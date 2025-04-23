@@ -12,23 +12,17 @@ getTaste is an application designed to help users easily discover personalized m
 
 ## Getting Started Locally
 ### Prerequisites
-- **Node.js:** Version specified in the `.nvmrc` file (v22.14.0)
+- **Node.js:** Version specified in the `.nvmrc` file **(v22.14.0)**
 - **npm:** Comes with Node.js
 
 ### Installation
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
+1. **Clone the repository:**
+   git clone https://github.com/tdarowsk/get-taste-app
    cd get-taste
-   ```
-2. Install the dependencies:
-   ```bash
+2. **Install the dependencies:**
    npm install
-   ```
-3. Start the development server:
-   ```bash
+3. **Start the development server:**
    npm run dev
-   ```
 
 ## Available Scripts
 - `npm run dev` - Launch the development server.
@@ -53,7 +47,7 @@ The MVP focuses on delivering the core functionality of generating personalized 
 - AI-driven chat or dynamic conversation features
 
 ## Project Status
-This project is currently in its MVP phase and under active development. Enhancements and additional features may be introduced based on user feedback.
+This project is currently in its MVP phase and under active development.
 
 ## License
 This project is licensed under the MIT License.
