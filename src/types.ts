@@ -116,8 +116,24 @@ export interface RecommendationDTO {
   id: number;
   user_id: number; // transformed from DB user_id type to number
   type: "music" | "film";
-  data: any; // JSON payload with recommendation details
+  data: RecommendationDataDetails; // Changed from 'any' to specific type
   created_at: string;
+}
+
+/** Detailed structure for recommendation data */
+export interface RecommendationDataDetails {
+  title?: string;
+  description?: string;
+  items?: RecommendationItem[];
+  [key: string]: unknown; // Allow for additional properties
+}
+
+/** Structure for recommendation item */
+export interface RecommendationItem {
+  id: string;
+  name: string;
+  type: string;
+  details?: Record<string, unknown>;
 }
 
 /** Command Model for generating new recommendations (POST /users/{id}/recommendations) */
@@ -141,6 +157,40 @@ export interface SpotifyDataDTO {
   user_id: number; // transformed from DB string id to number
   album_id: string | null;
   artist_id: string | null;
-  data: any; // JSON payload with Spotify data
+  data: SpotifyDataDetails; // Changed from 'any' to SpotifyDataDetails
   created_at: string;
+}
+
+/** Detailed structure for Spotify data */
+export interface SpotifyDataDetails {
+  album_name?: string;
+  artist_name?: string;
+  genres?: string[];
+  popularity?: number;
+  release_date?: string;
+  tracks?: SpotifyTrack[];
+}
+
+/** Structure for Spotify track data */
+export interface SpotifyTrack {
+  id: string;
+  name: string;
+  duration_ms: number;
+  explicit: boolean;
+  preview_url?: string;
+}
+
+/** Response DTO for POST /spotify/sync */
+export interface SpotifySyncResponseDTO {
+  message: string;
+  status: "success" | "error";
+  details?: string;
+}
+
+/** Response DTO for GET /users/{id}/spotify */
+export interface SpotifyDataListResponseDTO {
+  data: SpotifyDataDTO[];
+  count: number;
+  limit: number;
+  offset: number;
 }
