@@ -1,27 +1,36 @@
 ---
-import AuthLayout from "../../layouts/AuthLayout.astro";
+import Layout from "../../layouts/Layout.astro";
 import { RegisterForm } from "../../components/auth/RegisterForm";
-import { supabaseClient } from "../../db/supabase.client.ts";
+import { createSupabaseServerInstance } from "../../db/supabase.client";
+
+// Ustaw, że ta strona jest zawsze renderowana na serwerze
+export const prerender = false;
 
 // Sprawdź, czy użytkownik jest już zalogowany
-const {
-  data: { session },
-} = await supabaseClient.auth.getSession();
+const supabase = createSupabaseServerInstance({
+  cookies: Astro.cookies,
+  headers: Astro.request.headers,
+});
 
-// Jeśli użytkownik jest zalogowany, przekieruj go na dashboard
-if (session) {
-  return Astro.redirect("/dashboard");
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+// Jeśli użytkownik jest zalogowany, przekieruj go na stronę główną
+if (user) {
+  return Astro.redirect("/");
 }
+
+const handleRegisterSuccess = () => {
+  // Przekierowanie jest obsługiwane po stronie klienta w komponencie RegisterForm
+};
 ---
 
-<AuthLayout title="Rejestracja - getTaste">
-  <RegisterForm
-    client:load
-    onRegisterSuccess={() => {
-      // Logika przekierowania po rejestracji jest obsługiwana w skrypcie klienta
-    }}
-  />
-</AuthLayout>
+<Layout title="Rejestracja | getTaste">
+  <div class="flex items-center justify-center min-h-[calc(100vh-100px)]">
+    <RegisterForm client:load onRegisterSuccess={handleRegisterSuccess} />
+  </div>
+</Layout>
 
 <script>
   // Skrypt klienta zapewniający przekierowanie po pomyślnej rejestracji

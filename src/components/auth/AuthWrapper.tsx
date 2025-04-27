@@ -1,68 +1,71 @@
 import React, { useState, useEffect } from "react";
-import { supabaseClient } from "../../db/supabase.client";
 
 interface AuthWrapperProps {
   /**
-   * Zawartość do wyświetlenia, gdy użytkownik jest zalogowany
+   * Komponent wyświetlany jeśli użytkownik jest zalogowany
    */
   children: React.ReactNode;
   /**
-   * Zawartość do wyświetlenia podczas ładowania
+   * Komponent wyświetlany podczas ładowania stanu zalogowania
    */
-  fallback?: React.ReactNode;
+  loadingComponent?: React.ReactNode;
+  /**
+   * Komponent wyświetlany jeśli użytkownik nie jest zalogowany
+   */
+  fallbackComponent?: React.ReactNode;
 }
 
 /**
- * Komponent opakowujący elementy wymagające autoryzacji.
- * Jeśli użytkownik nie jest zalogowany, zostanie automatycznie przekierowany do strony logowania.
+ * Komponent opakowujący, który sprawdza stan zalogowania użytkownika
+ * i renderuje odpowiedni komponent
  */
 export const AuthWrapper: React.FC<AuthWrapperProps> = ({
   children,
-  fallback = (
-    <div className="flex justify-center items-center h-24">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-    </div>
-  ),
+  loadingComponent = <div>Ładowanie...</div>,
+  fallbackComponent = <div>Musisz być zalogowany, aby zobaczyć tę treść</div>,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    // Sprawdź stan zalogowania
+    const checkAuthStatus = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabaseClient.auth.getSession();
+        const response = await fetch("/api/auth/status", {
+          method: "GET",
+        });
 
-        if (!session) {
-          // Jeśli brak sesji, przekieruj na stronę logowania
-          window.location.href = `/auth/login?redirectTo=${encodeURIComponent(window.location.pathname)}`;
-          return;
+        if (response.ok) {
+          const data = await response.json();
+          setIsLoggedIn(!!data.user);
+        } else {
+          setIsLoggedIn(false);
         }
-
-        setIsAuthenticated(true);
       } catch (error) {
-        console.error("Błąd sprawdzania autoryzacji:", error);
-        // W przypadku błędu przekieruj na stronę logowania
-        window.location.href = "/auth/login";
-      } finally {
-        setIsLoading(false);
+        console.error("Błąd sprawdzania statusu autoryzacji:", error);
+        setIsLoggedIn(false);
       }
     };
 
-    checkAuth();
+    checkAuthStatus();
+
+    // Nasłuchuj na zdarzenia logowania/wylogowania
+    const handleLoginSuccess = () => setIsLoggedIn(true);
+    const handleLogoutSuccess = () => setIsLoggedIn(false);
+
+    document.addEventListener("login:success", handleLoginSuccess);
+    document.addEventListener("logout:success", handleLogoutSuccess);
+
+    return () => {
+      document.removeEventListener("login:success", handleLoginSuccess);
+      document.removeEventListener("logout:success", handleLogoutSuccess);
+    };
   }, []);
 
-  // Jeśli trwa ładowanie, pokaż fallback
-  if (isLoading) {
-    return <>{fallback}</>;
+  // Pokaż komponent ładowania, jeśli stan zalogowania jest jeszcze ustalany
+  if (isLoggedIn === null) {
+    return <>{loadingComponent}</>;
   }
 
-  // Jeśli użytkownik jest zalogowany, pokaż zawartość
-  if (isAuthenticated) {
-    return <>{children}</>;
-  }
-
-  // Domyślnie zwróć null - przekierowanie zostanie obsłużone w useEffect
-  return null;
+  // Pokaż odpowiedni komponent w zależności od stanu zalogowania
+  return <>{isLoggedIn ? children : fallbackComponent}</>;
 };

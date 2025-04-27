@@ -1,39 +1,31 @@
 import type { APIRoute } from "astro";
-import { supabaseClient } from "../../../db/supabase.client";
+import { createSupabaseServerInstance } from "../../../db/supabase.client";
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const formData = await request.json();
-    const { email, password, nick } = formData;
+    const { email, password } = formData;
 
-    if (!email || !password || !nick) {
+    if (!email || !password) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Email, hasło i nick są wymagane",
+          error: "Email i hasło są wymagane",
         }),
         { status: 400 }
       );
     }
 
-    // Sprawdź minimalne wymagania dla hasła
-    if (password.length < 8) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Hasło musi mieć co najmniej 8 znaków",
-        }),
-        { status: 400 }
-      );
-    }
+    const supabase = createSupabaseServerInstance({
+      cookies,
+      headers: request.headers,
+    });
 
-    const { data, error } = await supabaseClient.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          nick,
-        },
+        emailRedirectTo: `${new URL(request.url).origin}/auth/login`,
       },
     });
 
@@ -47,11 +39,10 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Rejestracja pomyślna
     return new Response(
       JSON.stringify({
         success: true,
-        session: data.session,
+        user: data.user,
       }),
       { status: 200 }
     );
