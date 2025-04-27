@@ -237,3 +237,69 @@ export interface SpotifyDataListResponseDTO {
   limit: number;
   offset: number;
 }
+
+/* =========================
+   OpenRouter API Integration
+   ========================= */
+
+/** Response format type for structured LLM responses */
+export interface ResponseFormat {
+  type: "json_schema";
+  json_schema: {
+    name: string;
+    strict: boolean;
+    schema: object;
+  };
+}
+
+/** Chat message structure */
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+/** Chat completion request structure */
+export interface ChatCompletionRequest {
+  model: string;
+  messages: ChatMessage[];
+  response_format?: ResponseFormat;
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  stream?: boolean;
+}
+
+/** Chat completion response structure */
+export interface ChatCompletionResponse {
+  id: string;
+  model: string;
+  created: number;
+  object: string;
+  choices: {
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+/** Model information structure */
+export interface ModelInfo {
+  id: string;
+  name: string;
+  description: string;
+  provider: string;
+  pricing: {
+    prompt: number;
+    completion: number;
+  };
+  context_length: number;
+  capabilities: string[];
+}
