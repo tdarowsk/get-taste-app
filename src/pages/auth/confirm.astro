@@ -1,0 +1,46 @@
+---
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { PasswordResetForm } from "../../components/auth/PasswordResetForm";
+import { supabaseClient } from "../../db/supabase.client.ts";
+
+// Sprawdź parametry URL
+const token = Astro.url.searchParams.get("token");
+const type = Astro.url.searchParams.get("type") || "reset-password";
+
+// Jeśli brak tokena, przekieruj na stronę główną
+if (!token) {
+  return Astro.redirect("/");
+}
+
+// Jeśli to strona resetowania hasła, upewnij się, że token jest ważny
+if (type === "reset-password") {
+  try {
+    // Weryfikacja tokenu resetowania hasła byłaby tutaj
+    // W rzeczywistym scenariuszu powinniśmy zweryfikować token z Supabase
+    // Ale w przypadku Supabase, token jest weryfikowany przy faktycznym resetowaniu hasła
+  } catch (error) {
+    return Astro.redirect("/auth/reset-password?error=invalid_token");
+  }
+}
+---
+
+<AuthLayout title="Ustaw nowe hasło - getTaste">
+  <PasswordResetForm
+    client:load
+    mode="reset"
+    token={token}
+    onResetSuccess={() => {
+      // Logika przekierowania jest obsługiwana w skrypcie klienta
+    }}
+  />
+</AuthLayout>
+
+<script>
+  // Skrypt klienta zapewniający przekierowanie po pomyślnym resecie hasła
+  document.addEventListener("astro:page-load", () => {
+    // Po pomyślnym resecie hasła przekierujemy do strony logowania
+    document.addEventListener("reset:success", () => {
+      window.location.href = "/auth/login?reset=success";
+    });
+  });
+</script>

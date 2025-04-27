@@ -1,0 +1,34 @@
+---
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { RegisterForm } from "../../components/auth/RegisterForm";
+import { supabaseClient } from "../../db/supabase.client.ts";
+
+// Sprawdź, czy użytkownik jest już zalogowany
+const {
+  data: { session },
+} = await supabaseClient.auth.getSession();
+
+// Jeśli użytkownik jest zalogowany, przekieruj go na dashboard
+if (session) {
+  return Astro.redirect("/dashboard");
+}
+---
+
+<AuthLayout title="Rejestracja - getTaste">
+  <RegisterForm
+    client:load
+    onRegisterSuccess={() => {
+      // Logika przekierowania po rejestracji jest obsługiwana w skrypcie klienta
+    }}
+  />
+</AuthLayout>
+
+<script>
+  // Skrypt klienta zapewniający przekierowanie po pomyślnej rejestracji
+  document.addEventListener("astro:page-load", () => {
+    // Po pomyślnej rejestracji przekierujemy do dashboardu
+    document.addEventListener("register:success", () => {
+      window.location.href = "/dashboard";
+    });
+  });
+</script>

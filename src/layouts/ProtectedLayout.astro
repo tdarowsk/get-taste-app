@@ -1,0 +1,65 @@
+---
+import { ViewTransitions } from "astro:transitions";
+import { supabaseClient } from "../db/supabase.client.ts";
+
+interface Props {
+  title: string;
+}
+
+// Sprawdź czy użytkownik jest zalogowany
+const {
+  data: { session },
+} = await supabaseClient.auth.getSession();
+
+// Jeśli nie ma sesji, przekieruj na stronę logowania
+if (!session) {
+  return Astro.redirect("/auth/login?redirectTo=" + encodeURIComponent(Astro.url.pathname));
+}
+
+const { title } = Astro.props;
+const user = session.user;
+---
+
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <ViewTransitions />
+  </head>
+  <body class="min-h-screen bg-gradient-to-br from-[#0e0e20] to-[#1e1e3f] text-white">
+    <header class="bg-[#0a0a18]/80 backdrop-blur-sm border-b border-white/10">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <a href="/dashboard" class="flex items-center">
+          <img src="/images/logo.svg" alt="getTaste Logo" class="h-10" transition:name="logo" />
+        </a>
+        <nav>
+          <ul class="flex items-center space-x-6">
+            <li>
+              <a href="/dashboard" class="text-white/80 hover:text-white transition-colors"> Dashboard </a>
+            </li>
+            <li>
+              <a href="/profile" class="text-white/80 hover:text-white transition-colors"> Profil </a>
+            </li>
+            <li>
+              <form action="/api/auth/logout" method="post">
+                <button type="submit" class="text-white/80 hover:text-white transition-colors"> Wyloguj się </button>
+              </form>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="py-4 text-center text-white/50 text-sm">
+      <p>&copy; {new Date().getFullYear()} getTaste. Wszystkie prawa zastrzeżone.</p>
+    </footer>
+  </body>
+</html>
