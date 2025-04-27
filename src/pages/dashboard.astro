@@ -1,29 +1,44 @@
 ---
 import MainLayout from "../layouts/MainLayout.astro";
 import { DashboardWrapper } from "../components/dashboard/DashboardWrapper";
-import { supabaseClient } from "../db/supabase.client.ts";
+import { createSupabaseServerInstance } from "../db/supabase.client";
 import type { UserProfileDTO } from "../types";
 
-// Check if user is authenticated
-const {
-  data: { session },
-} = await supabaseClient.auth.getSession();
+// Strona dashboard zawsze renderowana na serwerze
+export const prerender = false;
 
-// If user is not authenticated, redirect to homepage
-if (!session) {
-  return Astro.redirect("/");
+// Sprawdzenie czy użytkownik jest zalogowany jest obsługiwane przez middleware
+// Jeśli nie jest, zostanie automatycznie przekierowany na stronę logowania
+
+// Pobierz użytkownika z middleware
+const { user } = Astro.locals;
+
+// Pobierz dodatkowe dane użytkownika
+const supabase = createSupabaseServerInstance({
+  cookies: Astro.cookies,
+  headers: Astro.request.headers,
+});
+
+// Konwersja danych użytkownika do formatu UserProfileDTO
+const userProfile: UserProfileDTO = {
+  id: parseInt(user.id, 10), // Konwersja UUID na liczbę dla kompatybilności z API
+  email: user.email || "",
+  nick: "User", // Domyślna wartość
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+// Spróbuj pobrać dodatkowe metadane użytkownika
+const { data } = await supabase.auth.getUser();
+if (data?.user?.user_metadata) {
+  userProfile.nick = data.user.user_metadata.nick || userProfile.nick;
+  if (data.user.created_at) userProfile.created_at = data.user.created_at;
+  if (data.user.updated_at) userProfile.updated_at = data.user.updated_at;
 }
 
-// Get user data from session and convert to UserProfileDTO format
-const user: UserProfileDTO = {
-  id: parseInt(session.user.id, 10), // Convert UUID to number for API compatibility
-  email: session.user.email || "",
-  nick: session.user.user_metadata?.nick || "User",
-  created_at: session.user.created_at,
-  updated_at: session.user.updated_at || session.user.created_at,
-};
+console.log("Dashboard: Dane użytkownika:", userProfile);
 ---
 
-<MainLayout title="getTaste | Your Personal Recommendations">
-  <DashboardWrapper user={user} client:only="react" />
+<MainLayout title="getTaste | Twoje rekomendacje">
+  <DashboardWrapper user={userProfile} client:only="react" />
 </MainLayout>

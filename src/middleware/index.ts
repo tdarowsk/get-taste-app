@@ -1,25 +1,48 @@
 import { defineMiddleware } from "astro:middleware";
+import { createSupabaseServerInstance } from "../db/supabase.client";
 
-import { supabaseClient } from "../db/supabase.client.ts";
-import { OpenRouterService } from "../lib/services/openrouter.service";
+// Publiczne ścieżki - endpoints API Auth i strony autentykacji renderowane przez serwer
+const PUBLIC_PATHS = [
+  // Strony renderowane przez serwer
+  "/auth/login",
+  "/auth/register",
+  "/auth/reset-password",
+  "/auth/confirm",
+  // Endpointy API Auth
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/reset-password",
+  "/api/auth/confirm-reset",
+  "/api/auth/logout",
+  "/api/auth/status",
+];
 
-// Initialize OpenRouter service
-const OPENROUTER_API_KEY = import.meta.env.OPENROUTER_API_KEY;
-const OPENROUTER_DEFAULT_MODEL = import.meta.env.OPENROUTER_DEFAULT_MODEL || "anthropic/claude-3-opus-20240229";
-const OPENROUTER_DEFAULT_SYSTEM_PROMPT = import.meta.env.OPENROUTER_DEFAULT_SYSTEM_PROMPT;
-
-if (OPENROUTER_API_KEY) {
-  try {
-    OpenRouterService.configure(OPENROUTER_API_KEY, OPENROUTER_DEFAULT_MODEL, OPENROUTER_DEFAULT_SYSTEM_PROMPT);
-    console.log("OpenRouter service configured successfully");
-  } catch (error) {
-    console.error("Failed to configure OpenRouter service:", error);
+export const onRequest = defineMiddleware(async ({ locals, cookies, url, request, redirect }, next) => {
+  // Pomijamy sprawdzanie autentykacji dla ścieżek publicznych
+  if (PUBLIC_PATHS.includes(url.pathname)) {
+    return next();
   }
-} else {
-  console.warn("OPENROUTER_API_KEY not provided. OpenRouter service will not be available.");
-}
 
-export const onRequest = defineMiddleware((context, next) => {
-  context.locals.supabase = supabaseClient;
+  const supabase = createSupabaseServerInstance({
+    cookies,
+    headers: request.headers,
+  });
+
+  // WAŻNE: Zawsze najpierw pobieramy sesję użytkownika przed innymi operacjami
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    locals.user = {
+      email: user.email || null,
+      id: user.id,
+    };
+    locals.supabase = supabase;
+  } else if (!PUBLIC_PATHS.includes(url.pathname)) {
+    // Przekierowanie do logowania dla chronionych ścieżek
+    return redirect("/auth/login");
+  }
+
   return next();
 });

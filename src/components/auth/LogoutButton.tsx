@@ -6,13 +6,13 @@ interface LogoutButtonProps {
    */
   onLogoutSuccess?: () => void;
   /**
-   * Niestandardowa klasa CSS dla przycisku
+   * Dodatkowe klasy CSS
    */
   className?: string;
   /**
-   * Niestandardowy tekst przycisku
+   * Treść przycisku
    */
-  text?: string;
+  children?: React.ReactNode;
 }
 
 /**
@@ -21,13 +21,16 @@ interface LogoutButtonProps {
 export const LogoutButton: React.FC<LogoutButtonProps> = ({
   onLogoutSuccess,
   className = "",
-  text = "Wyloguj się",
+  children = "Wyloguj się",
 }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogout = async () => {
-    setIsLoading(true);
+    if (isLoading) return;
+
     try {
+      setIsLoading(true);
+
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {
@@ -35,20 +38,25 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
         },
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Błąd podczas wylogowywania");
+        throw new Error(data.error || "Błąd wylogowania");
       }
 
-      // Po wylogowaniu, przekieruj do strony głównej lub wywołaj callback
+      // Wywołaj niestandardowe zdarzenie po pomyślnym wylogowaniu
+      const logoutSuccessEvent = new CustomEvent("logout:success");
+      document.dispatchEvent(logoutSuccessEvent);
+
+      // Opcjonalnie wywołaj callback
       if (onLogoutSuccess) {
         onLogoutSuccess();
       } else {
-        // Domyślne przekierowanie do strony głównej
-        window.location.href = "/";
+        // Domyślnie przekieruj na stronę logowania
+        window.location.href = "/auth/login";
       }
     } catch (error) {
-      console.error("Błąd wylogowywania:", error);
+      console.error("Błąd wylogowania:", error);
     } finally {
       setIsLoading(false);
     }
@@ -58,10 +66,9 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
     <button
       onClick={handleLogout}
       disabled={isLoading}
-      className={`text-white/80 hover:text-white transition-colors ${isLoading ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
-      aria-label="Wyloguj się"
+      className={`text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-800 font-medium rounded-lg px-5 py-2.5 text-center ${className}`}
     >
-      {isLoading ? "Wylogowywanie..." : text}
+      {isLoading ? "Wylogowywanie..." : children}
     </button>
   );
 };

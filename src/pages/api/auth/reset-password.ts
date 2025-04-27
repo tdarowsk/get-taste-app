@@ -3,14 +3,13 @@ import { createSupabaseServerInstance } from "../../../db/supabase.client";
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const formData = await request.json();
-    const { email, password } = formData;
+    const { email } = await request.json();
 
-    if (!email || !password) {
+    if (!email) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Email i hasło są wymagane",
+          error: "Email jest wymagany",
         }),
         { status: 400 }
       );
@@ -21,9 +20,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: request.headers,
     });
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${new URL(request.url).origin}/auth/reset-password?mode=reset`,
     });
 
     if (error) {
@@ -32,24 +30,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           success: false,
           error: error.message,
         }),
-        { status: 401 }
+        { status: 400 }
       );
     }
 
-    // Logowanie pomyślne
     return new Response(
       JSON.stringify({
         success: true,
-        user: data.user,
       }),
       { status: 200 }
     );
   } catch (error) {
-    console.error("Błąd logowania:", error);
+    console.error("Błąd resetowania hasła:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Wystąpił błąd podczas logowania",
+        error: "Wystąpił błąd podczas wysyłania linku resetującego hasło",
       }),
       { status: 500 }
     );
