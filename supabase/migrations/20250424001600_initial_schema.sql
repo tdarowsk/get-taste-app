@@ -43,49 +43,6 @@ create policy "users_select_policy_for_anon"
 create index if not exists users_email_idx on users(email);
 create index if not exists users_nick_idx on users(nick);
 
--- user2fa table for two-factor authentication
-create table if not exists user2fa (
-    id serial primary key,
-    user_id uuid not null unique references users(id) on delete cascade,
-    verification_code varchar(20) not null,
-    created_at timestamptz not null default now(),
-    expires_at timestamptz not null,
-    verified_at timestamptz null
-);
-
--- enable row level security on user2fa table
-alter table user2fa enable row level security;
-
--- rls policies for user2fa table
--- authenticated users can only see and modify their own 2fa data
-create policy "user2fa_select_policy_for_authenticated"
-    on user2fa
-    for select
-    to authenticated
-    using (user_id = auth.uid());
-
-create policy "user2fa_insert_policy_for_authenticated"
-    on user2fa
-    for insert
-    to authenticated
-    with check (user_id = auth.uid());
-
-create policy "user2fa_update_policy_for_authenticated"
-    on user2fa
-    for update
-    to authenticated
-    using (user_id = auth.uid());
-
--- anon users can't access 2fa data
-create policy "user2fa_select_policy_for_anon"
-    on user2fa
-    for select
-    to anon
-    using (false);
-
--- create index for user2fa table
-create index if not exists user2fa_user_id_idx on user2fa(user_id);
-
 -- sessions table
 create table if not exists sessions (
     id serial primary key,
@@ -254,8 +211,9 @@ create table if not exists spotify_data (
 -- enable row level security on spotify_data table
 alter table spotify_data enable row level security;
 
--- rls policies for spotify_data table
--- authenticated users can only see their own spotify data
+-- DISABLED: rls policies for spotify_data table
+-- authenticated users can only see and modify their own spotify data
+/*
 create policy "spotify_data_select_policy_for_authenticated"
     on spotify_data
     for select
@@ -274,11 +232,51 @@ create policy "spotify_data_select_policy_for_anon"
     for select
     to anon
     using (false);
+*/
 
 -- create index for spotify_data table
 create index if not exists spotify_data_user_id_idx on spotify_data(user_id);
-create index if not exists spotify_data_album_id_idx on spotify_data(album_id);
-create index if not exists spotify_data_artist_id_idx on spotify_data(artist_id);
+
+-- recommendation feedback table for swipe right/swipe left
+create table if not exists recommendation_feedback (
+    id serial primary key,
+    recommendation_id integer not null references recommendations(id) on delete cascade,
+    user_id uuid not null references users(id) on delete cascade,
+    feedback_type varchar(10) not null check (feedback_type in ('like', 'dislike')),
+    created_at timestamptz not null default now(),
+    unique(recommendation_id, user_id) -- each user can only give one feedback per recommendation
+);
+
+-- enable row level security on recommendation_feedback table
+alter table recommendation_feedback enable row level security;
+
+-- DISABLED: rls policies for recommendation_feedback table
+-- authenticated users can only see and modify their own feedback
+/*
+create policy "recommendation_feedback_select_policy_for_authenticated"
+    on recommendation_feedback
+    for select
+    to authenticated
+    using (user_id = auth.uid());
+
+create policy "recommendation_feedback_insert_policy_for_authenticated"
+    on recommendation_feedback
+    for insert
+    to authenticated
+    with check (user_id = auth.uid());
+
+-- anon users can't access recommendation feedback
+create policy "recommendation_feedback_select_policy_for_anon"
+    on recommendation_feedback
+    for select
+    to anon
+    using (false);
+*/
+
+-- create index for recommendation_feedback table
+create index if not exists recommendation_feedback_recommendation_id_idx on recommendation_feedback(recommendation_id);
+create index if not exists recommendation_feedback_user_id_idx on recommendation_feedback(user_id);
+create index if not exists recommendation_feedback_feedback_type_idx on recommendation_feedback(feedback_type);
 
 -- trigger for updating the 'updated_at' column when a record is updated
 create or replace function update_updated_at_column()

@@ -1,4 +1,53 @@
 ---
-// Redirect from homepage to dashboard page
-return Astro.redirect("/dashboard");
+import Layout from "../layouts/Layout.astro";
+import { supabaseClient } from "../db/supabase.client";
+
+// Check if user is authenticated
+const {
+  data: { session },
+} = await supabaseClient.auth.getSession();
+
+// If user is authenticated, redirect to dashboard
+if (session) {
+  return Astro.redirect("/dashboard");
+}
 ---
+
+<Layout title="getTaste - Odkrywaj muzykę i filmy dopasowane do Twojego gustu">
+  <main class="container mx-auto px-4 py-8 max-w-6xl">
+    <div class="flex flex-col items-center justify-center">
+      <h1 class="text-4xl md:text-5xl font-bold text-center mb-6">
+        Odkrywaj muzykę i filmy dopasowane do Twojego gustu
+      </h1>
+
+      <p class="text-xl text-center mb-10 max-w-3xl">
+        getTaste wykorzystuje zaawansowaną sztuczną inteligencję, aby dostarczać spersonalizowane rekomendacje muzyki i
+        filmów, które pokochasz.
+      </p>
+
+      <div class="grid md:grid-cols-3 gap-8 w-full max-w-4xl mb-12">
+        <div class="bg-white/5 p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-semibold mb-3">Personalizowane rekomendacje</h3>
+          <p>AI analizuje Twoje preferencje, aby dostarczać trafne sugestie muzyki i filmów.</p>
+        </div>
+
+        <div class="bg-white/5 p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-semibold mb-3">Integracja ze Spotify</h3>
+          <p>Automatyczna synchronizacja z Twoim kontem Spotify zapewnia aktualne rekomendacje.</p>
+        </div>
+
+        <div class="bg-white/5 p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-semibold mb-3">Twórz własny profil</h3>
+          <p>Dostosuj swoje preferencje i oceniaj rekomendacje, aby otrzymywać coraz lepsze sugestie.</p>
+        </div>
+      </div>
+
+      <a
+        href="/login"
+        class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-300"
+      >
+        Rozpocznij odkrywanie
+      </a>
+    </div>
+  </main>
+</Layout>

@@ -27,29 +27,16 @@ export interface RegisterUserResponseDTO {
   updated_at: string;
 }
 
-/** Command Model for 2FA verification (POST /auth/verify-2fa) */
-export interface VerifyTwoFaCommand {
-  user_id: number;
-  verification_code: string;
-}
-
-/** DTO for the response of 2FA verification containing the JWT token */
-export interface VerifyTwoFaResponseDTO {
-  token: string;
-}
-
 /** Command Model for user login (POST /auth/login) */
 export interface LoginCommand {
   email: string;
   password: string;
 }
 
-/** DTO for the response of login.
- *  Either a token is returned directly or a flag indicates 2FA is required.
- */
+/** DTO for the response of login containing the JWT token */
 export interface LoginResponseDTO {
-  token?: string;
-  requires2FA?: boolean;
+  token: string;
+  user: UserProfileDTO;
 }
 
 /** DTO representing the authenticated user's profile (GET /auth/me and GET /users/{id}) */

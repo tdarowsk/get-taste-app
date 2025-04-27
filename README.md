@@ -1,7 +1,9 @@
-# getTaste
+# getTaste - Discover personalized music and movie recommendations
+
+getTaste is a web application that leverages AI to provide personalized music and movie recommendations based on your individual preferences. The platform includes user registration, secure login through Supabase Auth, and profile management, while leveraging AI-powered algorithms alongside real-time data from Spotify to generate dynamic recommendations.
 
 ## Project Description
-getTaste is an application designed to help users easily discover personalized music and movie recommendations based on their unique tastes. It streamlines the search process by providing tailored suggestions, enabling users to quickly find content that aligns with their preferences. The app supports user registration, secure login (with 2FA), and profile management, while leveraging AI-powered algorithms alongside real-time data from Spotify to generate dynamic recommendations.
+getTaste is an application designed to help users easily discover personalized music and movie recommendations based on their unique tastes. It streamlines the search process by providing tailored suggestions, enabling users to quickly find content that aligns with their preferences. The app supports user registration, secure login through Supabase Auth, and profile management, while leveraging AI-powered algorithms alongside real-time data from Spotify to generate dynamic recommendations.
 
 ## Tech Stack
 - **Frontend:** Astro 5 with React 19 for interactive components
@@ -35,7 +37,7 @@ getTaste is an application designed to help users easily discover personalized m
 
 ## Project Scope
 The MVP focuses on delivering the core functionality of generating personalized music and movie recommendations. Key features include:
-- **User Management:** Registration, login (with 2FA), and profile editing to set music and movie preferences.
+- **User Management:** Registration, login through Supabase Auth, and profile editing to set music and movie preferences.
 - **Recommendation Engine:** Real-time generation of tailored recommendations based on user inputs.
 - **Spotify Integration:** Fetching up-to-date album and artist information via the Spotify API.
 - **Automated Testing:** Incorporation of unit and end-to-end tests to ensure reliability during development.
@@ -60,3 +62,31 @@ This project is licensed under the MIT License.
 - [Project Scope](#project-scope)
 - [Project Status](#project-status)
 - [License](#license)
+
+## Features
+
+- **Personalized Recommendations:** Get AI-generated recommendations for music and movies based on your preferences.
+- **Preference Management:** Set and update your preferences for music genres, artists, movie genres, directors, and more.
+- **User Management:** Registration, login through Supabase Auth, and profile editing to set music and movie preferences.
+- **Spotify Integration:** Connect with Spotify to enhance your music recommendations.
+- **Recommendation Feedback:** "Swipe" system to like or dislike recommendations, improving future suggestions.
+- **History Tracking:** View your past recommendations and feedback history.
+
+## Konfiguracja zmiennych środowiskowych
+
+Aplikacja wymaga następujących zmiennych środowiskowych, które należy umieścić w pliku `.env` w głównym katalogu projektu:
+
+```
+# Supabase environment variables (server-side)
+SUPABASE_URL=https://your-supabase-url.supabase.co
+SUPABASE_KEY=your-supabase-service-key
+
+# Supabase environment variables (client-side)
+PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# OpenRouter API key
+OPENROUTER_API_KEY=your-openrouter-api-key
+```
+
+Plik `.env` jest ignorowany przez system kontroli wersji, dlatego musisz utworzyć go lokalnie.

@@ -1,15 +1,26 @@
 ---
 import MainLayout from "../layouts/MainLayout.astro";
 import { DashboardWrapper } from "../components/dashboard/DashboardWrapper";
+import { supabaseClient } from "../db/supabase.client.ts";
+import type { UserProfileDTO } from "../types";
 
-// In a real app, you would check authentication here
-// For demo purposes, we're assuming the user is already authenticated
-const user = {
-  id: 1,
-  email: "user@example.com",
-  nick: "TestUser",
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
+// Check if user is authenticated
+const {
+  data: { session },
+} = await supabaseClient.auth.getSession();
+
+// If user is not authenticated, redirect to homepage
+if (!session) {
+  return Astro.redirect("/");
+}
+
+// Get user data from session and convert to UserProfileDTO format
+const user: UserProfileDTO = {
+  id: parseInt(session.user.id, 10), // Convert UUID to number for API compatibility
+  email: session.user.email || "",
+  nick: session.user.user_metadata?.nick || "User",
+  created_at: session.user.created_at,
+  updated_at: session.user.updated_at || session.user.created_at,
 };
 ---
 

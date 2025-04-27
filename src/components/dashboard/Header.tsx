@@ -1,13 +1,17 @@
-import { Bell, User, Settings } from "lucide-react";
+import { Bell, Settings, LogOut, Menu } from "lucide-react";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import type { UserProfileDTO } from "../../types";
+import { useState } from "react";
 
 interface HeaderProps {
   user: UserProfileDTO;
 }
 
 export function Header({ user }: HeaderProps) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
   // Get the initials for the avatar
   const getInitials = (name: string) => {
     return name
@@ -16,6 +20,31 @@ export function Header({ user }: HeaderProps) {
       .join("")
       .toUpperCase()
       .substring(0, 2);
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Redirect to home page after successful logout
+        window.location.href = "/";
+      } else {
+        console.error("Błąd wylogowania:", data.error);
+      }
+    } catch (error) {
+      console.error("Błąd podczas wylogowania:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -69,6 +98,17 @@ export function Header({ user }: HeaderProps) {
             <Settings className="h-5 w-5" />
           </Button>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Logout"
+            className="text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 hidden sm:flex"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+
           <div className="ml-2 flex items-center pl-2">
             <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-[2px] rounded-full">
               <Avatar className="h-9 w-9 border-2 border-white dark:border-gray-800">
@@ -81,8 +121,46 @@ export function Header({ user }: HeaderProps) {
               {user.nick}
             </span>
           </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Menu"
+            className="text-gray-600 dark:text-gray-300 md:hidden"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {showMobileMenu && (
+        <div className="md:hidden bg-white dark:bg-gray-900 shadow-md py-2 px-4 border-t">
+          <div className="flex flex-col space-y-2">
+            <Button variant="ghost" className="justify-start text-sm font-medium">
+              Dashboard
+            </Button>
+            <Button variant="ghost" className="justify-start text-sm font-medium">
+              Explore
+            </Button>
+            <Button variant="ghost" className="justify-start text-sm font-medium">
+              History
+            </Button>
+            <Button variant="ghost" className="justify-start text-sm font-medium">
+              Settings
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start text-sm font-medium text-red-500"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? "Wylogowywanie..." : "Wyloguj się"}
+            </Button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

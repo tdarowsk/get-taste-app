@@ -8,6 +8,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node"
   }
 }

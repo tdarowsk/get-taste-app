@@ -35,7 +35,7 @@ export function RecommendationCard({ item, type }: RecommendationCardProps) {
   const director = getMetadataValue("director");
 
   // Apply different accent colors based on type
-  const accentColor = type === "music" ? "from-blue-500 to-indigo-600" : "from-purple-500 to-pink-600";
+  const accentColor = type === "music" ? "from-blue-600 to-indigo-600" : "from-purple-600 to-pink-600";
 
   // Handle card click to open detail view
   const handleCardClick = () => {
@@ -50,41 +50,41 @@ export function RecommendationCard({ item, type }: RecommendationCardProps) {
   return (
     <>
       <Card
-        className="overflow-hidden hover:shadow-sm transition-all duration-300 h-full flex flex-col group bg-white dark:bg-gray-800 border-0 shadow-sm cursor-pointer"
+        className="overflow-hidden transition-all duration-300 h-full flex flex-col group bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20 shadow-lg rounded-lg cursor-pointer hover:transform hover:scale-105"
         onClick={handleCardClick}
       >
-        <div className="flex p-2">
+        <div className="flex p-3">
           {/* Thumbnail image */}
-          <div className="w-10 h-10 flex-shrink-0 overflow-hidden rounded-md mr-2">
-            <img src={imageUrl} alt={item.name} className="" style={{ maxWidth: "200px", maxHeight: "200px" }} />
+          <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-md mr-3 border border-white/10">
+            <img src={imageUrl} alt={item.name} className="w-full h-full object-cover" />
           </div>
 
           {/* Title and metadata */}
           <div className="flex-1 min-w-0">
             <div
-              className={`inline-flex items-center px-1 py-px rounded-full text-[10px] font-medium bg-gradient-to-r ${accentColor} text-white mb-0.5`}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gradient-to-r ${accentColor} text-white mb-1`}
             >
               {genre}
             </div>
-            <h3 className="text-xs font-bold line-clamp-1">{item.name}</h3>
-            {type === "music" && artist && <p className="text-[10px] text-gray-500 line-clamp-1">{artist}</p>}
-            {type === "film" && director && <p className="text-[10px] text-gray-500 line-clamp-1">Dir: {director}</p>}
+            <h3 className="text-xs font-bold line-clamp-1 text-white">{item.name}</h3>
+            {type === "music" && artist && <p className="text-[10px] text-gray-300 line-clamp-1">{artist}</p>}
+            {type === "film" && director && <p className="text-[10px] text-gray-300 line-clamp-1">Dir: {director}</p>}
           </div>
         </div>
 
         {item.description && (
-          <div className="px-2 pb-1">
-            <p className="text-[10px] text-muted-foreground line-clamp-1">{item.description}</p>
+          <div className="px-3 pb-2">
+            <p className="text-[10px] text-gray-300 line-clamp-2">{item.description}</p>
           </div>
         )}
 
-        <div className="mt-auto px-2 pb-2 pt-1 border-t flex justify-between items-center">
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
+        <div className="mt-auto px-3 pb-3 pt-2 border-t border-white/10 flex justify-between items-center">
+          <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
             {type === "music" ? "Listen" : "Watch"}
           </span>
-          <button className={`p-1 rounded-full bg-gradient-to-r ${accentColor} text-white`}>
+          <button className={`p-1.5 rounded-full bg-gradient-to-r ${accentColor} text-white shadow-md`}>
             <svg
-              className="w-2 h-2"
+              className="w-2.5 h-2.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

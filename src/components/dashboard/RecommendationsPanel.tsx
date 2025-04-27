@@ -26,7 +26,7 @@ export function RecommendationsPanel({
   const [activeTab, setActiveTab] = useState<"recommendations" | "ratings">("recommendations");
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border">
+    <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg border border-white/10">
       <RecommendationsHeader
         activeType={activeType}
         onTypeChange={onTypeChange}
@@ -34,14 +34,14 @@ export function RecommendationsPanel({
         isLoading={isLoading}
       />
 
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-white/10">
         <nav className="flex -mb-px px-6">
           <button
             onClick={() => setActiveTab("recommendations")}
             className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
               activeTab === "recommendations"
-                ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                ? "border-purple-500 text-purple-400"
+                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
             }`}
           >
             Recommendations
@@ -50,8 +50,8 @@ export function RecommendationsPanel({
             onClick={() => setActiveTab("ratings")}
             className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
               activeTab === "ratings"
-                ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                ? "border-purple-500 text-purple-400"
+                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
             }`}
           >
             My Ratings
