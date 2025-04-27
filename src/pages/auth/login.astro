@@ -1,0 +1,40 @@
+---
+import AuthLayout from "../../layouts/AuthLayout.astro";
+import { LoginForm } from "../../components/auth/LoginForm";
+import { supabaseClient } from "../../db/supabase.client.ts";
+
+// Sprawdź, czy użytkownik jest już zalogowany
+const {
+  data: { session },
+} = await supabaseClient.auth.getSession();
+
+// Jeśli użytkownik jest zalogowany, przekieruj go na dashboard
+if (session) {
+  return Astro.redirect("/dashboard");
+}
+
+// Pobierz URL do przekierowania po zalogowaniu (jeśli istnieje)
+const redirectTo = Astro.url.searchParams.get("redirectTo") || "/dashboard";
+---
+
+<AuthLayout title="Logowanie - getTaste">
+  <LoginForm client:load onLoginSuccess={() => {}} />
+</AuthLayout>
+
+<script>
+  // Skrypt klienta zapewniający przekierowanie po pomyślnym zalogowaniu
+  document.addEventListener("astro:page-load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get("redirectTo") || "/dashboard";
+
+    // Po zalogowaniu przekierujemy do odpowiedniej strony
+    const handleLoginSuccess = () => {
+      window.location.href = redirectTo;
+    };
+
+    // Przekaż informację do komponentu React
+    document.addEventListener("login:success", () => {
+      handleLoginSuccess();
+    });
+  });
+</script>
