@@ -1,10 +1,10 @@
 # Dokument wymagań produktu (PRD) - getTaste (MVP)
 
 ## 1. Przegląd produktu
-Aplikacja getTaste ma na celu ułatwienie wyszukiwania muzyki i filmów dostosowanych do gustu użytkownika. Aplikacja umożliwia rejestrację, logowanie, edycję profilu z preferencjami muzycznymi i filmowymi, a także generowanie rekomendacji przy użyciu technologii OpenAI. System integruje się z API Spotify w celu pobierania aktualnych informacji o albumach i artystach, a dynamiczne rekomendacje są aktualizowane w odpowiedzi na zmiany w preferencjach użytkownika. Projekt przewiduje wdrożenie zabezpieczenia 2FA oraz automatyzację testów jednostkowych i end-to-end.
+Aplikacja getTaste ma na celu ułatwienie wyszukiwania muzyki i filmów dostosowanych do gustu użytkownika. Aplikacja umożliwia rejestrację, logowanie, edycję profilu z preferencjami muzycznymi i filmowymi, a także generowanie rekomendacji przy użyciu technologii OpenAI. System integruje się z API Spotify w celu pobierania aktualnych informacji o albumach i artystach, a dynamiczne rekomendacje są aktualizowane w odpowiedzi na zmiany w preferencjach użytkownika oraz opinie użytkownika na temat prezentowanych rekomendacji (system swipe right/swipe left). Projekt przewiduje wdrożenie zabezpieczenia 2FA oraz automatyzację testów jednostkowych i end-to-end.
 
 ## 2. Problem użytkownika
-Użytkownik ma problem ze znalezieniem muzyki lub filmu, który odpowiada jego indywidualnym preferencjom. Brak spersonalizowanych rekomendacji może skutkować marnowaniem czasu na wyszukiwanie treści w ogromnej liczbie dostępnych opcji. Aplikacja rozwiązuje ten problem poprzez dostarczenie dopasowanych rekomendacji opartych o preferencje użytkownika, co umożliwia szybsze i bardziej satysfakcjonujące odkrywanie nowych treści.
+Użytkownik ma problem ze znalezieniem muzyki lub filmu, który odpowiada jego indywidualnym preferencjom. Brak spersonalizowanych rekomendacji może skutkować marnowaniem czasu na wyszukiwanie treści w ogromnej liczbie dostępnych opcji. Aplikacja rozwiązuje ten problem poprzez dostarczenie dopasowanych rekomendacji opartych o preferencje użytkownika oraz jego wcześniejsze interakcje z rekomendacjami, co umożliwia szybsze i bardziej satysfakcjonujące odkrywanie nowych treści.
 
 ## 3. Wymagania funkcjonalne
 1. Rejestracja i logowanie użytkownika z wykorzystaniem 2FA opartego na aplikacji mobilnej.
@@ -12,18 +12,20 @@ Użytkownik ma problem ze znalezieniem muzyki lub filmu, który odpowiada jego i
    - Preferencje muzyczne (gatunki, artyści).
    - Preferencje filmowe (gatunki, reżyser, obsada, scenarzysta).
 3. System generowania rekomendacji z wykorzystaniem technologii OpenAI (wybór konkretnego modelu ustalony w przyszłości).
-4. Dynamiczna aktualizacja rekomendacji na podstawie zmian w profilu użytkownika.
+4. Dynamiczna aktualizacja rekomendacji na podstawie zmian w profilu użytkownika oraz interakcji z wcześniejszymi rekomendacjami.
 5. Integracja z API Spotify do synchronizacji danych o albumach, artystach i doświadczeniu muzycznym.
 6. Prosty i intuicyjny interfejs, zaprojektowany w podejściu mobile-first.
 7. Zapisywanie ostatnich wyników rekomendacji w profilu użytkownika.
 8. Automatyzacja testów jednostkowych oraz end-to-end, uruchamianych przy każdej zmianie kodu (GitHub Actions).
+9. Interaktywny sidepanel z rekomendacjami i systemem swipe right/swipe left (lubię/nie lubię) do zbierania opinii użytkowników.
+10. System uczenia się preferencji użytkownika na podstawie historii interakcji z rekomendacjami.
 
 ## 4. Granice produktu
-1. Brak możliwości oceniania rekomendacji (brak mechanizmu "lubię/nie lubię").
+1. ~~Brak możliwości oceniania rekomendacji (brak mechanizmu "lubię/nie lubię").~~
 2. Brak systemu społecznościowego (np. dodawanie znajomych, udostępnianie gustu).
 3. Brak zaawansowanego filtrowania wyników (np. według daty premiery, popularności).
 4. Brak personalizacji UI/UX w oparciu o indywidualny styl użytkownika.
-5. Brak historii przeglądanych lub odrzuconych rekomendacji.
+5. ~~Brak historii przeglądanych lub odrzuconych rekomendacji.~~
 6. Brak funkcji czatu z AI lub dynamicznej rozmowy (np. "co chcesz dziś obejrzeć?").
 
 ## 5. Historyjki użytkowników
@@ -58,7 +60,7 @@ US-004
 Tytuł: Generowanie rekomendacji  
 Opis: Jako użytkownik, chcę otrzymywać rekomendacje dotyczące muzyki i filmów na podstawie moich preferencji, aby szybko znaleźć treści odpowiadające mojemu gustowi.  
 Kryteria akceptacji:  
-- System generuje rekomendacje na podstawie profilu użytkownika.  
+- System generuje rekomendacje na podstawie profilu użytkownika oraz historii interakcji.
 - Rekomendacje są generowane przy logowaniu oraz podczas aktualizacji profilu.  
 - Użytkownik może zobaczyć listę propozycji dopasowanych do jego preferencji.
 
@@ -74,11 +76,30 @@ US-006
 Tytuł: Dynamiczna aktualizacja rekomendacji  
 Opis: Jako użytkownik, chcę, aby rekomendacje były aktualizowane dynamicznie w odpowiedzi na zmiany w moich preferencjach, aby zawsze otrzymywać najnowsze propozycje.  
 Kryteria akceptacji:  
-- System automatycznie aktualizuje rekomendacje po zmianie preferencji w profilu.  
+- System automatycznie aktualizuje rekomendacje po zmianie preferencji w profilu.
+- System aktualizuje rekomendacje na podstawie interakcji użytkownika z poprzednimi propozycjami.
 - Użytkownik otrzymuje nowe rekomendacje bez konieczności ponownego logowania.
+
+US-007  
+Tytuł: Interakcja z rekomendacjami poprzez system swipe  
+Opis: Jako użytkownik, chcę móc łatwo oceniać proponowane mi rekomendacje poprzez system swipe right/swipe left, aby algorytm lepiej poznał mój gust.  
+Kryteria akceptacji:  
+- Użytkownik widzi rekomendacje w formie kart w sidepanelu aplikacji.
+- Użytkownik może przeciągnąć kartę w prawo (lubię) lub w lewo (nie lubię).
+- System zapisuje ocenę użytkownika i wykorzystuje ją do ulepszenia przyszłych rekomendacji.
+- Po ocenieniu wszystkich rekomendacji, system generuje nowe propozycje.
+
+US-008  
+Tytuł: Historia ocenionych rekomendacji  
+Opis: Jako użytkownik, chcę mieć dostęp do historii moich ocenionych rekomendacji, aby móc wrócić do pozytywnie ocenionych treści.  
+Kryteria akceptacji:  
+- System przechowuje historię wszystkich ocenionych rekomendacji.
+- Użytkownik ma dostęp do listy swoich polubionych rekomendacji.
+- Użytkownik może filtrować historię według typu (muzyka/film) oraz oceny (pozytywna/negatywna).
 
 ## 6. Metryki sukcesu
 1. Co najmniej 90% użytkowników posiada w pełni uzupełnione profile z poprawnymi danymi dotyczącymi preferencji.
 2. Co najmniej 75% użytkowników otrzymuje spersonalizowane rekomendacje.
-3. System działa stabilnie, a jakość rekomendacji jest monitorowana przez automatyczne testy jednostkowe i end-to-end uruchamiane przy każdej zmianie kodu.
-4. Integracja z API Spotify oraz zabezpieczenie 2FA działają nieprzerwanie w tle, zapewniając płynność i bezpieczeństwo operacji.
+3. Co najmniej 60% użytkowników aktywnie korzysta z systemu oceniania rekomendacji (swipe right/swipe left).
+4. System działa stabilnie, a jakość rekomendacji jest monitorowana przez automatyczne testy jednostkowe i end-to-end uruchamiane przy każdej zmianie kodu.
+5. Integracja z API Spotify oraz zabezpieczenie 2FA działają nieprzerwanie w tle, zapewniając płynność i bezpieczeństwo operacji.

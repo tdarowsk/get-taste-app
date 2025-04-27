@@ -118,6 +118,7 @@ export interface RecommendationDTO {
   type: "music" | "film";
   data: RecommendationDataDetails; // Changed from 'any' to specific type
   created_at: string;
+  feedback?: RecommendationFeedback; // Added feedback field
 }
 
 /** Detailed structure for recommendation data */
@@ -140,6 +141,48 @@ export interface RecommendationItem {
 export interface CreateRecommendationsCommand {
   type: "music" | "film";
   force_refresh: boolean;
+}
+
+/** Enum for recommendation feedback type */
+export enum RecommendationFeedbackType {
+  LIKE = "like",
+  DISLIKE = "dislike",
+}
+
+/** Interface for recommendation feedback */
+export interface RecommendationFeedback {
+  id: number;
+  recommendation_id: number;
+  user_id: number;
+  feedback_type: RecommendationFeedbackType;
+  created_at: string;
+}
+
+/** Command Model for submitting recommendation feedback (POST /users/{id}/recommendations/{rec_id}/feedback) */
+export interface SubmitRecommendationFeedbackCommand {
+  feedback_type: RecommendationFeedbackType;
+}
+
+/** DTO for recommendation feedback history (GET /users/{id}/recommendation-history) */
+export interface RecommendationHistoryDTO {
+  data: RecommendationWithFeedbackDTO[];
+  count: number;
+  limit: number;
+  offset: number;
+}
+
+/** DTO for recommendation with feedback details */
+export interface RecommendationWithFeedbackDTO {
+  recommendation: RecommendationDTO;
+  feedback: RecommendationFeedback;
+}
+
+/** Command Model for filtering recommendation history (GET /users/{id}/recommendation-history) */
+export interface FilterRecommendationHistoryCommand {
+  type?: "music" | "film";
+  feedback_type?: RecommendationFeedbackType;
+  limit?: number;
+  offset?: number;
 }
 
 /* =========================

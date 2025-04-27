@@ -1,0 +1,326 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import { Alert, Spinner, Badge } from "../components/airbnb-design-system/Feedback";
+import { Button } from "../components/airbnb-design-system/Button";
+import { Input } from "../components/airbnb-design-system/Input";
+import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "../components/airbnb-design-system/Card";
+import { Progress, CircularProgress } from "../components/airbnb-design-system/Progress";
+import { Heading, Text } from "../components/airbnb-design-system/Typography";
+import { List, ListItem } from "../components/airbnb-design-system/List";
+import { Toast } from "../components/airbnb-design-system/Feedback";
+import { Modal, ModalHeader, ModalContent, ModalFooter } from "../components/airbnb-design-system/Modal";
+import { Navigation } from "../components/airbnb-design-system/Navigation";
+import { Form } from "../components/airbnb-design-system/Form";
+---
+
+<MainLayout title="Airbnb Design System | Kitchen Sink">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8 text-rose-600">Airbnb Design System - Kitchen Sink</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Typography Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Typography</h2>
+        <div class="space-y-4">
+          <Heading level={1} client:load>Heading 1</Heading>
+          <Heading level={2} client:load>Heading 2</Heading>
+          <Heading level={3} client:load>Heading 3</Heading>
+          <Text variant="body" client:load>Body text example with the Airbnb Design System.</Text>
+          <Text variant="caption" client:load>Caption text for smaller details.</Text>
+        </div>
+      </section>
+
+      <!-- Button Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Buttons</h2>
+        <div class="flex flex-wrap gap-3">
+          <Button variant="primary" client:load>Primary</Button>
+          <Button variant="secondary" client:load>Secondary</Button>
+          <Button variant="tertiary" client:load>Tertiary</Button>
+          <Button variant="text" client:load>Text</Button>
+          <Button variant="primary" size="small" client:load>Small</Button>
+          <Button variant="primary" size="large" client:load>Large</Button>
+          <Button variant="primary" disabled client:load>Disabled</Button>
+        </div>
+      </section>
+
+      <!-- Input Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Inputs</h2>
+        <div class="space-y-4">
+          <Input placeholder="Standard input" client:load />
+          <Input placeholder="Disabled input" disabled client:load />
+          <Input placeholder="With label" label="Email address" client:load />
+          <Input placeholder="With error" error="This field is required" client:load />
+        </div>
+      </section>
+
+      <!-- Alert Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Alerts</h2>
+        <div class="space-y-4">
+          <Alert type="info" title="Information" client:load>This is an information alert.</Alert>
+          <Alert type="success" title="Success" client:load>This is a success alert.</Alert>
+          <Alert type="warning" title="Warning" client:load>This is a warning alert.</Alert>
+          <Alert type="error" title="Error" client:load>This is an error alert.</Alert>
+        </div>
+      </section>
+
+      <!-- Badge Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Badges</h2>
+        <div class="flex flex-wrap gap-3">
+          <Badge client:load>Default</Badge>
+          <Badge variant="success" client:load>Success</Badge>
+          <Badge variant="warning" client:load>Warning</Badge>
+          <Badge variant="error" client:load>Error</Badge>
+          <Badge variant="info" client:load>Info</Badge>
+          <Badge variant="outline" client:load>Outline</Badge>
+        </div>
+      </section>
+
+      <!-- Progress Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Progress</h2>
+        <div class="space-y-6">
+          <div>
+            <h3 class="text-lg font-medium mb-2">Linear Progress</h3>
+            <Progress value={30} max={100} shape="rounded" client:load />
+            <div class="h-4"></div>
+            <Progress value={60} max={100} shape="rounded" color="secondary" client:load />
+            <div class="h-4"></div>
+            <Progress value={90} max={100} shape="rounded" color="success" client:load />
+          </div>
+          <div>
+            <h3 class="text-lg font-medium mb-2">Circular Progress</h3>
+            <div class="flex gap-4">
+              <CircularProgress value={25} size={32} client:load />
+              <CircularProgress value={50} size={48} client:load />
+              <CircularProgress value={75} size={64} client:load />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Spinner Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Spinners</h2>
+        <div class="flex items-center gap-6">
+          <Spinner size="small" client:load />
+          <Spinner size="medium" client:load />
+          <Spinner size="large" client:load />
+          <Spinner size="medium" color="gray" client:load />
+          <Spinner size="medium" label="Loading..." client:load />
+        </div>
+      </section>
+
+      <!-- Card Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Cards</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Card shadowed hoverable client:load>
+              <CardHeader client:load>
+                <CardTitle client:load>Standard Card</CardTitle>
+              </CardHeader>
+              <CardContent client:load>
+                <p>This is the content of a standard card component.</p>
+              </CardContent>
+              <CardFooter client:load>
+                <div class="flex justify-end w-full">
+                  <Button variant="primary" size="small" client:load>Action</Button>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
+
+          <div>
+            <Card shadowed hoverable client:load>
+              <div>
+                <img
+                  src="https://a0.muscache.com/im/pictures/miso/Hosting-53733023/original/6d15108d-1a56-45d4-9c75-db9314484bdb.jpeg?im_w=720"
+                  alt="Sample Image"
+                  class="w-full h-40 object-cover"
+                />
+              </div>
+              <CardContent client:load>
+                <CardTitle client:load>Card with Image</CardTitle>
+                <p>Card with an image at the top.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <!-- List Section -->
+      <section class="border rounded-lg p-6 shadow-sm">
+        <h2 class="text-2xl font-semibold mb-4">Lists</h2>
+        <List client:load>
+          <ListItem client:load>First list item</ListItem>
+          <ListItem client:load>Second list item</ListItem>
+          <ListItem client:load>Third list item</ListItem>
+        </List>
+      </section>
+    </div>
+
+    <!-- Toast Demo Section -->
+    <section class="mt-8 border rounded-lg p-6 shadow-sm">
+      <h2 class="text-2xl font-semibold mb-4">Toast Notifications (Demo Controls)</h2>
+      <div class="flex flex-wrap gap-3">
+        <Button id="show-info-toast" variant="primary" client:load>Show Info Toast</Button>
+        <Button id="show-success-toast" variant="secondary" client:load>Show Success Toast</Button>
+        <Button id="show-warning-toast" variant="tertiary" client:load>Show Warning Toast</Button>
+        <Button id="show-error-toast" variant="text" client:load>Show Error Toast</Button>
+      </div>
+    </section>
+
+    <!-- Modal Demo Section -->
+    <section class="mt-8 border rounded-lg p-6 shadow-sm">
+      <h2 class="text-2xl font-semibold mb-4">Modal Dialog (Demo)</h2>
+      <div class="text-center">
+        <Button id="open-modal-btn" variant="primary" client:load>Open Modal</Button>
+      </div>
+
+      <div id="modal-container"></div>
+    </section>
+  </div>
+
+  <script>
+    // Toast Demo
+    document.addEventListener("DOMContentLoaded", () => {
+      // Toast button handlers
+      document.getElementById("show-info-toast")?.addEventListener("click", () => showToast("info"));
+      document.getElementById("show-success-toast")?.addEventListener("click", () => showToast("success"));
+      document.getElementById("show-warning-toast")?.addEventListener("click", () => showToast("warning"));
+      document.getElementById("show-error-toast")?.addEventListener("click", () => showToast("error"));
+
+      // Modal button handler
+      setupModalDemo();
+    });
+
+    function showToast(type: "info" | "success" | "warning" | "error"): void {
+      // Create toast element
+      const toast = document.createElement("div");
+      toast.className = `fixed z-50 max-w-sm transform transition-all duration-300 ease-in-out bottom-4 left-1/2 -translate-x-1/2 opacity-0 translate-y-4`;
+
+      // Set background color based on type
+      let bgColor = "";
+      let message = "";
+
+      switch (type) {
+        case "info":
+          bgColor = "bg-blue-600";
+          message = "This is an information notification";
+          break;
+        case "success":
+          bgColor = "bg-green-600";
+          message = "Action completed successfully!";
+          break;
+        case "warning":
+          bgColor = "bg-yellow-600";
+          message = "Warning: This action may have consequences";
+          break;
+        case "error":
+          bgColor = "bg-red-600";
+          message = "Error: Something went wrong";
+          break;
+      }
+
+      // Create toast content
+      toast.innerHTML = `
+        <div class="flex items-center shadow-lg rounded-lg text-white pr-2 pl-3 py-2 ${bgColor}">
+          <div class="flex-1 mr-2 text-sm py-1">${message}</div>
+          <button type="button" class="flex-shrink-0 p-1 rounded-full hover:bg-white/20 transition-colors" 
+                  onclick="this.parentElement.parentElement.remove()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      // Add to DOM
+      document.body.appendChild(toast);
+
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove("opacity-0", "translate-y-4");
+        toast.classList.add("opacity-100", "translate-y-0");
+      }, 10);
+
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-4");
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3000);
+    }
+
+    // Modal Demo - Client-side only
+    function setupModalDemo(): void {
+      const openModalBtn = document.getElementById("open-modal-btn");
+      const modalContainer = document.getElementById("modal-container");
+
+      if (openModalBtn && modalContainer) {
+        openModalBtn.addEventListener("click", () => {
+          // Create a custom modal since we can't directly use the React component in script
+          const modal = document.createElement("div");
+          modal.className =
+            "fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black/60 backdrop-blur-sm";
+          modal.setAttribute("role", "dialog");
+          modal.setAttribute("aria-modal", "true");
+
+          modal.innerHTML = `
+            <div class="w-full max-w-md bg-white rounded-xl shadow-2xl transform transition-all duration-300 animate-scale-in">
+              <div class="flex items-center justify-between px-6 pt-6 pb-4">
+                <h2 class="text-xl font-semibold text-gray-900">Example Modal</h2>
+                <button type="button" class="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors close-modal-btn">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div class="px-6 py-2">
+                <p class="py-4">This is an example modal dialog from the Airbnb Design System.</p>
+              </div>
+              <div class="flex justify-end gap-3 px-6 pt-4 pb-6">
+                <button class="inline-flex items-center justify-center font-medium transition-all rounded-md px-4 py-2 gap-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 shadow-sm text-sm close-modal-btn">
+                  Cancel
+                </button>
+                <button class="inline-flex items-center justify-center font-medium transition-all rounded-md px-4 py-2 gap-2 bg-rose-500 hover:bg-rose-600 text-white shadow-sm text-sm close-modal-btn">
+                  Confirm
+                </button>
+              </div>
+            </div>
+          `;
+
+          modalContainer.appendChild(modal);
+
+          // Close modal functionality
+          const closeButtons = modal.querySelectorAll(".close-modal-btn");
+          closeButtons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+              modal.classList.add("opacity-0");
+              setTimeout(() => {
+                modal.remove();
+              }, 300);
+            });
+          });
+
+          // Close on backdrop click
+          modal.addEventListener("click", (e) => {
+            if (e.target === modal) {
+              modal.classList.add("opacity-0");
+              setTimeout(() => {
+                modal.remove();
+              }, 300);
+            }
+          });
+        });
+      }
+    }
+  </script>
+</MainLayout>

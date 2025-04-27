@@ -1,5 +1,5 @@
 import { supabaseClient } from "../../db/supabase.client";
-import type { SpotifyDataDTO, SpotifySyncCommand, SpotifySyncResponseDTO } from "../../types";
+import type { SpotifyDataDTO, SpotifySyncCommand, SpotifySyncResponseDTO, RecommendationItem } from "../../types";
 import { z } from "zod";
 
 // Schema for Spotify data validation
@@ -190,4 +190,171 @@ async function fetchSpotifyData(): Promise<SpotifyDataDetails> {
       },
     ],
   };
+}
+
+/**
+ * Service for interacting with the Spotify API
+ */
+export class SpotifyService {
+  private readonly API_BASE_URL = "https://api.spotify.com/v1";
+  private accessToken: string | null = null;
+
+  /**
+   * Gets the artist's albums from Spotify API
+   * @param artistId The Spotify artist ID
+   * @param includeGroups Optional filter for album types (album, single, appears_on, compilation)
+   * @param market Optional market code (ISO 3166-1 alpha-2 country code)
+   * @param limit Maximum number of albums to return (default: 10, max: 50)
+   */
+  async getArtistAlbums(
+    artistId: string,
+    includeGroups = "album,single",
+    market = "US",
+    limit = 10
+  ): Promise<RecommendationItem[]> {
+    try {
+      // In a real implementation, we would:
+      // 1. Get a valid access token from our auth system
+      // 2. Make the API request to Spotify
+      // 3. Transform and return the data
+
+      // For now, we'll simulate the response from Spotify
+      return this.getMockArtistAlbums(artistId);
+    } catch (error) {
+      console.error("Error fetching artist albums from Spotify:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Mock function to simulate getting artist albums from Spotify
+   * This is used for demonstration purposes until actual API integration is implemented
+   */
+  private getMockArtistAlbums(artistId: string): RecommendationItem[] {
+    // Mock data based on the Spotify API response structure
+    const artistName = this.getArtistNameById(artistId);
+
+    return [
+      {
+        id: `album-${artistId}-1`,
+        name: `${artistName} - Album 1`,
+        type: "album",
+        details: {
+          artist: artistName,
+          releaseDate: "2022-05-20",
+          totalTracks: 12,
+          imageUrl: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
+        },
+      },
+      {
+        id: `album-${artistId}-2`,
+        name: `${artistName} - Album 2`,
+        type: "album",
+        details: {
+          artist: artistName,
+          releaseDate: "2020-08-15",
+          totalTracks: 10,
+          imageUrl: "https://i.scdn.co/image/ab67616d00001e02b5d60a94c44a87d9c1768ba2",
+        },
+      },
+      {
+        id: `album-${artistId}-3`,
+        name: `${artistName} - Single Collection`,
+        type: "single",
+        details: {
+          artist: artistName,
+          releaseDate: "2021-03-10",
+          totalTracks: 5,
+          imageUrl: "https://i.scdn.co/image/ab67616d00001e02dbfc8e57c44bb54e10d7c6c7",
+        },
+      },
+    ];
+  }
+
+  /**
+   * Helper method to get artist name from ID
+   * In a real implementation, this would use a database lookup or API call
+   */
+  private getArtistNameById(artistId: string): string {
+    const artistMap: Record<string, string> = {
+      "0TnOYISbd1XYRBk9myaseg": "Drake",
+      "6vWDO969PvNqNYHIOW5v0m": "Beyoncé",
+      "1Xyo4u8uXC1ZmMpatF05PJ": "The Weeknd",
+      "6qqNVTkY8uBg9cP3Jd7DAH": "Billie Eilish",
+      "6M2wZ9GZgrQXHCFfjv46we": "Dua Lipa",
+      "5K4W6rqBFWDnAN6FQUkS6x": "Kanye West",
+      default: "Unknown Artist",
+    };
+
+    return artistMap[artistId] || artistMap["default"];
+  }
+
+  /**
+   * Gets track information from Spotify API
+   * @param trackId The Spotify track ID
+   * @param market Optional market code (ISO 3166-1 alpha-2 country code)
+   */
+  async getTrackInfo(trackId: string, market = "US"): Promise<RecommendationItem | null> {
+    try {
+      // In a real implementation, we would:
+      // 1. Get a valid access token
+      // 2. Make the API request to Spotify
+      // 3. Transform and return the data
+
+      // For now, simulate the Spotify API response
+      return this.getMockTrackInfo(trackId);
+    } catch (error) {
+      console.error("Error fetching track info from Spotify:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Mock function to simulate getting track information from Spotify
+   */
+  private getMockTrackInfo(trackId: string): RecommendationItem {
+    // Find the track name based on ID
+    const trackMap: Record<string, { name: string; artist: string; imageUrl: string }> = {
+      "0VjIjW4GlUZAMYd2vXMi3b": {
+        name: "Blinding Lights",
+        artist: "The Weeknd",
+        imageUrl: "https://i.scdn.co/image/ab67616d00001e02c8b444df094279e70d0ed856",
+      },
+      "2Fxmhks0bxGSBdJ92vM42m": {
+        name: "Bad Guy",
+        artist: "Billie Eilish",
+        imageUrl: "https://i.scdn.co/image/ab67616d00001e02deae7d931928fc1543e70203",
+      },
+      "39LLxExYz6ewLAcYrzQQyP": {
+        name: "Levitating",
+        artist: "Dua Lipa",
+        imageUrl: "https://i.scdn.co/image/ab67616d00001e0282b243023e9806c15b5f8130",
+      },
+      "5HCyWlXZPP0y6Gqq8TgA20": {
+        name: "Stay",
+        artist: "The Kid LAROI & Justin Bieber",
+        imageUrl: "https://i.scdn.co/image/ab67616d00001e02ca99583f5142d370240b8ada",
+      },
+      default: {
+        name: "Unknown Track",
+        artist: "Unknown Artist",
+        imageUrl: "https://i.scdn.co/image/ab67616d00001e02000000000000000000000000",
+      },
+    };
+
+    const trackInfo = trackMap[trackId] || trackMap["default"];
+
+    return {
+      id: `track-${trackId}`,
+      name: trackInfo.name,
+      type: "song",
+      details: {
+        artist: trackInfo.artist,
+        imageUrl: trackInfo.imageUrl,
+        spotifyId: trackId,
+        popularity: 90,
+        releaseDate: "2020-01-01",
+      },
+    };
+  }
 }
