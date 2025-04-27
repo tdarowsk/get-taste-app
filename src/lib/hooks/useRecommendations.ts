@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RecommendationDTO } from "../../types";
-import { mockRecommendations, mockFilmRecommendations } from "./mockData";
+import type { RecommendationDTO, RecommendationHistoryDTO } from "../../types";
 
 interface UseRecommendationsOptions {
   userId: number;
@@ -8,35 +7,20 @@ interface UseRecommendationsOptions {
   isNewUser?: boolean;
 }
 
-export function useRecommendations({ userId, type, isNewUser = false }: UseRecommendationsOptions) {
-  return useQuery({
-    queryKey: ["recommendations", userId, type, isNewUser],
+export function useRecommendations({ userId, type }: UseRecommendationsOptions) {
+  return useQuery<RecommendationDTO[]>({
+    queryKey: ["likedRecommendations", userId, type],
     queryFn: async () => {
-      try {
-        const url = new URL(`/api/users/${userId}/recommendations`, window.location.origin);
-        url.searchParams.append("type", type);
-
-        if (isNewUser) {
-          url.searchParams.append("is_new_user", "true");
-        }
-
-        const response = await fetch(url.toString());
-
-        if (response.status === 404) {
-          console.log(`API endpoint not found, using mock data for ${type} recommendations`);
-          return type === "music" ? mockRecommendations : mockFilmRecommendations;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch recommendations: ${response.statusText}`);
-        }
-
-        return (await response.json()) as RecommendationDTO[];
-      } catch (error) {
-        console.error(`Error fetching ${type} recommendations:`, error);
-        // Return mock data in case of any error
-        return type === "music" ? mockRecommendations : mockFilmRecommendations;
+      const url = new URL(`/api/users/${userId}/recommendation-history`, window.location.origin);
+      url.searchParams.append("feedback_type", "like");
+      url.searchParams.append("type", type);
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error(`Failed to fetch liked recommendations: ${response.statusText}`);
       }
+      const data = (await response.json()) as RecommendationHistoryDTO;
+      // Extract the recommendation objects from history
+      return data.data.map((h) => h.recommendation);
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,

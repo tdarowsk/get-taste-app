@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useUserPreferences } from "./useUserPreferences";
 import { useRecommendations } from "./useRecommendations";
 import { useUpdatePreferences } from "./useUpdatePreferences";
@@ -9,6 +9,7 @@ export function useDashboard(userId: number) {
   const [activeType, setActiveType] = useState<"music" | "film">("music");
   const [isMobilePreferencesOpen, setMobilePreferencesOpen] = useState(false);
   const [isNewUser, setIsNewUser] = useState(true);
+  const lastRefreshTimeRef = useRef<number>(0);
 
   const preferencesQuery = useUserPreferences(userId);
 
@@ -41,6 +42,14 @@ export function useDashboard(userId: number) {
   const generateRecommendationsMutation = useGenerateRecommendations();
 
   const refreshRecommendations = useCallback(() => {
+    // Prevent multiple refreshes within 5 seconds
+    const now = Date.now();
+    if (now - lastRefreshTimeRef.current < 5000) {
+      console.log("Skipping refresh, too soon since last refresh");
+      return;
+    }
+
+    lastRefreshTimeRef.current = now;
     generateRecommendationsMutation.mutate({
       userId,
       type: activeType,

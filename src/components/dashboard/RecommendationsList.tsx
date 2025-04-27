@@ -14,13 +14,13 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
   // Handle loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px] rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <div className="flex items-center justify-center min-h-[300px] bg-white/5 backdrop-blur-sm">
         <div className="flex flex-col items-center">
           <div className="relative h-12 w-12 mb-4">
-            <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
-            <div className="absolute inset-3 rounded-full border-2 border-primary/30"></div>
+            <div className="absolute inset-0 rounded-full border-t-2 border-purple-500 animate-spin"></div>
+            <div className="absolute inset-3 rounded-full border-2 border-purple-500/30"></div>
           </div>
-          <p className="text-muted-foreground font-medium">
+          <p className="text-gray-300 font-medium">
             {isNewUser ? "Loading popular recommendations..." : "Loading your personalized recommendations..."}
           </p>
         </div>
@@ -31,10 +31,10 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
   // Handle empty state
   if (!recommendations || recommendations.length === 0)
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        <div className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 p-6 rounded-full mb-6">
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
+        <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-full mb-6 border border-white/10">
           <svg
-            className="h-12 w-12 text-primary/70"
+            className="h-12 w-12 text-purple-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -48,13 +48,13 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
             ></path>
           </svg>
         </div>
-        <h3 className="text-xl font-semibold mb-2">No {type} recommendations yet</h3>
-        <p className="text-muted-foreground max-w-md mb-6">
+        <h3 className="text-xl font-semibold mb-2 text-white">No {type} recommendations yet</h3>
+        <p className="text-gray-300 max-w-md mb-6">
           {isNewUser
             ? "We're having trouble loading popular recommendations. Please try refreshing."
             : "Update your preferences to get personalized recommendations tailored to your taste"}
         </p>
-        <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+        <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md">
           {isNewUser ? "Refresh" : "Set Your Preferences"}
         </button>
       </div>
@@ -65,9 +65,9 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
 
   if (filteredRecommendations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        <h3 className="text-xl font-semibold mb-2">No {type} recommendations available</h3>
-        <p className="text-muted-foreground max-w-md mb-6">
+      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
+        <h3 className="text-xl font-semibold mb-2 text-white">No {type} recommendations available</h3>
+        <p className="text-gray-300 max-w-md mb-6">
           {isNewUser
             ? `Try switching to ${type === "music" ? "film" : "music"} recommendations or refresh the page`
             : "Try switching to a different category or updating your preferences"}
@@ -88,20 +88,20 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
   );
 
   return (
-    <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
-      <h3 className="text-lg font-medium mb-3 text-gray-800 dark:text-gray-200">
+    <div className="p-6 bg-white/5 backdrop-blur-sm rounded-b-lg">
+      <h3 className="text-lg font-medium mb-3 text-white">
         {viewModels[0]?.title || (type === "music" ? "Music Recommendations" : "Film Recommendations")}
       </h3>
 
       {isNewUser && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-xs text-gray-300 mb-4">
           {type === "music"
             ? "Popular music based on current trends and chart-toppers"
             : "Popular films that are trending and critically acclaimed"}
         </p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
         {allItems.map((item) => (
           <RecommendationCard key={item.id} item={item} type={item.type as "music" | "film"} />
         ))}

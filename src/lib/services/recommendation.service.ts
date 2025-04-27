@@ -1,6 +1,21 @@
 import { supabaseClient } from "../../db/supabase.client";
-import type { CreateRecommendationsCommand, RecommendationDTO } from "../../types";
+import type { CreateRecommendationsCommand, RecommendationDTO, RecommendationDataDetails } from "../../types";
 import type { Database } from "../../db/database.types";
+
+// Define types for TMDB API responses
+interface TmdbTrendingResponse {
+  results: { id: number }[];
+}
+interface TmdbMovieDetail {
+  id: number;
+  title: string;
+  credits: {
+    crew: { job: string; name: string }[];
+    cast: { name: string }[];
+  };
+  poster_path: string | null;
+  overview: string | null;
+}
 
 type MusicPreferences = Database["public"]["Tables"]["music_preferences"]["Row"];
 type FilmPreferences = Database["public"]["Tables"]["film_preferences"]["Row"];
@@ -56,7 +71,7 @@ export const RecommendationService = {
         id: data.id,
         user_id: Number(data.user_id), // Konwersja string ID na number zgodnie z DTO
         type: data.type as "music" | "film",
-        data: data.data,
+        data: data.data as RecommendationDataDetails,
         created_at: data.created_at,
       };
     } catch (error) {
@@ -90,7 +105,7 @@ export const RecommendationService = {
       id: data.id,
       user_id: Number(userId),
       type: data.type as "music" | "film",
-      data: data.data,
+      data: data.data as RecommendationDataDetails,
       created_at: data.created_at,
     };
   },
@@ -120,30 +135,77 @@ export const RecommendationService = {
    * @param type - Typ rekomendacji ("music" lub "film")
    * @returns Dane wygenerowane przez Openrouter.ai
    */
-  async callOpenrouterAPI(preferences: MusicPreferences | FilmPreferences, type: "music" | "film"): Promise<Json> {
+  async callOpenrouterAPI(
+    preferences: MusicPreferences | FilmPreferences,
+    type: "music" | "film"
+  ): Promise<RecommendationDataDetails> {
     try {
-      // TODO: Implementacja rzeczywistego wywołania Openrouter.ai
-      // W tej wersji zwracamy przykładowe dane
+      if (type === "film") {
+        const tmdbApiKey = import.meta.env.TMDB_API_KEY;
+        if (!tmdbApiKey) {
+          throw new Error("TMDB_API_KEY is not set in environment variables");
+        }
+        // Fetch trending movies for the week
+        const trendingRes = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${tmdbApiKey}`);
+        if (!trendingRes.ok) {
+          throw new Error(`TMDB API error: ${trendingRes.statusText}`);
+        }
+        const trendingData = (await trendingRes.json()) as TmdbTrendingResponse;
+        const movies = trendingData.results.slice(0, 10);
 
-      if (type === "music") {
+        // Fetch details including credits for each movie
+        const items = await Promise.all(
+          movies.map(async (movie) => {
+            const detailRes = await fetch(
+              `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${tmdbApiKey}&append_to_response=credits`
+            );
+            if (!detailRes.ok) {
+              throw new Error(`TMDB detail API error for movie ${movie.id}: ${detailRes.statusText}`);
+            }
+            const detailData = (await detailRes.json()) as TmdbMovieDetail;
+            const director = detailData.credits.crew.find((c) => c.job === "Director")?.name || null;
+            const writers = detailData.credits.crew
+              .filter((c) => ["Screenplay", "Writer"].includes(c.job))
+              .map((c) => c.name);
+            const screenwriter = writers.length ? writers.join(", ") : null;
+            const cast = detailData.credits.cast.slice(0, 5).map((c) => c.name);
+            const imageUrl = detailData.poster_path ? `https://image.tmdb.org/t/p/w500${detailData.poster_path}` : null;
+            const description = detailData.overview || null;
+
+            return {
+              id: String(detailData.id),
+              name: detailData.title,
+              type,
+              details: {
+                director,
+                screenwriter,
+                cast,
+                imageUrl,
+                description,
+              },
+            };
+          })
+        );
+
         return {
-          recommendations: [
-            { title: "Przykładowy album 1", artist: "Artysta 1", genre: "Rock" },
-            { title: "Przykładowy album 2", artist: "Artysta 2", genre: "Pop" },
-            { title: "Przykładowy album 3", artist: "Artysta 3", genre: "Jazz" },
-          ],
-        };
-      } else {
-        return {
-          recommendations: [
-            { title: "Przykładowy film 1", director: "Reżyser 1", genre: "Dramat" },
-            { title: "Przykładowy film 2", director: "Reżyser 2", genre: "Komedia" },
-            { title: "Przykładowy film 3", director: "Reżyser 3", genre: "Akcja" },
-          ],
+          title: "Trending Films",
+          description: "Popular movies this week",
+          items,
         };
       }
+
+      if (type === "music") {
+        // Stub for music - implement external API later
+        return {
+          title: "Music Recommendations",
+          description: "Sample music recommendations",
+          items: [],
+        };
+      }
+
+      return { items: [] };
     } catch (error) {
-      console.error(`Błąd podczas komunikacji z Openrouter.ai: ${error}`);
+      console.error(`Błąd podczas komunikacji z TMDB/API: ${error}`);
       throw new Error("Nie udało się wygenerować rekomendacji");
     }
   },
