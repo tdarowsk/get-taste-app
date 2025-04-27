@@ -29,11 +29,16 @@ The primary resources and their corresponding database tables are:
 7. **SpotifyData** (table: `SpotifyData`)
    - Fields: `id`, `user_id` (FK to Users), `album_id`, `artist_id`, `data` (JSONB), `created_at`.
 
+8. **RecommendationsFeedback** (table: `recommendations_feedback`)
+   - Fields: `id`, `recommendation_id` (FK to Recommendations), `user_id` (FK to Users), `feedback_type` (must be either 'like' or 'dislike'), `created_at`.
+
 *Additional Notes on Schema:*
 - Relationships include one-to-one (Users ⇄ User2FA), one-to-(zero or one) for preferences tables, and one-to-many for Recommendations and SpotifyData.
-- Unique indices exist on `Users.email`, `Users.nick`, and `Sessions.token`.
-- Check constraints in `Users` (for `nick`) and `Recommendations` (for `type`) ensure data validity.
+- One-to-many relationship between Recommendations and RecommendationsFeedback (a recommendation can have multiple feedback entries).
+- Unique indices exist on `Users.email`, `Users.nick`, `Sessions.token`, and (`recommendations_feedback.recommendation_id`, `recommendations_feedback.user_id`).
+- Check constraints in `Users` (for `nick`), `Recommendations` (for `type`), and `recommendations_feedback` (for `feedback_type`) ensure data validity.
 - Row Level Security (RLS) policies are assumed to be in place for enforcing per-user access.
+- A database view `recommendation_history` combines Recommendations and RecommendationsFeedback for efficient querying of a user's recommendation history with feedback.
 
 ---
 
@@ -160,7 +165,27 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
     ```
   - Response: JSON object containing the new recommendations.
   - Success Codes: 201 Created.
-  - Error Codes: 400 Bad Request, 500 Internal Server Error.
+  - Error Codes: 400 Bad Request, 500 Internal Server Error (with fallback to mocked recommendations in case of service failure).
+
+- **POST /users/{id}/recommendations/{rec_id}/feedback**
+  - Description: Submit user feedback (like/dislike) for a specific recommendation.
+  - URL Parameters: `id` (User ID), `rec_id` (Recommendation ID)
+  - Request Payload:
+    ```json
+    {
+      "feedback_type": "like"  // or "dislike"
+    }
+    ```
+  - Response: JSON object with the saved feedback information.
+  - Success Codes: 201 Created.
+  - Error Codes: 400 Bad Request, 404 Not Found, 401 Unauthorized.
+
+- **GET /users/{id}/recommendation-history**
+  - Description: Retrieve user's recommendation history with feedback information. Supports filtering by recommendation type, feedback type, and pagination.
+  - Query Parameters: `type` (optional: 'music' or 'film'), `feedback_type` (optional: 'like' or 'dislike'), `limit`, `offset`
+  - Response: JSON array of recommendation objects with feedback information.
+  - Success Codes: 200 OK.
+  - Error Codes: 400 Bad Request, 401 Unauthorized.
 
 ### 2.4. Spotify Integration
 
@@ -200,6 +225,9 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
     - `nick` must comply with the regex constraint and not exceed 20 characters.
   - **Recommendations:**
     - `type` field must be either 'music' or 'film'.
+  - **RecommendationsFeedback:**
+    - `feedback_type` field must be either 'like' or 'dislike'.
+    - Unique constraint on recommendation_id and user_id to prevent duplicate feedback.
   - **Preferences:**
     - Ensure arrays for genres, artists, and cast contain valid strings.
 
@@ -212,12 +240,17 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - **Recommendation Generation:**
     - Integration with Openrouter.ai for dynamic recommendations based on profile preferences.
     - Recommendations are refreshed on login and/or explicit request.
+    - Fallback mechanism provides mocked recommendations if API fails.
+  - **Recommendation Feedback:**
+    - Users can provide feedback on recommendations to enhance future suggestion quality.
+    - Feedback is stored and can be used to improve the recommendation algorithm.
   - **Spotify Synchronization:**
     - Backend triggers data sync with Spotify upon user login or via manual endpoint call to keep music data current.
 
 - **Error Handling:**
   - Consistent error responses using standard HTTP status codes (400, 401, 403, 404, 409, 500).
   - Detailed error messages for validation failures.
+  - Fallback mechanisms for critical endpoints to ensure continued application functionality.
 
 ---
 

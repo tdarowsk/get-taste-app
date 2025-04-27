@@ -293,4 +293,61 @@ $$ language plpgsql;
 create trigger update_users_updated_at
 before update on users
 for each row
-execute function update_updated_at_column(); 
+execute function update_updated_at_column();
+
+-- Insert sample test data
+-- Sample users with fixed UUIDs for testing
+insert into users (id, email, password_hash, nick, created_at, updated_at)
+values
+  ('00000000-0000-0000-0000-000000000001', 'john.doe@example.com', 'hashed_password_1', 'johndoe', now() - interval '30 days', now() - interval '30 days'),
+  ('00000000-0000-0000-0000-000000000002', 'jane.smith@example.com', 'hashed_password_2', 'janesmith', now() - interval '25 days', now() - interval '25 days');
+
+-- Sample music preferences
+insert into music_preferences (user_id, genres, artists)
+values
+  ('00000000-0000-0000-0000-000000000001', array['rock', 'indie', 'alternative'], array['Radiohead', 'Arctic Monkeys', 'The Strokes']),
+  ('00000000-0000-0000-0000-000000000002', array['pop', 'r&b', 'dance'], array['Beyoncé', 'Dua Lipa', 'The Weeknd']);
+
+-- Sample film preferences
+insert into film_preferences (user_id, genres, director, "cast", screenwriter)
+values
+  ('00000000-0000-0000-0000-000000000001', array['sci-fi', 'thriller', 'drama'], 'Christopher Nolan', array['Leonardo DiCaprio', 'Tom Hardy', 'Cillian Murphy'], 'Christopher Nolan'),
+  ('00000000-0000-0000-0000-000000000002', array['comedy', 'romance', 'drama'], 'Greta Gerwig', array['Saoirse Ronan', 'Timothée Chalamet', 'Emma Watson'], 'Greta Gerwig');
+
+-- Sample recommendations
+insert into recommendations (user_id, type, data, created_at)
+values
+  ('00000000-0000-0000-0000-000000000001', 'music', '{
+    "title": "Rock Classics You Might Like",
+    "description": "Based on your preference for rock music",
+    "items": [
+      {
+        "id": "song-1",
+        "name": "Paranoid Android",
+        "type": "song",
+        "details": {
+          "artist": "Radiohead",
+          "album": "OK Computer",
+          "year": 1997,
+          "genres": ["rock", "alternative", "art rock"]
+        }
+      }
+    ]
+  }'::jsonb, now() - interval '20 days'),
+  ('00000000-0000-0000-0000-000000000002', 'film', '{
+    "title": "Feel-Good Comedy Films",
+    "description": "Comedy and romance movies you might enjoy",
+    "items": [
+      {
+        "id": "movie-4",
+        "name": "Little Women",
+        "type": "movie",
+        "details": {
+          "director": "Greta Gerwig",
+          "year": 2019,
+          "genres": ["drama", "romance"],
+          "duration": 135
+        }
+      }
+    ]
+  }'::jsonb, now() - interval '12 days'); 

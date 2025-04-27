@@ -147,4 +147,68 @@ export const RecommendationService = {
       throw new Error("Nie udało się wygenerować rekomendacji");
     }
   },
+
+  /**
+   * Pobiera popularne rekomendacje dla nowych użytkowników bez preferencji.
+   * Może wykorzystywać zewnętrzne API trendów lub bazę danych najpopularniejszych pozycji.
+   *
+   * @param type - Typ rekomendacji ("music" lub "film")
+   * @returns Rekomendacje popularne w danej kategorii
+   */
+  async getPopularRecommendations(type: "music" | "film"): Promise<Json> {
+    try {
+      // TODO: W rzeczywistej implementacji możemy:
+      // 1. Skorzystać z API trendów Spotify dla muzyki
+      // 2. Skorzystać z API TMDB dla filmów
+      // 3. Pobierać dane z naszej bazy najczęściej lubianych pozycji
+      // 4. Połączyć kilka źródeł danych
+
+      if (type === "music") {
+        return {
+          popular: [
+            {
+              title: "Top Charting Artists",
+              description: "The most popular artists loved by millions of listeners worldwide.",
+              items: [
+                { id: "artist-1", name: "Drake", type: "artist", genres: ["hip hop", "rap"] },
+                { id: "artist-2", name: "Beyoncé", type: "artist", genres: ["r&b", "pop"] },
+              ],
+            },
+            {
+              title: "Trending Songs Right Now",
+              description: "Catch up with what everyone is listening to this week.",
+              items: [
+                { id: "song-1", name: "Blinding Lights", type: "song", artist: "The Weeknd" },
+                { id: "song-2", name: "Bad Guy", type: "song", artist: "Billie Eilish" },
+              ],
+            },
+          ],
+        };
+      } else {
+        return {
+          popular: [
+            {
+              title: "Highest Grossing Films of All Time",
+              description: "Blockbusters loved by audiences worldwide that broke box office records.",
+              items: [
+                { id: "movie-1", name: "Avengers: Endgame", type: "movie", year: 2019 },
+                { id: "movie-2", name: "Avatar", type: "movie", year: 2009 },
+              ],
+            },
+            {
+              title: "Trending Movies Everyone's Talking About",
+              description: "The most talked about films that are making waves in theaters and streaming.",
+              items: [
+                { id: "movie-3", name: "Dune", type: "movie", year: 2021 },
+                { id: "movie-4", name: "The Batman", type: "movie", year: 2022 },
+              ],
+            },
+          ],
+        };
+      }
+    } catch (error) {
+      console.error(`Błąd podczas pobierania popularnych rekomendacji: ${error}`);
+      throw new Error("Nie udało się pobrać popularnych rekomendacji");
+    }
+  },
 };
