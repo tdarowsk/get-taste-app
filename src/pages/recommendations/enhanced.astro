@@ -1,0 +1,32 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { ImprovedRecommendationsView } from "../../components/ImprovedRecommendationsView";
+import { createSupabaseServerInstance } from "../../db/supabase.client";
+
+// Utwórz instancję Supabase z odpowiednim kontekstem
+const supabase = createSupabaseServerInstance({
+  headers: Astro.request.headers,
+  cookies: Astro.cookies,
+});
+
+// Sprawdź sesję użytkownika
+const {
+  data: { session },
+  error,
+} = await supabase.auth.getSession();
+
+// Jeśli nie ma sesji lub wystąpił błąd, przekieruj na stronę logowania
+if (!session || error) {
+  return Astro.redirect("/login?redirect=/recommendations/enhanced");
+}
+
+// Użyj ID użytkownika z sesji
+const userId = session.user.id;
+console.log("User ID from session:", userId, "Type:", typeof userId);
+---
+
+<Layout title="Zaawansowane rekomendacje | getTaste">
+  <main>
+    <ImprovedRecommendationsView userId={userId} client:only="react" />
+  </main>
+</Layout>

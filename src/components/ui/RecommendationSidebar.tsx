@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { RecommendationDTO, RecommendationItem } from "../../types";
-import { RecommendationFeedbackType as FeedbackType } from "../../types";
+import { FeedbackType } from "../../types";
 import { mockMusicRecommendations, mockFilmRecommendations } from "../../mockData";
+import { UniqueRecommendationsService } from "../../lib/services/uniqueRecommendations.service";
 
 // Use imported mock data instead of local definitions
 const mockRecommendations: RecommendationDTO[] = [...mockMusicRecommendations, ...mockFilmRecommendations];
 
-// Define an interface for storing feedback history
-interface FeedbackHistory {
-  itemId: string; // Changed from recommendationId to itemId
-  timestamp: number; // Unix timestamp in milliseconds
-  feedbackType: FeedbackType;
-}
-
 // The time period for which items should not be shown after feedback (24 hours)
 const RECOMMENDATION_COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+interface FeedbackHistoryItem {
+  id: string;
+  timestamp: number;
+  feedbackType: FeedbackType;
+}
 
 interface ItemCardProps {
   item: RecommendationItem;
@@ -35,16 +35,16 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
     }
   }, [isActive, item.id]);
 
-  // Sprawdź, czy ten element był już kiedyś oceniony
+  // Check if this item has been rated before
   const hasBeenRatedBefore = () => {
     try {
       const storedHistory = localStorage.getItem(`item-feedback-history`);
       if (storedHistory) {
-        const history = JSON.parse(storedHistory) as FeedbackHistory[];
-        // Znajdź najnowszy feedback dla tego elementu (jeśli istnieje)
+        const history = JSON.parse(storedHistory) as FeedbackHistoryItem[];
+        // Find the most recent feedback for this item (if it exists)
         const previousFeedback = history
-          .filter((historyItem) => historyItem.itemId === item.id)
-          .sort((a, b) => b.timestamp - a.timestamp)[0];
+          .filter((historyItem: FeedbackHistoryItem) => historyItem.id === item.id)
+          .sort((a: FeedbackHistoryItem, b: FeedbackHistoryItem) => b.timestamp - a.timestamp)[0];
 
         return previousFeedback ? { exists: true, type: previousFeedback.feedbackType } : { exists: false };
       }
@@ -160,7 +160,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
 };
 
 interface RecommendationSidebarProps {
-  userId: number;
+  userId: string;
   className?: string;
   isNewUser?: boolean;
 }
@@ -171,143 +171,89 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [feedbackHistory, setFeedbackHistory] = useState<FeedbackHistory[]>([]);
-
-  // Load feedback history from localStorage on component mount
-  useEffect(() => {
-    const loadFeedbackHistory = () => {
-      try {
-        const storedHistory = localStorage.getItem(`item-feedback-history`);
-        if (storedHistory) {
-          setFeedbackHistory(JSON.parse(storedHistory));
-        }
-      } catch (err) {
-        console.error("Error loading feedback history from localStorage:", err);
-      }
-    };
-
-    loadFeedbackHistory();
-  }, []);
-
-  // Save feedback history to localStorage whenever it changes
-  useEffect(() => {
-    if (feedbackHistory.length > 0) {
-      try {
-        localStorage.setItem(`item-feedback-history`, JSON.stringify(feedbackHistory));
-      } catch (err) {
-        console.error("Error saving feedback history to localStorage:", err);
-      }
-    }
-  }, [feedbackHistory]);
-
-  // Filter out items that have received feedback recently
-  const filterItems = (items: RecommendationItem[]): RecommendationItem[] => {
-    const now = Date.now();
-
-    return items.filter((item) => {
-      // Check if this item has feedback that's not yet expired
-      const feedback = feedbackHistory.find((fb) => fb.itemId === item.id);
-      if (!feedback) return true; // No feedback, include it
-
-      // Check if the feedback is still in the cooldown period
-      return now - feedback.timestamp > RECOMMENDATION_COOLDOWN_PERIOD;
-    });
-  };
+  const [needMoreRecommendations, setNeedMoreRecommendations] = useState(false);
 
   // Fetch recommendations and extract items on component mount and when userId changes
   useEffect(() => {
-    const fetchRecommendations = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        // Build URL with query parameters
-        const url = new URL(`/api/users/${userId}/recommendations`, window.location.origin);
-
-        // Add is_new_user parameter for new users
-        if (isNewUser) {
-          url.searchParams.append("is_new_user", "true");
-        }
-
-        const response = await fetch(url.toString());
-        let recommendations: RecommendationDTO[] = [];
-
-        // If API returns 404 or any error, silently use mock data
-        if (!response.ok) {
-          console.log("API error or not found, using mock recommendations");
-          // Update user_id in mock recommendations
-          recommendations = mockRecommendations.map((rec) => ({
-            ...rec,
-            user_id: userId,
-            id: rec.id + Math.floor(Math.random() * 1000), // Ensure unique IDs
-          }));
-        } else {
-          // Parse API response
-          const data = await response.json();
-          if (data && data.length > 0) {
-            recommendations = data;
-          } else {
-            // If API returned empty results, use mocks
-            recommendations = mockRecommendations.map((rec) => ({
-              ...rec,
-              user_id: userId,
-              id: rec.id + Math.floor(Math.random() * 1000),
-            }));
-          }
-        }
-
-        // Extract all items from recommendations
-        const extractedItems: RecommendationItem[] = [];
-        recommendations.forEach((rec) => {
-          if (rec.data?.items && Array.isArray(rec.data.items)) {
-            // Add a unique ID to each item to ensure uniqueness across recommendations
-            const itemsWithUniqueIds = rec.data.items.map((item) => ({
-              ...item,
-              id: `${item.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            }));
-            extractedItems.push(...itemsWithUniqueIds);
-          }
-        });
-
-        // Shuffle the items for variety
-        const shuffledItems = extractedItems.sort(() => Math.random() - 0.5);
-
-        // Filter out items with recent feedback
-        const filteredItems = filterItems(shuffledItems);
-
-        setAllItems(filteredItems);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred");
-        console.error("Error fetching recommendations:", err);
-
-        // Use mock recommendations as fallback in case of error
-        const fallbackItems: RecommendationItem[] = [];
-        mockRecommendations.forEach((rec) => {
-          if (rec.data?.items && Array.isArray(rec.data.items)) {
-            // Add a unique ID to each item
-            const itemsWithUniqueIds = rec.data.items.map((item) => ({
-              ...item,
-              id: `${item.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            }));
-            fallbackItems.push(...itemsWithUniqueIds);
-          }
-        });
-
-        // Filter out items with recent feedback
-        const filteredItems = filterItems(fallbackItems);
-
-        setAllItems(filteredItems);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRecommendations();
+  }, [userId, isNewUser]);
+
+  // Fetch recommendations and filter them
+  const fetchRecommendations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log("Fetching recommendations for user:", userId);
+      // Build URL with query parameters
+      const url = new URL(`/api/users/${userId}/recommendations`, window.location.origin);
+
+      // Add is_new_user parameter for new users
+      if (isNewUser) {
+        url.searchParams.append("is_new_user", "true");
+      }
+
+      console.log("Request URL:", url.toString());
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        console.error("Failed to fetch recommendations:", response.status, response.statusText);
+        throw new Error(`Failed to fetch recommendations: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Received recommendations data:", data);
+
+      if (!data || data.length === 0) {
+        console.error("No recommendations available");
+        throw new Error("No recommendations available");
+      }
+
+      // Extract all items from recommendations
+      const extractedItems: RecommendationItem[] = [];
+      data.forEach((rec: RecommendationDTO) => {
+        if (rec.data?.items && Array.isArray(rec.data.items)) {
+          console.log("Processing recommendation:", rec);
+          // Add a unique ID to each item to ensure uniqueness across recommendations
+          const itemsWithUniqueIds = rec.data.items.map((item: RecommendationItem) => ({
+            ...item,
+            id: `${item.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          }));
+          extractedItems.push(...itemsWithUniqueIds);
+        }
+      });
+
+      console.log("Extracted items:", extractedItems);
+
+      // Shuffle the items for variety
+      const shuffledItems = extractedItems.sort(() => Math.random() - 0.5);
+      console.log("Shuffled items:", shuffledItems);
+
+      // Filter out items based on user's history (using async method to check server + local)
+      const filteredItems = await UniqueRecommendationsService.filterUniqueRecommendationsAsync(
+        userId,
+        shuffledItems,
+        RECOMMENDATION_COOLDOWN_PERIOD
+      );
+      console.log("Filtered items:", filteredItems);
+
+      // Check if we need more recommendations
+      setNeedMoreRecommendations(UniqueRecommendationsService.needsMoreRecommendations(filteredItems));
+
+      setAllItems(filteredItems);
+    } catch (err) {
+      console.error("Error in fetchRecommendations:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      setAllItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, [userId, isNewUser]);
 
   // Handle swipe action for an item
   const handleSwipe = async (itemId: string, feedbackType: FeedbackType) => {
+    console.log(`Processing swipe for item ${itemId} with feedback: ${feedbackType}`);
+
     try {
       // First update the current index to show the next item immediately
       if (currentIndex < allItems.length - 1) {
@@ -317,21 +263,82 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         setCurrentIndex(allItems.length);
       }
 
-      // Add to feedback history
-      setFeedbackHistory((prev) => [
-        ...prev,
-        {
-          itemId: itemId,
-          timestamp: Date.now(),
-          feedbackType: feedbackType,
-        },
-      ]);
+      // Add to feedback history using the service (saves to localStorage)
+      UniqueRecommendationsService.addToHistory(userId, itemId, feedbackType);
+      console.log(`Saved feedback to localStorage for item ${itemId}`);
 
       // Remove the item from the current list
       setAllItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
 
-      // TODO: If you want to send feedback to the server, you would need to
-      // implement a new endpoint for item feedback or modify the existing one
+      // Store feedback in the database
+      try {
+        // Try the primary endpoint first
+        let savedSuccessfully = false;
+        try {
+          console.log(`Attempting to save feedback to primary endpoint for item ${itemId}...`);
+          const primaryUrl = new URL(`/api/users/${userId}/item-feedback`, window.location.origin);
+          const primaryResponse = await fetch(primaryUrl.toString(), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              item_id: itemId,
+              feedback_type: feedbackType,
+            }),
+          });
+
+          if (primaryResponse.ok) {
+            console.log(`✅ Feedback saved to database successfully via primary endpoint for item ${itemId}`);
+            savedSuccessfully = true;
+          } else {
+            console.warn(
+              `❌ Failed to save feedback to primary endpoint: ${primaryResponse.status} ${primaryResponse.statusText}`
+            );
+          }
+        } catch (primaryError) {
+          console.warn("Error with primary feedback endpoint:", primaryError);
+        }
+
+        // If primary endpoint failed, try fallback
+        if (!savedSuccessfully) {
+          try {
+            console.log(`Attempting to save feedback to fallback endpoint for item ${itemId}...`);
+            const fallbackUrl = new URL(`/api/users/${userId}/recommendations/feedback`, window.location.origin);
+            const fallbackResponse = await fetch(fallbackUrl.toString(), {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                item_id: itemId,
+                feedback_type: feedbackType,
+              }),
+            });
+
+            if (fallbackResponse.ok) {
+              console.log(`✅ Feedback saved to fallback endpoint successfully for item ${itemId}`);
+              savedSuccessfully = true;
+            } else {
+              console.warn(
+                `❌ Fallback feedback endpoint also failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`
+              );
+            }
+          } catch (fallbackError) {
+            console.warn("Error with fallback feedback endpoint:", fallbackError);
+          }
+        }
+
+        // If both endpoints failed but we have localStorage, that's okay
+        if (!savedSuccessfully) {
+          console.log(
+            `⚠️ Could not save feedback to any API endpoint for item ${itemId}. Feedback is stored locally only.`
+          );
+        }
+      } catch (apiError) {
+        // Silent fail - feedback is still stored locally
+        console.warn("Could not send feedback to API, storing locally only", apiError);
+      }
     } catch (err) {
       console.error("Error processing item feedback:", err);
     }
@@ -339,154 +346,149 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
 
   // Clear feedback history
   const clearFeedbackHistory = () => {
-    setFeedbackHistory([]);
-    localStorage.removeItem(`item-feedback-history`);
+    UniqueRecommendationsService.clearHistory(userId);
     // Reset index to show all items
     setCurrentIndex(0);
+    // Refresh recommendations
+    fetchRecommendations();
   };
 
-  // Fetch more items if needed
-  const fetchMoreItems = useCallback(async () => {
+  // Fetch more recommendations
+  const fetchMoreRecommendations = useCallback(async () => {
     setLoading(true);
 
     try {
-      // Generate new mock items as a simple way to get "more" items
-      const newMockItems: RecommendationItem[] = [];
-      mockRecommendations.forEach((rec) => {
+      // Build URL with query parameters and force refresh
+      const url = new URL(`/api/users/${userId}/recommendations`, window.location.origin);
+      url.searchParams.append("force_refresh", "true");
+
+      if (isNewUser) {
+        url.searchParams.append("is_new_user", "true");
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "music", // Could be made dynamic based on user preference
+          force_refresh: true,
+        }),
+      });
+      console.log(response);
+
+      let recommendations: RecommendationDTO[] = [];
+
+      if (!response.ok) {
+        console.log("API error or not found, using mock recommendations");
+        // Fall back to mock data with new IDs
+        recommendations = mockRecommendations.map((rec) => ({
+          ...rec,
+          user_id: String(userId),
+          id: Number(rec.id + Math.floor(Math.random() * 1000) + Date.now()),
+        }));
+      } else {
+        const data = await response.json();
+        if (data.data) {
+          recommendations = [data.data];
+        } else {
+          recommendations = mockRecommendations;
+        }
+      }
+
+      // Extract items from recommendations
+      const extractedItems: RecommendationItem[] = [];
+      recommendations.forEach((rec) => {
         if (rec.data?.items && Array.isArray(rec.data.items)) {
+          // Add a unique ID to each item
           const itemsWithUniqueIds = rec.data.items.map((item) => ({
             ...item,
             id: `${item.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           }));
-          newMockItems.push(...itemsWithUniqueIds);
+          extractedItems.push(...itemsWithUniqueIds);
         }
       });
 
       // Filter and shuffle
-      const filteredItems = filterItems(newMockItems);
+      const filteredItems = await UniqueRecommendationsService.filterUniqueRecommendationsAsync(
+        userId,
+        extractedItems,
+        RECOMMENDATION_COOLDOWN_PERIOD
+      );
+
       const shuffledItems = filteredItems.sort(() => Math.random() - 0.5);
 
       setAllItems(shuffledItems);
       setCurrentIndex(0);
+      setNeedMoreRecommendations(false);
     } catch (err) {
       console.error("Error fetching more items:", err);
       setError("Failed to fetch more items");
     } finally {
       setLoading(false);
     }
-  }, [filterItems]);
+  }, [userId, isNewUser]);
 
   return (
     <div className={`recommendations-sidebar h-full flex flex-col ${className || ""}`}>
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Recommendations</h2>
-          {feedbackHistory.length > 0 && (
-            <button
-              onClick={clearFeedbackHistory}
-              className="text-xs text-gray-500 hover:text-indigo-600 transition-colors"
-              title="Clear your feedback history to see all recommendations again"
-            >
-              Reset ({feedbackHistory.length})
-            </button>
-          )}
-        </div>
-        <p className="text-sm text-gray-600">
-          {isNewUser ? "Rate these popular items to improve your recommendations" : "Swipe to like or dislike"}
-        </p>
+      <div className="p-4 border-b flex justify-between items-center">
+        <h2 className="text-xl font-bold">Recommendations</h2>
+        <button
+          onClick={clearFeedbackHistory}
+          className="text-xs text-gray-500 hover:text-indigo-600 transition-colors"
+          title="Clear your feedback history to see all recommendations again"
+        >
+          Reset
+        </button>
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-500 border-r-transparent"></div>
+            <p className="mt-2 text-gray-600">Loading recommendations...</p>
           </div>
         ) : error ? (
-          <div className="p-4 text-red-500">
-            <p>Error: {error}</p>
-            <button
-              className="mt-2 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
+          <div className="text-center text-red-500">
+            <p>{error}</p>
+            <button className="mt-2 text-indigo-500 hover:underline" onClick={fetchRecommendations}>
+              Try again
             </button>
           </div>
         ) : allItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-            <p className="text-gray-500 mb-4">
-              {feedbackHistory.length > 0
-                ? "You've rated all available items. Clear your history to see them again."
-                : "No recommendations available at this time."}
-            </p>
-            {feedbackHistory.length > 0 && (
+          <div className="text-center">
+            <p className="text-gray-600">No recommendations available right now.</p>
+            {needMoreRecommendations && (
               <button
-                className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-                onClick={clearFeedbackHistory}
+                className="mt-2 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                onClick={fetchMoreRecommendations}
               >
-                Clear History
+                Get More Recommendations
               </button>
             )}
           </div>
         ) : currentIndex >= allItems.length ? (
-          <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-            <p className="text-gray-500 mb-4">You&apos;ve seen all items!</p>
-            <button className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600" onClick={fetchMoreItems}>
-              Get More Recommendations
+          <div className="text-center">
+            <p className="text-gray-600">You&apos;ve seen all recommendations for now.</p>
+            <button
+              className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+              onClick={clearFeedbackHistory}
+            >
+              Clear History to See More
             </button>
           </div>
         ) : (
-          // Render all item cards but only show the active one
-          allItems.map((item, index) => (
-            <ItemCard key={item.id} item={item} onSwipe={handleSwipe} isActive={index === currentIndex} />
-          ))
+          // Cards are stacked, with the current one visible
+          <div className="relative w-full max-w-md h-96">
+            {allItems.map((item, index) => (
+              <ItemCard key={item.id} item={item} onSwipe={handleSwipe} isActive={index === currentIndex} />
+            ))}
+          </div>
         )}
-      </div>
-
-      <div className="p-4 border-t border-gray-200 flex justify-between">
-        <button
-          className="p-2 rounded-full bg-red-100 text-red-500 hover:bg-red-200 disabled:opacity-50"
-          disabled={loading || allItems.length === 0 || currentIndex >= allItems.length}
-          onClick={async () => {
-            if (currentIndex < allItems.length) {
-              await handleSwipe(allItems[currentIndex].id, FeedbackType.DISLIKE);
-            }
-          }}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <button
-          className="p-2 rounded-full bg-green-100 text-green-500 hover:bg-green-200 disabled:opacity-50"
-          disabled={loading || allItems.length === 0 || currentIndex >= allItems.length}
-          onClick={async () => {
-            if (currentIndex < allItems.length) {
-              await handleSwipe(allItems[currentIndex].id, FeedbackType.LIKE);
-            }
-          }}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </button>
       </div>
     </div>
   );
 };
 
-// Make sure this component is exported correctly
-export { RecommendationSidebar };
 export default RecommendationSidebar;

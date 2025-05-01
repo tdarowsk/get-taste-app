@@ -1,7 +1,6 @@
 ---
 import AuthLayout from "../../layouts/AuthLayout.astro";
 import { PasswordResetForm } from "../../components/auth/PasswordResetForm";
-import { supabaseClient } from "../../db/supabase.client.ts";
 
 // Sprawdź parametry URL
 const token = Astro.url.searchParams.get("token");
@@ -18,7 +17,7 @@ if (type === "reset-password") {
     // Weryfikacja tokenu resetowania hasła byłaby tutaj
     // W rzeczywistym scenariuszu powinniśmy zweryfikować token z Supabase
     // Ale w przypadku Supabase, token jest weryfikowany przy faktycznym resetowaniu hasła
-  } catch (error) {
+  } catch {
     return Astro.redirect("/auth/reset-password?error=invalid_token");
   }
 }

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { RecommendationDTO, RecommendationHistoryDTO } from "../../types";
 
 interface UseRecommendationsOptions {
-  userId: number;
+  userId: string;
   type: "music" | "film";
   isNewUser?: boolean;
 }

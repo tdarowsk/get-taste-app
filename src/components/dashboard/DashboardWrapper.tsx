@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DashboardLayout } from "./DashboardLayout";
+import { ToastProvider } from "../ui";
 import type { UserProfileDTO } from "../../types";
 
 interface DashboardWrapperProps {
@@ -24,7 +25,9 @@ export function DashboardWrapper({ user }: DashboardWrapperProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DashboardLayout user={user} />
+      <ToastProvider>
+        <DashboardLayout user={user} />
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

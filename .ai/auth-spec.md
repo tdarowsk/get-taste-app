@@ -5,6 +5,7 @@
 ### 1.1. Struktura stron i komponentów
 
 #### Strony Astro (Server-Side Rendering):
+
 - **`/` (Landing Page)** - Strona powitalna dla niezalogowanych użytkowników
 - **`/auth/register`** - Strona formularza rejestracji
 - **`/auth/login`** - Strona formularza logowania
@@ -14,6 +15,7 @@
 - **`/profile`** - Strona profilu użytkownika (chroniona)
 
 #### Komponenty React (Client-Side):
+
 - **`AuthForm`** - Bazowy komponent formularza autentykacji z obsługą stanu i walidacji
 - **`LoginForm`** - Specyficzny komponent formularza logowania
 - **`RegisterForm`** - Specyficzny komponent formularza rejestracji
@@ -23,6 +25,7 @@
 - **`AuthWrapper`** - Komponent opakowujący strony chronione, weryfikujący sesję użytkownika
 
 #### Layouty:
+
 - **`BaseLayout.astro`** - Podstawowy layout aplikacji
 - **`AuthLayout.astro`** - Layout dla stron autentykacji
 - **`ProtectedLayout.astro`** - Layout dla stron wymagających zalogowania
@@ -30,6 +33,7 @@
 ### 1.2. Przepływ użytkownika i integracja
 
 #### Rejestracja:
+
 1. Użytkownik trafia na stronę powitalną (Landing Page)
 2. Klika przycisk "Zarejestruj się"
 3. Zostaje przekierowany na `/auth/register`
@@ -39,6 +43,7 @@
 7. W przypadku błędu, wyświetlany jest odpowiedni komunikat
 
 #### Logowanie:
+
 1. Użytkownik trafia na stronę powitalną (Landing Page)
 2. Klika przycisk "Zaloguj się"
 3. Zostaje przekierowany na `/auth/login`
@@ -48,6 +53,7 @@
 7. W przypadku błędu, wyświetlany jest odpowiedni komunikat
 
 #### Reset hasła:
+
 1. Użytkownik klika "Zapomniałem hasła" na stronie logowania
 2. Zostaje przekierowany na `/auth/reset-password`
 3. Wprowadza swój email
@@ -58,6 +64,7 @@
 8. Użytkownik jest przekierowywany na stronę logowania
 
 #### Wylogowanie:
+
 1. Zalogowany użytkownik klika przycisk "Wyloguj" dostępny na każdej stronie
 2. Sesja jest usuwana z Supabase
 3. Użytkownik jest przekierowywany na stronę powitalną
@@ -65,6 +72,7 @@
 ### 1.3. Walidacja i obsługa błędów
 
 #### Walidacja Client-Side:
+
 - Email:
   - Format email (regex)
   - Wymagane pole
@@ -79,7 +87,9 @@
   - Wymagane pole
 
 #### Komunikaty błędów:
+
 - Walidacja formularza:
+
   - "Wprowadź poprawny adres email"
   - "Hasło musi zawierać minimum 8 znaków"
   - "Hasło musi zawierać co najmniej jedną cyfrę"
@@ -100,9 +110,10 @@
 ### 2.1. Integracja z Supabase
 
 #### Konfiguracja Supabase:
+
 ```typescript
 // lib/supabase.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -111,6 +122,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 #### Model danych użytkownika:
+
 ```typescript
 // types/user.ts
 export interface User {
@@ -142,7 +154,7 @@ export interface UserProfile {
 
 ```typescript
 // services/auth.ts
-import { supabase } from '../lib/supabase';
+import { supabase } from "../lib/supabase";
 
 export const authService = {
   // Rejestracja użytkownika
@@ -193,31 +205,31 @@ Astro udostępnia mechanizm middleware, który możemy wykorzystać do ochrony s
 
 ```typescript
 // middleware.ts
-import { defineMiddleware } from 'astro:middleware';
-import { supabase } from './lib/supabase';
+import { defineMiddleware } from "astro:middleware";
+import { supabase } from "./lib/supabase";
 
 export const onRequest = defineMiddleware(async ({ request, locals, redirect }, next) => {
   const { pathname } = new URL(request.url);
-  
+
   // Strony chronione, wymagające autentykacji
-  const protectedRoutes = ['/dashboard', '/profile'];
-  
+  const protectedRoutes = ["/dashboard", "/profile"];
+
   // Sprawdzenie czy ścieżka wymaga autentykacji
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
-  
+  const isProtectedRoute = protectedRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+
   if (isProtectedRoute) {
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
-      return redirect('/auth/login?redirectTo=' + encodeURIComponent(pathname));
+      return redirect("/auth/login?redirectTo=" + encodeURIComponent(pathname));
     }
-    
+
     // Dodanie informacji o użytkowniku do kontekstu
     locals.user = session.user;
   }
-  
+
   return next();
 });
 ```
@@ -228,60 +240,46 @@ W Astro możemy zdefiniować endpointy API, które będą obsługiwały żądani
 
 ```typescript
 // src/pages/api/auth/register.ts
-import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import type { APIRoute } from "astro";
+import { supabase } from "../../../lib/supabase";
 
 export const post: APIRoute = async ({ request, redirect }) => {
   try {
     const data = await request.json();
     const { email, password } = data;
-    
+
     // Walidacja danych wejściowych
     if (!email || !password) {
-      return new Response(
-        JSON.stringify({ error: 'Email i hasło są wymagane' }),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "Email i hasło są wymagane" }), { status: 400 });
     }
-    
+
     // Rejestracja użytkownika
     const { data: authData, error } = await supabase.auth.signUp({
       email,
       password,
     });
-    
+
     if (error) {
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: error.message }), { status: 400 });
     }
-    
+
     // Tworzenie profilu użytkownika
     if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          music_preferences: { genres: [], artists: [] },
-          movie_preferences: { genres: [], directors: [], actors: [], screenwriters: [] }
-        });
-      
+      const { error: profileError } = await supabase.from("profiles").insert({
+        user_id: authData.user.id,
+        music_preferences: { genres: [], artists: [] },
+        movie_preferences: { genres: [], directors: [], actors: [], screenwriters: [] },
+      });
+
       if (profileError) {
-        console.error('Error creating profile:', profileError);
+        console.error("Error creating profile:", profileError);
       }
     }
-    
-    return new Response(
-      JSON.stringify({ success: true, user: authData.user }),
-      { status: 200 }
-    );
+
+    return new Response(JSON.stringify({ success: true, user: authData.user }), { status: 200 });
   } catch (e) {
-    console.error('Registration error:', e);
-    return new Response(
-      JSON.stringify({ error: 'Wystąpił błąd podczas rejestracji' }),
-      { status: 500 }
-    );
+    console.error("Registration error:", e);
+    return new Response(JSON.stringify({ error: "Wystąpił błąd podczas rejestracji" }), { status: 500 });
   }
 };
 ```
@@ -298,8 +296,8 @@ W main.ts lub odpowiednim pliku konfiguracyjnym:
 
 ```typescript
 // src/lib/supabase.ts
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
 
 export const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -310,22 +308,24 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 #### Kontrola dostępu w layoutach
 
 ```astro
-<!-- src/layouts/ProtectedLayout.astro -->
 ---
-import BaseLayout from './BaseLayout.astro';
-import { supabase } from '../lib/supabase';
+import BaseLayout from "./BaseLayout.astro";
+import { supabase } from "../lib/supabase";
 
 // Sprawdzenie czy użytkownik jest zalogowany
-const { data: { session } } = await supabase.auth.getSession();
+const {
+  data: { session },
+} = await supabase.auth.getSession();
 
 // Jeśli nie ma sesji, przekieruj na stronę logowania
 if (!session) {
-  return Astro.redirect('/auth/login?redirectTo=' + encodeURIComponent(Astro.url.pathname));
+  return Astro.redirect("/auth/login?redirectTo=" + encodeURIComponent(Astro.url.pathname));
 }
 
 const { user } = session;
 ---
 
+<!-- src/layouts/ProtectedLayout.astro -->
 <BaseLayout>
   <slot />
 </BaseLayout>
@@ -335,9 +335,9 @@ const { user } = session;
 
 ```typescript
 // src/hooks/useAuth.ts
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User } from '../types/user';
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import type { User } from "../types/user";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -346,7 +346,9 @@ export function useAuth() {
   useEffect(() => {
     // Pobranie aktualnego użytkownika
     const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
     };
@@ -354,12 +356,12 @@ export function useAuth() {
     fetchUser();
 
     // Nasłuchiwanie zmian autoryzacji
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -437,7 +439,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
-  
+
   return (
     <AuthContext.Provider value={auth}>
       {children}
@@ -460,16 +462,13 @@ W pliku `astro.config.mjs` należy dodać odpowiednią konfigurację:
 
 ```javascript
 // astro.config.mjs
-import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
+import { defineConfig } from "astro/config";
+import react from "@astrojs/react";
+import tailwind from "@astrojs/tailwind";
 
 export default defineConfig({
-  integrations: [
-    react(),
-    tailwind(),
-  ],
-  output: 'server', // Konieczne dla autentykacji server-side
+  integrations: [react(), tailwind()],
+  output: "server", // Konieczne dla autentykacji server-side
 });
 ```
 
@@ -480,16 +479,19 @@ Przedstawiona architektura systemu autentykacji dla aplikacji getTaste zapewnia:
 1. **Kompleksowe rozwiązanie uwzględniające rejestrację, logowanie i resetowanie hasła** zgodnie z wymaganiami US-002 i US-003.
 
 2. **Optymalny podział odpowiedzialności**:
+
    - Strony Astro zapewniają server-side rendering i kontrolę dostępu
    - Komponenty React obsługują interaktywne formularze i logikę client-side
    - Supabase Auth odpowiada za bezpieczne przechowywanie i weryfikację danych uwierzytelniających
 
 3. **Bezpieczny przepływ danych**:
+
    - Walidacja danych zarówno na front-endzie, jak i na back-endzie
    - Szyfrowanie haseł wykonywane przez Supabase
    - Bezpieczne zarządzanie tokenami sesji
 
 4. **Skalowalność rozwiązania**:
+
    - Możliwość łatwego dodania dodatkowych metod autentykacji (OAuth, Magic Link)
    - Rozbudowa systemu ról i uprawnień w przyszłości
 
@@ -498,4 +500,4 @@ Przedstawiona architektura systemu autentykacji dla aplikacji getTaste zapewnia:
    - Wykorzystanie technologii wymienionych w tech-stack.md
    - Uwzględnienie przepływu użytkownika opisanego w historyjkach użytkownika
 
-Zaproponowana architektura zapewnia solidną podstawę dla funkcjonalności autentykacji w aplikacji getTaste, jednocześnie umożliwiając przyszłą rozbudowę systemu. 
+Zaproponowana architektura zapewnia solidną podstawę dla funkcjonalności autentykacji w aplikacji getTaste, jednocześnie umożliwiając przyszłą rozbudowę systemu.

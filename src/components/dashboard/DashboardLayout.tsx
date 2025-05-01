@@ -3,7 +3,7 @@ import { Header } from "./Header";
 import { RecommendationsPanel } from "./RecommendationsPanel";
 import { useDashboard } from "../../lib/hooks/useDashboard";
 import type { UserProfileDTO } from "../../types";
-import { RecommendationSidebar } from "../ui/RecommendationSidebar";
+import RecommendationSidebar from "../ui/RecommendationSidebar";
 
 interface DashboardLayoutProps {
   user: UserProfileDTO;

@@ -1,9 +1,11 @@
 # API Endpoint Implementation Plan: POST /users/{id}/recommendations
 
 ## 1. Przegląd punktu końcowego
+
 Endpoint POST /users/{id}/recommendations odpowiada za generowanie nowych rekomendacji (muzycznych lub filmowych) na podstawie bieżących preferencji użytkownika. Integruje się z usługą Openrouter.ai, która po stronie AI generuje rekomendacje. Wygenerowane dane są zapisywane w tabeli `Recommendations` w bazie danych i zwracane w odpowiedzi jako obiekt JSON.
 
 ## 2. Szczegóły żądania
+
 - **Metoda HTTP:** POST
 - **Struktura URL:** /users/{id}/recommendations
 - **Parametry:**
@@ -16,13 +18,14 @@ Endpoint POST /users/{id}/recommendations odpowiada za generowanie nowych rekome
 - **Request Body Example:**
   ```json
   {
-    "type": "music",  // lub "film"
+    "type": "music", // lub "film"
     "force_refresh": true
   }
   ```
 - **Uwierzytelnienie:** JWT token, weryfikowany przez middleware oraz zabezpieczony politykami RLS w Supabase.
 
 ## 3. Wykorzystywane typy
+
 - **DTO:**
   - `RecommendationDTO` – reprezentuje dane rekomendacji; zawiera pola: `id`, `user_id`, `type`, `data`, `created_at`.
   - `RecommendationFeedback` - reprezentuje reakcję użytkownika na rekomendację; zawiera pola: `id`, `recommendation_id`, `user_id`, `feedback_type`, `created_at`.
@@ -33,8 +36,10 @@ Endpoint POST /users/{id}/recommendations odpowiada za generowanie nowych rekome
   - `RecommendationFeedbackType` - typ enum z wartościami: `LIKE`, `DISLIKE`.
 
 ## 4. Szczegóły odpowiedzi
+
 - **Kod statusu:** 201 Created (w przypadku sukcesu)
 - **Struktura odpowiedzi:** Obiekt typu `RecommendationDTO`, przykładowa struktura:
+
   ```typescript
   interface RecommendationDTO {
     id: number;
@@ -59,6 +64,7 @@ Endpoint POST /users/{id}/recommendations odpowiada za generowanie nowych rekome
     details?: Record<string, unknown>;
   }
   ```
+
 - **Kody błędów:**
   - 400 Bad Request – błędne dane wejściowe
   - 401 Unauthorized – brak lub nieprawidłowy token autoryzacyjny
@@ -66,6 +72,7 @@ Endpoint POST /users/{id}/recommendations odpowiada za generowanie nowych rekome
   - 500 Internal Server Error – błąd serwera lub problem z usługą Openrouter.ai
 
 ## 5. Przepływ danych
+
 1. Endpoint odbiera żądanie z URL Parameter `id` oraz payloadem `CreateRecommendationsCommand`.
 2. Middleware uwierzytelniający weryfikuje token JWT i potwierdza uprawnienia użytkownika (RLS w Supabase).
 3. Walidacja danych wejściowych, np. za pomocą Zod – sprawdzenie, czy `type` przyjmuje wartość \"music\" lub \"film\", a `force_refresh` jest boolean.
@@ -79,13 +86,14 @@ Endpoint POST /users/{id}/recommendations odpowiada za generowanie nowych rekome
 ## 6. Feedback na rekomendacje
 
 ### 6.1. Endpoint: POST /users/{id}/recommendations/{rec_id}/feedback
+
 Dedykowany endpoint do przesyłania reakcji użytkownika na konkretną rekomendację.
 
 - **Metoda HTTP:** POST
 - **Struktura URL:** /users/{id}/recommendations/{rec_id}/feedback
 - **Parametry:**
   - **Wymagane:**
-    - URL Parameters: 
+    - URL Parameters:
       - `id` (liczba całkowita) – identyfikator użytkownika
       - `rec_id` (liczba całkowita) – identyfikator rekomendacji
     - Request Body:
@@ -93,11 +101,12 @@ Dedykowany endpoint do przesyłania reakcji użytkownika na konkretną rekomenda
   - **Request Body Example:**
     ```json
     {
-      "feedback_type": "like"  // lub "dislike"
+      "feedback_type": "like" // lub "dislike"
     }
     ```
 
 ### 6.2. Przepływ danych dla feedbacku
+
 1. Endpoint odbiera żądanie z URL Parameters oraz payloadem `SubmitRecommendationFeedbackCommand`.
 2. Middleware uwierzytelniający weryfikuje token JWT i uprawnienia użytkownika.
 3. Walidacja danych wejściowych, sprawdzenie czy `feedback_type` przyjmuje wartość "like" lub "dislike".
@@ -105,6 +114,7 @@ Dedykowany endpoint do przesyłania reakcji użytkownika na konkretną rekomenda
 5. Zwrot odpowiedzi z kodem 201 Created oraz danymi zapisanego feedbacku.
 
 ### 6.3. Endpoint: GET /users/{id}/recommendation-history
+
 Endpoint umożliwiający pobieranie historii rekomendacji użytkownika wraz z udzielonymi feedbackami.
 
 - **Metoda HTTP:** GET
@@ -117,6 +127,7 @@ Endpoint umożliwiający pobieranie historii rekomendacji użytkownika wraz z ud
     - `offset`: przesunięcie dla paginacji (domyślnie 0)
 
 ## 7. Względy bezpieczeństwa
+
 - Uwierzytelnienie za pomocą JWT; wykorzystanie RLS, aby użytkownik mógł operować tylko na swoich danych.
 - Walidacja wejścia (np. Zod) w celu zapobiegania wstrzyknięciom oraz nieprawidłowym danym.
 - Bezpieczna komunikacja z usługą Openrouter.ai oraz obsługa błędów komunikacyjnych.
@@ -124,6 +135,7 @@ Endpoint umożliwiający pobieranie historii rekomendacji użytkownika wraz z ud
 - Stosowanie unikalnych ograniczeń w bazie danych, aby zapobiec duplikatom feedbacku od tego samego użytkownika dla tej samej rekomendacji.
 
 ## 8. Obsługa błędów
+
 - **400 Bad Request:** Nieprawidłowy format danych wejściowych lub brak wymaganych pól.
 - **401 Unauthorized:** Brak lub nieprawidłowy token JWT.
 - **404 Not Found:** Użytkownik o podanym `id` lub rekomendacja o podanym `rec_id` nie istnieje.
@@ -132,6 +144,7 @@ Endpoint umożliwiający pobieranie historii rekomendacji użytkownika wraz z ud
 - Implementacja mechanizmu fallback do danych mockowych w przypadku błędów API.
 
 ## 9. Rozważania dotyczące wydajności
+
 - Asynchroniczne wywołania do Openrouter.ai, aby nie blokować głównego wątku przetwarzania.
 - Możliwość buforowania wyników rekomendacji, gdy `force_refresh` jest ustawione na false, dla zmniejszenia obciążenia usługi.
 - Optymalizacja zapytań do bazy danych przy użyciu indeksów na polach `user_id` i `type`.
@@ -139,6 +152,7 @@ Endpoint umożliwiający pobieranie historii rekomendacji użytkownika wraz z ud
 - Unikalne indeksy na tabeli `recommendations_feedback` dla pary (`recommendation_id`, `user_id`) w celu uniknięcia duplikatów.
 
 ## 10. Etapy wdrożenia
+
 1. **Przygotowanie środowiska:**
    - Konfiguracja projektu (Next.js, Supabase, integracja z Openrouter.ai).
    - Dodanie niezbędnych zależności (np. Zod, narzędzia logowania błędów).
@@ -159,7 +173,9 @@ Endpoint umożliwiający pobieranie historii rekomendacji użytkownika wraz z ud
    - Testowanie różnych scenariuszy błędów i mechanizmów fallback.
 
 ## 11. Implementacyjne podejście do danych testowych
+
 W ramach wdrożenia przygotowano kompleksowe dane testowe obejmujące:
+
 - Przykładowe dane użytkowników
 - Zróżnicowane preferencje muzyczne i filmowe
 - Przykładowe rekomendacje różnych typów

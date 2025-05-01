@@ -121,7 +121,8 @@ create table if not exists film_preferences (
     genres text[], -- list of film genres
     director varchar(255), -- favorite director
     "cast" text[], -- list of favorite actors/cast
-    screenwriter varchar(255) -- favorite screenwriter
+    screenwriter varchar(255), -- favorite screenwriter
+    liked_movies text[] -- list of TMDB movie IDs that user liked
 );
 
 -- enable row level security on film_preferences table
@@ -307,10 +308,10 @@ values
   ('00000000-0000-0000-0000-000000000002', array['pop', 'r&b', 'dance'], array['Beyoncé', 'Dua Lipa', 'The Weeknd']);
 
 -- Sample film preferences
-insert into film_preferences (user_id, genres, director, "cast", screenwriter)
+insert into film_preferences (user_id, genres, director, "cast", screenwriter, liked_movies)
 values
-  ('00000000-0000-0000-0000-000000000001', array['sci-fi', 'thriller', 'drama'], 'Christopher Nolan', array['Leonardo DiCaprio', 'Tom Hardy', 'Cillian Murphy'], 'Christopher Nolan'),
-  ('00000000-0000-0000-0000-000000000002', array['comedy', 'romance', 'drama'], 'Greta Gerwig', array['Saoirse Ronan', 'Timothée Chalamet', 'Emma Watson'], 'Greta Gerwig');
+  ('00000000-0000-0000-0000-000000000001', array['sci-fi', 'thriller', 'drama'], 'Christopher Nolan', array['Leonardo DiCaprio', 'Tom Hardy', 'Cillian Murphy'], 'Christopher Nolan', array['123456', '789012']),
+  ('00000000-0000-0000-0000-000000000002', array['comedy', 'romance', 'drama'], 'Greta Gerwig', array['Saoirse Ronan', 'Timothée Chalamet', 'Emma Watson'], 'Greta Gerwig', array['345678', '901234']);
 
 -- Sample recommendations
 insert into recommendations (user_id, type, data, created_at)

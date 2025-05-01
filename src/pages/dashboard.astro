@@ -1,4 +1,5 @@
 ---
+// Removed Astro DashboardLayout to use React DashboardLayout
 import MainLayout from "../layouts/MainLayout.astro";
 import { DashboardWrapper } from "../components/dashboard/DashboardWrapper";
 import { createSupabaseServerInstance } from "../db/supabase.client";
@@ -13,6 +14,11 @@ export const prerender = false;
 // Pobierz użytkownika z middleware
 const { user } = Astro.locals;
 
+// Sprawdź czy użytkownik istnieje
+if (!user) {
+  return Astro.redirect("/auth/login");
+}
+
 // Pobierz dodatkowe dane użytkownika
 const supabase = createSupabaseServerInstance({
   cookies: Astro.cookies,
@@ -21,7 +27,7 @@ const supabase = createSupabaseServerInstance({
 
 // Konwersja danych użytkownika do formatu UserProfileDTO
 const userProfile: UserProfileDTO = {
-  id: parseInt(user.id, 10), // Konwersja UUID na liczbę dla kompatybilności z API
+  id: user.id, // Keep as string UUID
   email: user.email || "",
   nick: "User", // Domyślna wartość
   created_at: new Date().toISOString(),
