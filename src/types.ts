@@ -41,7 +41,7 @@ export interface LoginResponseDTO {
 
 /** DTO representing the authenticated user's profile (GET /auth/me and GET /users/{id}) */
 export interface UserProfileDTO {
-  id: number; // transformed from DB string id to number
+  id: string; // Changed from number to string to match Supabase Auth UUID
   email: string;
   nick: string;
   created_at: string;
@@ -84,6 +84,7 @@ export interface FilmPreferencesDTO {
   director: string | null;
   cast: string[];
   screenwriter: string | null;
+  liked_movies: string[];
 }
 
 /** Command Model for updating film preferences (PATCH /users/{id}/preferences/film) */
@@ -92,6 +93,24 @@ export interface UpdateFilmPreferencesCommand {
   director?: string;
   cast?: string[];
   screenwriter?: string;
+  liked_movies?: string[];
+}
+
+/** DTO for user taste based on preferences and recommendations */
+export interface UserTasteDTO {
+  name: string;
+  description: string;
+  music?: TasteDTO;
+  film?: TasteDTO;
+}
+
+/** DTO for specific taste category */
+export interface TasteDTO {
+  genres: string[];
+  mood: string[];
+  style: string;
+  intensity: number;
+  variety: number;
 }
 
 /* =========================
@@ -101,11 +120,11 @@ export interface UpdateFilmPreferencesCommand {
 /** DTO for recommendations (from recommendations table) */
 export interface RecommendationDTO {
   id: number;
-  user_id: number; // transformed from DB user_id type to number
+  user_id: string; // Changed from number to string to match Supabase Auth UUID
   type: "music" | "film";
-  data: RecommendationDataDetails; // Changed from 'any' to specific type
+  data: RecommendationDataDetails;
   created_at: string;
-  feedback?: RecommendationFeedback; // Added feedback field
+  feedback?: RecommendationFeedback;
 }
 
 /** Detailed structure for recommendation data */
@@ -131,10 +150,13 @@ export interface CreateRecommendationsCommand {
 }
 
 /** Enum for recommendation feedback type */
-export enum RecommendationFeedbackType {
+export enum FeedbackType {
   LIKE = "like",
   DISLIKE = "dislike",
 }
+
+/** Type for feedback from API */
+export type RecommendationFeedbackType = "like" | "dislike";
 
 /** Interface for recommendation feedback */
 export interface RecommendationFeedback {

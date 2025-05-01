@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import type { RecommendationHistoryDTO, RecommendationWithFeedbackDTO } from "../../types";
-import { RecommendationFeedbackType as FeedbackType } from "../../types";
+import type { RecommendationHistoryDTO, RecommendationWithFeedbackDTO, RecommendationFeedbackType } from "../../types";
 
 interface RecommendationHistoryProps {
-  userId: number;
+  userId: string;
   className?: string;
 }
 
@@ -106,11 +105,11 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
   };
 
   // Get color classes based on feedback type
-  const getFeedbackColorClasses = (feedbackType: FeedbackType) => {
+  const getFeedbackColorClasses = (feedbackType: RecommendationFeedbackType) => {
     switch (feedbackType) {
-      case FeedbackType.LIKE:
+      case "like":
         return "bg-green-100 text-green-800 border-green-300";
-      case FeedbackType.DISLIKE:
+      case "dislike":
         return "bg-red-100 text-red-800 border-red-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
@@ -150,8 +149,8 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
               onChange={handleFeedbackTypeFilterChange}
             >
               <option value="">All Feedback</option>
-              <option value={FeedbackType.LIKE}>Liked</option>
-              <option value={FeedbackType.DISLIKE}>Disliked</option>
+              <option value="like">Liked</option>
+              <option value="dislike">Disliked</option>
             </select>
           </div>
         </div>
@@ -193,7 +192,7 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded border ${getFeedbackColorClasses(item.feedback.feedback_type)}`}
                     >
-                      {item.feedback.feedback_type === FeedbackType.LIKE ? "Liked" : "Disliked"}
+                      {item.feedback.feedback_type === "like" ? "Liked" : "Disliked"}
                     </span>
                   </div>
 

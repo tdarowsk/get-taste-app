@@ -86,6 +86,7 @@ Te endpointy umożliwią zarządzanie profilem użytkownika oraz jego preferencj
 ### Istniejące typy
 
 Z pliku `src/types.ts` wykorzystane zostaną:
+
 - `UserProfileDTO`
 - `UpdateUserCommand`
 - `UserPreferencesDTO`
@@ -101,7 +102,8 @@ Należy zdefiniować w `src/lib/utils/validationSchemas.ts`:
 ```typescript
 // Schemat walidacyjny dla aktualizacji profilu użytkownika
 export const updateUserSchema = z.object({
-  nick: z.string()
+  nick: z
+    .string()
     .min(2, "Nick musi mieć co najmniej 2 znaki")
     .max(20, "Nick może mieć maksymalnie 20 znaków")
     .regex(/^[A-Za-z0-9_!]+$/, "Nick może zawierać tylko litery, cyfry, znak podkreślenia i wykrzyknik")
@@ -166,7 +168,9 @@ export const updateFilmPreferencesSchema = z.object({
   ```json
   {
     "error": "Nieprawidłowe dane wejściowe",
-    "details": { /* szczegóły błędów walidacji */ }
+    "details": {
+      /* szczegóły błędów walidacji */
+    }
   }
   ```
 - **Błąd (404 Not Found)**:
@@ -225,7 +229,9 @@ export const updateFilmPreferencesSchema = z.object({
   ```json
   {
     "error": "Nieprawidłowe dane wejściowe",
-    "details": { /* szczegóły błędów walidacji */ }
+    "details": {
+      /* szczegóły błędów walidacji */
+    }
   }
   ```
 - **Błąd (404 Not Found)**:
@@ -250,7 +256,9 @@ export const updateFilmPreferencesSchema = z.object({
   ```json
   {
     "error": "Nieprawidłowe dane wejściowe",
-    "details": { /* szczegóły błędów walidacji */ }
+    "details": {
+      /* szczegóły błędów walidacji */
+    }
   }
   ```
 - **Błąd (404 Not Found)**:
@@ -267,6 +275,7 @@ export const updateFilmPreferencesSchema = z.object({
 Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/`:
 
 1. **UserService**:
+
    - `getUserProfile(userId: string)`: Pobieranie danych użytkownika
    - `updateUserProfile(userId: string, data: UpdateUserCommand)`: Aktualizacja danych użytkownika
 
@@ -278,12 +287,14 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 ### Przepływ danych dla każdego endpointu
 
 #### GET /users/{id}
+
 1. Walidacja parametru ID użytkownika
 2. Uwierzytelnienie i autoryzacja
 3. Pobieranie danych użytkownika przy użyciu UserService
 4. Transformacja danych do UserProfileDTO i zwrócenie odpowiedzi
 
 #### PATCH /users/{id}
+
 1. Walidacja parametru ID użytkownika
 2. Uwierzytelnienie i autoryzacja
 3. Walidacja danych wejściowych przy użyciu Zod
@@ -291,12 +302,14 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 5. Transformacja danych do UserProfileDTO i zwrócenie odpowiedzi
 
 #### GET /users/{id}/preferences
+
 1. Walidacja parametru ID użytkownika
 2. Uwierzytelnienie i autoryzacja
 3. Pobieranie preferencji przy użyciu PreferencesService
 4. Zwrócenie odpowiedzi z połączonymi preferencjami
 
 #### PATCH /users/{id}/preferences/music
+
 1. Walidacja parametru ID użytkownika
 2. Uwierzytelnienie i autoryzacja
 3. Walidacja danych wejściowych przy użyciu Zod
@@ -304,6 +317,7 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 5. Zwrócenie zaktualizowanych preferencji
 
 #### PATCH /users/{id}/preferences/film
+
 1. Walidacja parametru ID użytkownika
 2. Uwierzytelnienie i autoryzacja
 3. Walidacja danych wejściowych przy użyciu Zod
@@ -313,16 +327,19 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 ## 6. Względy bezpieczeństwa
 
 ### Uwierzytelnianie i autoryzacja
+
 - Używanie tokenów JWT przechowywanych w cookie (`sb-token`)
 - Weryfikacja tożsamości użytkownika poprzez Supabase
 - Sprawdzanie czy zalogowany użytkownik ma uprawnienia do danego zasobu
 
 ### Walidacja danych
+
 - Ścisła walidacja wszystkich danych wejściowych przy użyciu biblioteki Zod
 - Walidacja zgodna z regułami biznesowymi i ograniczeniami bazy danych
 - Zapobieganie atakom wstrzykiwania SQL poprzez użycie parametryzowanych zapytań Supabase
 
 ### Inne względy bezpieczeństwa
+
 - Implementacja CORS dla ochrony przed atakami cross-origin
 - Ustawienie odpowiednich nagłówków bezpieczeństwa
 - Logowanie prób nieautoryzowanego dostępu
@@ -330,16 +347,20 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 ## 7. Obsługa błędów
 
 ### Potencjalne błędy
+
 1. **Błędy walidacji**:
+
    - Nieprawidłowy format ID użytkownika
    - Nieprawidłowe dane w ciele żądania
 
 2. **Błędy autoryzacji**:
+
    - Brak tokenu JWT
    - Nieprawidłowy token JWT
    - Użytkownik nie ma uprawnień do danego zasobu
 
 3. **Błędy związane z danymi**:
+
    - Użytkownik nie istnieje
    - Konflikty unikalnych wartości (np. próba użycia istniejącego nicka)
 
@@ -348,10 +369,13 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
    - Nieoczekiwane wyjątki
 
 ### Standardowa struktura błędów
+
 ```json
 {
   "error": "Krótki opis błędu",
-  "details": { /* opcjonalne szczegóły błędu */ },
+  "details": {
+    /* opcjonalne szczegóły błędu */
+  },
   "message": "Szczegółowy opis błędu (tylko dla błędów 500)"
 }
 ```
@@ -359,10 +383,12 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 ## 8. Rozważania dotyczące wydajności
 
 1. **Optymalizacja zapytań bazodanowych**:
+
    - Wykorzystanie odpowiednich indeksów w tabelach
    - Pobieranie tylko niezbędnych pól
 
 2. **Cachowanie**:
+
    - Można rozważyć cachowanie często pobieranych preferencji użytkowników
 
 3. **Monitorowanie wydajności**:
@@ -372,31 +398,37 @@ Przed implementacją endpointów, należy stworzyć serwisy w `src/lib/services/
 ## 9. Etapy wdrożenia
 
 ### 1. Implementacja serwisów
+
 1. Utworzenie `src/lib/services/user.service.ts`
 2. Utworzenie `src/lib/services/preferences.service.ts`
 3. Dodanie schematów walidacji w `src/lib/utils/validationSchemas.ts`
 
 ### 2. Implementacja endpoint GET /users/{id}
+
 1. Utwórz plik `src/pages/api/users/[id]/index.ts` dla obsługi GET/PATCH
 2. Zaimplementuj metodę GET zgodnie z określonym przepływem danych
 
 ### 3. Implementacja endpoint PATCH /users/{id}
+
 1. Dodaj metodę PATCH w tym samym pliku `src/pages/api/users/[id]/index.ts`
 2. Zaimplementuj zgodnie z określonym przepływem danych
 
 ### 4. Implementacja endpoint GET /users/{id}/preferences
+
 1. Utwórz plik `src/pages/api/users/[id]/preferences/index.ts`
 2. Zaimplementuj metodę GET zgodnie z określonym przepływem danych
 
 ### 5. Implementacja endpoint PATCH /users/{id}/preferences/music
+
 1. Utwórz plik `src/pages/api/users/[id]/preferences/music.ts`
 2. Zaimplementuj metodę PATCH zgodnie z określonym przepływem danych
 
 ### 6. Implementacja endpoint PATCH /users/{id}/preferences/film
+
 1. Utwórz plik `src/pages/api/users/[id]/preferences/film.ts`
 2. Zaimplementuj metodę PATCH zgodnie z określonym przepływem danych
 
-
 ### 7. Dokumentacja
+
 1. Aktualizacja dokumentacji API
-2. Dodanie komentarzy JSDoc do kodu 
+2. Dodanie komentarzy JSDoc do kodu

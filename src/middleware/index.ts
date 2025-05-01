@@ -15,6 +15,8 @@ const PUBLIC_PATHS = [
   "/api/auth/confirm-reset",
   "/api/auth/logout",
   "/api/auth/status",
+  // Test endpoints
+  "/api/test-taste",
 ];
 
 export const onRequest = defineMiddleware(async ({ locals, cookies, url, request, redirect }, next) => {

@@ -49,13 +49,8 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <header className="border-b bg-white dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
-      <div className="container mx-auto flex justify-between items-center h-16 px-4 max-w-7xl">
+      <div className="container mx-auto flex justify-between items-center h-16 px-4 max-w-7xl relative">
         <div className="flex items-center">
-          <div className="mr-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-              getTaste
-            </h1>
-          </div>
           <nav className="hidden md:flex space-x-1">
             <Button
               variant="ghost"
@@ -76,6 +71,10 @@ export function Header({ user }: HeaderProps) {
               History
             </Button>
           </nav>
+        </div>
+
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center">
+          <img src="/images/logo.svg" alt="getTaste Logo" className="h-10" />
         </div>
 
         <div className="flex items-center space-x-2">

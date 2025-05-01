@@ -5,7 +5,7 @@ import { useUpdatePreferences } from "./useUpdatePreferences";
 import { useGenerateRecommendations } from "./useGenerateRecommendations";
 import type { UpdateMusicPreferencesCommand, UpdateFilmPreferencesCommand } from "../../types";
 
-export function useDashboard(userId: number) {
+export function useDashboard(userId: string) {
   const [activeType, setActiveType] = useState<"music" | "film">("music");
   const [isMobilePreferencesOpen, setMobilePreferencesOpen] = useState(false);
   const [isNewUser, setIsNewUser] = useState(true);

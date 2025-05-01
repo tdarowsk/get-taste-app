@@ -9,30 +9,38 @@ This REST API plan is designed to support the getTaste MVP. It is based on the p
 The primary resources and their corresponding database tables are:
 
 1. **Users** (table: `Users`)
+
    - Fields: `id`, `email`, `password_hash`, `nick` (with check constraints on allowed characters and length), `created_at`, `updated_at`, `deleted_at` (soft delete).
 
 2. **User2FA** (table: `User2FA`)
+
    - Fields: `id`, `user_id` (unique, FK to Users), `verification_code`, `created_at`, `expires_at`, `verified_at`.
 
 3. **Sessions** (table: `Sessions`)
+
    - Fields: `id`, `token` (unique), `created_at`.
 
 4. **MusicPreferences** (table: `MusicPreferences`)
+
    - Fields: `user_id` (PK, FK to Users), `genres` (TEXT array), `artists` (TEXT array).
 
 5. **FilmPreferences** (table: `FilmPreferences`)
+
    - Fields: `user_id` (PK, FK to Users), `genres` (TEXT array), `director`, `cast` (TEXT array), `screenwriter`.
 
 6. **Recommendations** (table: `Recommendations`)
+
    - Fields: `id`, `user_id` (FK to Users), `type` (must be either 'music' or 'film'), `data` (JSONB for storing recommendation details), `created_at`.
 
 7. **SpotifyData** (table: `SpotifyData`)
+
    - Fields: `id`, `user_id` (FK to Users), `album_id`, `artist_id`, `data` (JSONB), `created_at`.
 
 8. **RecommendationsFeedback** (table: `recommendations_feedback`)
    - Fields: `id`, `recommendation_id` (FK to Recommendations), `user_id` (FK to Users), `feedback_type` (must be either 'like' or 'dislike'), `created_at`.
 
-*Additional Notes on Schema:*
+_Additional Notes on Schema:_
+
 - Relationships include one-to-one (Users ⇄ User2FA), one-to-(zero or one) for preferences tables, and one-to-many for Recommendations and SpotifyData.
 - One-to-many relationship between Recommendations and RecommendationsFeedback (a recommendation can have multiple feedback entries).
 - Unique indices exist on `Users.email`, `Users.nick`, `Sessions.token`, and (`recommendations_feedback.recommendation_id`, `recommendations_feedback.user_id`).
@@ -51,6 +59,7 @@ Below are the designed endpoints for each resource and business process.
 Endpoints will use token-based (JWT) authentication, integrated with Supabase's auth service and secured via RLS.
 
 - **POST /auth/register**
+
   - Description: Register a new user with initial credentials and trigger 2FA setup.
   - Request Payload:
     ```json
@@ -65,6 +74,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - Error Codes: 400 Bad Request (validation errors), 409 Conflict (e.g. duplicate email or nick).
 
 - **POST /auth/verify-2fa**
+
   - Description: Verify the 2FA code for a newly registered user.
   - Request Payload:
     ```json
@@ -78,6 +88,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - Error Codes: 400 Bad Request, 401 Unauthorized.
 
 - **POST /auth/login**
+
   - Description: Log in an existing user and initiate 2FA if required.
   - Request Payload:
     ```json
@@ -99,6 +110,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
 ### 2.2. User Profile & Preferences
 
 - **GET /users/{id}**
+
   - Description: Fetch user profile data excluding sensitive fields.
   - URL Parameter: `id` (User identifier)
   - Response: JSON object containing user basic data and links to preferences.
@@ -106,6 +118,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - Error Codes: 404 Not Found, 401 Unauthorized.
 
 - **PATCH /users/{id}**
+
   - Description: Update user details (e.g. nick) and/or preferences.
   - URL Parameter: `id`
   - Request Payload: Partial JSON with updated fields.
@@ -114,12 +127,14 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - Error Codes: 400 Bad Request, 404 Not Found, 403 Forbidden.
 
 - **GET /users/{id}/preferences**
+
   - Description: Retrieve a combined view of a user's music and film preferences.
   - Response: JSON object with keys `music` and `film` containing preference details.
   - Success Codes: 200 OK.
   - Error Codes: 404 Not Found, 401 Unauthorized.
 
 - **PATCH /users/{id}/preferences/music**
+
   - Description: Update music preferences (genres, artists).
   - Request Payload:
     ```json
@@ -148,6 +163,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
 ### 2.3. Recommendations
 
 - **GET /users/{id}/recommendations**
+
   - Description: Retrieve recommendations for a user. Supports filtering by type (music or film) and pagination.
   - Query Parameters: `type` (optional: 'music' or 'film'), `page`, `limit`
   - Response: JSON with an array of recommendation objects and pagination metadata.
@@ -155,11 +171,12 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - Error Codes: 400 Bad Request, 401 Unauthorized.
 
 - **POST /users/{id}/recommendations**
+
   - Description: Trigger generation of new recommendations based on current profile/preferences. This endpoint interfaces with the Openrouter.ai service for AI-generated recommendations.
   - Request Payload:
     ```json
     {
-      "type": "music",  // or "film"
+      "type": "music", // or "film"
       "force_refresh": true
     }
     ```
@@ -168,12 +185,13 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
   - Error Codes: 400 Bad Request, 500 Internal Server Error (with fallback to mocked recommendations in case of service failure).
 
 - **POST /users/{id}/recommendations/{rec_id}/feedback**
+
   - Description: Submit user feedback (like/dislike) for a specific recommendation.
   - URL Parameters: `id` (User ID), `rec_id` (Recommendation ID)
   - Request Payload:
     ```json
     {
-      "feedback_type": "like"  // or "dislike"
+      "feedback_type": "like" // or "dislike"
     }
     ```
   - Response: JSON object with the saved feedback information.
@@ -190,6 +208,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
 ### 2.4. Spotify Integration
 
 - **POST /spotify/sync**
+
   - Description: Initiate synchronization with Spotify to update user data (e.g., albums, artists) for recommendation enrichment.
   - Request Payload:
     ```json
@@ -220,6 +239,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
 ## 4. Validation and Business Logic
 
 - **Validation Rules (as per the DB Schema):**
+
   - **Users:**
     - Email must be unique and properly formatted.
     - `nick` must comply with the regex constraint and not exceed 20 characters.
@@ -232,6 +252,7 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
     - Ensure arrays for genres, artists, and cast contain valid strings.
 
 - **Business Logic Requirements (from PRD):**
+
   - **User Registration & 2FA:**
     - Upon registration, a verification code is generated and must be validated via `/auth/verify-2fa`.
     - Both registration and login processes enforce 2FA.
@@ -254,4 +275,4 @@ Endpoints will use token-based (JWT) authentication, integrated with Supabase's 
 
 ---
 
-This plan provides a comprehensive blueprint for implementing the REST API for getTaste MVP, ensuring that all CRUD operations, business logic, and security mechanisms are thoroughly addressed in alignment with the provided database schema, product requirements, and technology stack. 
+This plan provides a comprehensive blueprint for implementing the REST API for getTaste MVP, ensuring that all CRUD operations, business logic, and security mechanisms are thoroughly addressed in alignment with the provided database schema, product requirements, and technology stack.

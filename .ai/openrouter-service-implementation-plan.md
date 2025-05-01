@@ -16,7 +16,7 @@ The service will be implemented as a class with static methods, following the pa
 /**
  * Configures the OpenRouter service with API key and default parameters.
  * Should be called once at application startup.
- * 
+ *
  * @param apiKey - OpenRouter API key
  * @param defaultModel - Default model to use if not specified
  * @param defaultSystemPrompt - Default system prompt to use if not specified
@@ -24,8 +24,8 @@ The service will be implemented as a class with static methods, following the pa
  * @throws Error if API key is invalid or missing
  */
 public static configure(
-  apiKey: string, 
-  defaultModel: string = "anthropic/claude-3-opus-20240229", 
+  apiKey: string,
+  defaultModel: string = "anthropic/claude-3-opus-20240229",
   defaultSystemPrompt?: string
 ): void
 ```
@@ -35,7 +35,7 @@ public static configure(
 ```typescript
 /**
  * Sends a chat completion request to OpenRouter API.
- * 
+ *
  * @param userMessage - The user's message or query
  * @param options - Optional parameters (model, systemPrompt, responseFormat, etc.)
  * @returns The LLM response
@@ -61,7 +61,7 @@ public static async chatCompletion(
 ```typescript
 /**
  * Sends a chat completion request to OpenRouter API with JSON response format.
- * 
+ *
  * @param userMessage - The user's message or query
  * @param jsonSchema - The JSON schema that defines the response structure
  * @param options - Optional parameters (model, systemPrompt, etc.)
@@ -86,7 +86,7 @@ public static async jsonCompletion<T>(
 ```typescript
 /**
  * Fetches the list of available models from OpenRouter API.
- * 
+ *
  * @returns Array of available models with details
  * @throws Error if the request fails or if the service is not configured
  */
@@ -116,7 +116,7 @@ private static readonly baseUrl = 'https://openrouter.ai/api/v1';
 ```typescript
 /**
  * Constructs headers for OpenRouter API requests.
- * 
+ *
  * @returns Headers object with API key and other required headers
  * @throws Error if the service is not configured
  */
@@ -124,7 +124,7 @@ private static getHeaders(): Record<string, string>
 
 /**
  * Constructs the request body for chat completion.
- * 
+ *
  * @param userMessage - The user's message
  * @param options - Optional parameters
  * @returns Request body object
@@ -147,7 +147,7 @@ private static constructChatRequestBody(
 ```typescript
 /**
  * Processes the response from OpenRouter API.
- * 
+ *
  * @param response - Fetch response object
  * @returns Processed response data
  * @throws Error if the response indicates a failure
@@ -156,7 +156,7 @@ private static async processResponse<T>(response: Response): Promise<T>
 
 /**
  * Validates the JSON response against the provided schema.
- * 
+ *
  * @param response - The JSON response from the LLM
  * @param schema - The expected schema
  * @returns Boolean indicating if the response matches the schema
@@ -181,7 +181,7 @@ export class OpenRouterApiError extends Error {
     public response?: any
   ) {
     super(message);
-    this.name = 'OpenRouterApiError';
+    this.name = "OpenRouterApiError";
   }
 }
 
@@ -191,7 +191,7 @@ export class OpenRouterApiError extends Error {
 export class OpenRouterConfigError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'OpenRouterConfigError';
+    this.name = "OpenRouterConfigError";
   }
 }
 
@@ -205,7 +205,7 @@ export class JsonSchemaValidationError extends Error {
     public response: any
   ) {
     super(message);
-    this.name = 'JsonSchemaValidationError';
+    this.name = "JsonSchemaValidationError";
   }
 }
 ```
@@ -213,6 +213,7 @@ export class JsonSchemaValidationError extends Error {
 ### 5.2 Error Handling Implementation
 
 The service will handle errors using a structured approach:
+
 1. All API calls will be wrapped in try/catch blocks
 2. Early validation of parameters and configurations
 3. Proper error propagation with clear error messages
@@ -255,13 +256,13 @@ Create the necessary types for the OpenRouter service in `src/types.ts`:
 
 /** Response format type for structured LLM responses */
 export interface ResponseFormat {
-  type: 'json_schema';
+  type: "json_schema";
   schema: object;
 }
 
 /** Chat message structure */
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
@@ -317,34 +318,29 @@ export interface ModelInfo {
 Create the OpenRouter service file at `src/lib/services/openrouter.service.ts`:
 
 ```typescript
-import type {
-  ChatCompletionRequest,
-  ChatCompletionResponse,
-  ModelInfo,
-  ResponseFormat
-} from '../../types';
+import type { ChatCompletionRequest, ChatCompletionResponse, ModelInfo, ResponseFormat } from "../../types";
 
 /**
  * OpenRouter service for interacting with various LLM providers through OpenRouter.ai.
  */
 export class OpenRouterService {
   private static apiKey: string;
-  private static defaultModel: string = 'anthropic/claude-3-opus-20240229';
+  private static defaultModel: string = "anthropic/claude-3-opus-20240229";
   private static defaultSystemPrompt: string | undefined;
-  private static readonly baseUrl = 'https://openrouter.ai/api/v1';
+  private static readonly baseUrl = "https://openrouter.ai/api/v1";
 
   /**
    * Configures the OpenRouter service with API key and default parameters.
    */
   public static configure(
     apiKey: string,
-    defaultModel: string = 'anthropic/claude-3-opus-20240229',
+    defaultModel: string = "anthropic/claude-3-opus-20240229",
     defaultSystemPrompt?: string
   ): void {
     if (!apiKey) {
-      throw new OpenRouterConfigError('API key is required');
+      throw new OpenRouterConfigError("API key is required");
     }
-    
+
     this.apiKey = apiKey;
     this.defaultModel = defaultModel;
     this.defaultSystemPrompt = defaultSystemPrompt;
@@ -367,16 +363,16 @@ export class OpenRouterService {
     }
   ): Promise<ChatCompletionResponse> {
     if (!this.apiKey) {
-      throw new OpenRouterConfigError('OpenRouter service not configured. Call configure() first.');
+      throw new OpenRouterConfigError("OpenRouter service not configured. Call configure() first.");
     }
 
     try {
       const requestBody = this.constructChatRequestBody(userMessage, options);
-      
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
+        method: "POST",
         headers: this.getHeaders(),
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
       return await this.processResponse<ChatCompletionResponse>(response);
@@ -384,7 +380,7 @@ export class OpenRouterService {
       if (error instanceof OpenRouterApiError || error instanceof OpenRouterConfigError) {
         throw error;
       }
-      
+
       throw new OpenRouterApiError(
         `Failed to get chat completion: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -406,13 +402,13 @@ export class OpenRouterService {
     }
   ): Promise<T> {
     const responseFormat: ResponseFormat = {
-      type: 'json_schema',
-      schema: jsonSchema
+      type: "json_schema",
+      schema: jsonSchema,
     };
 
     const response = await this.chatCompletion(userMessage, {
       ...options,
-      responseFormat
+      responseFormat,
     });
 
     let parsedResponse: T;
@@ -420,18 +416,14 @@ export class OpenRouterService {
       parsedResponse = JSON.parse(response.choices[0].message.content) as T;
     } catch (error) {
       throw new JsonSchemaValidationError(
-        'Failed to parse JSON response',
+        "Failed to parse JSON response",
         jsonSchema,
         response.choices[0].message.content
       );
     }
 
     if (!this.validateJsonResponse(parsedResponse, jsonSchema)) {
-      throw new JsonSchemaValidationError(
-        'Response does not match the provided schema',
-        jsonSchema,
-        parsedResponse
-      );
+      throw new JsonSchemaValidationError("Response does not match the provided schema", jsonSchema, parsedResponse);
     }
 
     return parsedResponse;
@@ -442,13 +434,13 @@ export class OpenRouterService {
    */
   public static async listModels(): Promise<ModelInfo[]> {
     if (!this.apiKey) {
-      throw new OpenRouterConfigError('OpenRouter service not configured. Call configure() first.');
+      throw new OpenRouterConfigError("OpenRouter service not configured. Call configure() first.");
     }
 
     try {
       const response = await fetch(`${this.baseUrl}/models`, {
-        method: 'GET',
-        headers: this.getHeaders()
+        method: "GET",
+        headers: this.getHeaders(),
       });
 
       return await this.processResponse<ModelInfo[]>(response);
@@ -456,10 +448,8 @@ export class OpenRouterService {
       if (error instanceof OpenRouterApiError || error instanceof OpenRouterConfigError) {
         throw error;
       }
-      
-      throw new OpenRouterApiError(
-        `Failed to list models: ${error instanceof Error ? error.message : String(error)}`
-      );
+
+      throw new OpenRouterApiError(`Failed to list models: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -468,14 +458,14 @@ export class OpenRouterService {
    */
   private static getHeaders(): Record<string, string> {
     if (!this.apiKey) {
-      throw new OpenRouterConfigError('OpenRouter service not configured. Call configure() first.');
+      throw new OpenRouterConfigError("OpenRouter service not configured. Call configure() first.");
     }
 
     return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.apiKey}`,
-      'HTTP-Referer': 'https://api.openrouter.ai/', // Replace with your actual domain
-      'X-Title': '10xCards' // Replace with your application name
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${this.apiKey}`,
+      "HTTP-Referer": "https://api.openrouter.ai/", // Replace with your actual domain
+      "X-Title": "10xCards", // Replace with your application name
     };
   }
 
@@ -495,20 +485,20 @@ export class OpenRouterService {
     }
   ): ChatCompletionRequest {
     const messages = [];
-    
+
     // Add system message if provided or if default exists
     const systemPrompt = options?.systemPrompt || this.defaultSystemPrompt;
     if (systemPrompt) {
       messages.push({
-        role: 'system',
-        content: systemPrompt
+        role: "system",
+        content: systemPrompt,
       });
     }
-    
+
     // Add user message
     messages.push({
-      role: 'user',
-      content: userMessage
+      role: "user",
+      content: userMessage,
     });
 
     return {
@@ -518,7 +508,7 @@ export class OpenRouterService {
       temperature: options?.temperature,
       max_tokens: options?.maxTokens,
       top_p: options?.topP,
-      stream: options?.streaming || false
+      stream: options?.streaming || false,
     };
   }
 
@@ -534,14 +524,10 @@ export class OpenRouterService {
         errorData = await response.text();
       }
 
-      throw new OpenRouterApiError(
-        `API request failed with status ${response.status}`,
-        response.status,
-        errorData
-      );
+      throw new OpenRouterApiError(`API request failed with status ${response.status}`, response.status, errorData);
     }
 
-    return await response.json() as T;
+    return (await response.json()) as T;
   }
 
   /**
@@ -552,10 +538,10 @@ export class OpenRouterService {
     // Simple validation - in a real implementation, use a proper JSON schema validator
     try {
       // Basic validation - check if response is an object
-      if (typeof response !== 'object' || response === null) {
+      if (typeof response !== "object" || response === null) {
         return false;
       }
-      
+
       return true;
     } catch (error) {
       return false;
@@ -573,7 +559,7 @@ export class OpenRouterApiError extends Error {
     public response?: any
   ) {
     super(message);
-    this.name = 'OpenRouterApiError';
+    this.name = "OpenRouterApiError";
   }
 }
 
@@ -583,7 +569,7 @@ export class OpenRouterApiError extends Error {
 export class OpenRouterConfigError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'OpenRouterConfigError';
+    this.name = "OpenRouterConfigError";
   }
 }
 
@@ -597,7 +583,7 @@ export class JsonSchemaValidationError extends Error {
     public response: any
   ) {
     super(message);
-    this.name = 'JsonSchemaValidationError';
+    this.name = "JsonSchemaValidationError";
   }
 }
 ```
@@ -622,7 +608,7 @@ import { OpenRouterService } from "../lib/services/openrouter.service";
 // Initialize OpenRouter service
 OpenRouterService.configure(
   import.meta.env.OPENROUTER_API_KEY,
-  import.meta.env.OPENROUTER_DEFAULT_MODEL || 'anthropic/claude-3-opus-20240229',
+  import.meta.env.OPENROUTER_DEFAULT_MODEL || "anthropic/claude-3-opus-20240229",
   import.meta.env.OPENROUTER_DEFAULT_SYSTEM_PROMPT
 );
 ```
@@ -634,9 +620,7 @@ OpenRouterService.configure(
 ```typescript
 import { OpenRouterService } from "../lib/services/openrouter.service";
 
-const response = await OpenRouterService.chatCompletion(
-  "Explain quantum computing in simple terms"
-);
+const response = await OpenRouterService.chatCompletion("Explain quantum computing in simple terms");
 
 console.log(response.choices[0].message.content);
 ```
@@ -651,29 +635,25 @@ const schema = {
   properties: {
     explanation: {
       type: "string",
-      description: "Simple explanation of quantum computing"
+      description: "Simple explanation of quantum computing",
     },
     keyPoints: {
       type: "array",
       items: {
-        type: "string"
+        type: "string",
       },
-      description: "Key points about quantum computing"
-    }
+      description: "Key points about quantum computing",
+    },
   },
-  required: ["explanation", "keyPoints"]
+  required: ["explanation", "keyPoints"],
 };
 
 const response = await OpenRouterService.jsonCompletion<{
   explanation: string;
   keyPoints: string[];
-}>(
-  "Explain quantum computing in simple terms",
-  schema,
-  {
-    systemPrompt: "You are a science educator specializing in explaining complex topics in simple terms."
-  }
-);
+}>("Explain quantum computing in simple terms", schema, {
+  systemPrompt: "You are a science educator specializing in explaining complex topics in simple terms.",
+});
 
 console.log(response.explanation);
 console.log(response.keyPoints);
@@ -693,18 +673,16 @@ console.log(models);
 Example of using the service with proper error handling:
 
 ```typescript
-import { 
-  OpenRouterService, 
+import {
+  OpenRouterService,
   OpenRouterApiError,
   OpenRouterConfigError,
-  JsonSchemaValidationError
+  JsonSchemaValidationError,
 } from "../lib/services/openrouter.service";
 
 try {
-  const response = await OpenRouterService.chatCompletion(
-    "Explain quantum computing in simple terms"
-  );
-  
+  const response = await OpenRouterService.chatCompletion("Explain quantum computing in simple terms");
+
   console.log(response.choices[0].message.content);
 } catch (error) {
   if (error instanceof OpenRouterConfigError) {
@@ -724,4 +702,7 @@ try {
   }
 }
 ```
-``` 
+
+```
+
+```

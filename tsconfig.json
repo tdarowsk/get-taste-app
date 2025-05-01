@@ -9,8 +9,9 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler"
   }
 }

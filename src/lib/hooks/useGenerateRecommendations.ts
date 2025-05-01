@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { mockRecommendations, mockFilmRecommendations } from "./mockData";
+import { mockMusicRecommendations, mockFilmRecommendations } from "../../mockData";
 
 interface GenerateRecommendationsVariables {
   userId: number;
@@ -44,7 +44,8 @@ export function useGenerateRecommendations() {
                 data: {
                   title: type === "music" ? "Top Charting Artists" : "Highest Grossing Films of All Time",
                   description: "Popular items for new users",
-                  items: type === "music" ? mockRecommendations[0].data.items : mockFilmRecommendations[0].data.items,
+                  items:
+                    type === "music" ? mockMusicRecommendations[0].data.items : mockFilmRecommendations[0].data.items,
                 },
                 created_at: new Date().toISOString(),
               },
@@ -55,7 +56,7 @@ export function useGenerateRecommendations() {
           return {
             success: true,
             message: "Mock recommendations generated successfully",
-            data: type === "music" ? mockRecommendations[0] : mockFilmRecommendations[0],
+            data: type === "music" ? mockMusicRecommendations[0] : mockFilmRecommendations[0],
           };
         }
 
@@ -70,7 +71,7 @@ export function useGenerateRecommendations() {
         return {
           success: true,
           message: "Using mock data due to API error",
-          data: type === "music" ? mockRecommendations[0] : mockFilmRecommendations[0],
+          data: type === "music" ? mockMusicRecommendations[0] : mockFilmRecommendations[0],
         };
       }
     },

@@ -81,7 +81,7 @@ export interface SpotifyTrack {
 // Typ odpowiedzi dla POST /spotify/sync
 export interface SpotifySyncResponseDTO {
   message: string;
-  status: 'success' | 'error';
+  status: "success" | "error";
   details?: string;
 }
 
@@ -100,6 +100,7 @@ export interface SpotifyDataListResponseDTO {
 
 - **Kod statusu**: 200 OK
 - **Format odpowiedzi**:
+
   ```json
   {
     "message": "Synchronizacja z Spotify rozpoczęta",
@@ -117,6 +118,7 @@ export interface SpotifyDataListResponseDTO {
 
 - **Kod statusu**: 200 OK
 - **Format odpowiedzi**:
+
   ```json
   {
     "data": [
@@ -229,7 +231,7 @@ import { z } from "zod";
 
 // Schemat walidacji dla żądania synchronizacji
 const spotifySyncSchema = z.object({
-  user_id: z.number().positive()
+  user_id: z.number().positive(),
 });
 
 // Schemat walidacji dla danych Spotify
@@ -239,15 +241,17 @@ const spotifyDataSchema = z.object({
   genres: z.array(z.string()).optional(),
   popularity: z.number().min(0).max(100).optional(),
   release_date: z.string().optional(),
-  tracks: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      duration_ms: z.number().positive(),
-      explicit: z.boolean(),
-      preview_url: z.string().url().optional()
-    })
-  ).optional()
+  tracks: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        duration_ms: z.number().positive(),
+        explicit: z.boolean(),
+        preview_url: z.string().url().optional(),
+      })
+    )
+    .optional(),
 });
 
 export class SpotifyService {
@@ -258,7 +262,9 @@ export class SpotifyService {
    * @returns Status synchronizacji
    * @throws Error w przypadku błędu bazy danych lub API Spotify
    */
-  public static async syncSpotifyData(command: SpotifySyncCommand): Promise<{ message: string, status: 'success' | 'error' }> {
+  public static async syncSpotifyData(
+    command: SpotifySyncCommand
+  ): Promise<{ message: string; status: "success" | "error" }> {
     // Walidacja danych wejściowych
     try {
       spotifySyncSchema.parse(command);
@@ -270,19 +276,17 @@ export class SpotifyService {
       // Pobieranie danych z Spotify API
       // W MVP możemy użyć symulowanych danych
       const spotifyData = await this.fetchSpotifyData(command.user_id.toString());
-      
+
       // Walidacja pobranych danych
       const validatedData = spotifyDataSchema.parse(spotifyData);
 
       // Zapisanie danych w bazie
-      const { error } = await supabaseClient
-        .from("spotify_data")
-        .insert({
-          user_id: command.user_id.toString(),
-          album_id: "sample_album_id", // W rzeczywistej implementacji z API Spotify
-          artist_id: "sample_artist_id", // W rzeczywistej implementacji z API Spotify
-          data: validatedData
-        });
+      const { error } = await supabaseClient.from("spotify_data").insert({
+        user_id: command.user_id.toString(),
+        album_id: "sample_album_id", // W rzeczywistej implementacji z API Spotify
+        artist_id: "sample_artist_id", // W rzeczywistej implementacji z API Spotify
+        data: validatedData,
+      });
 
       if (error) {
         throw new Error(`Błąd podczas zapisywania danych Spotify: ${error.message}`);
@@ -290,18 +294,18 @@ export class SpotifyService {
 
       return {
         message: "Synchronizacja z Spotify rozpoczęta",
-        status: 'success'
+        status: "success",
       };
     } catch (error) {
       console.error(`Błąd podczas synchronizacji z Spotify: ${error.message}`);
       return {
         message: "Wystąpił błąd podczas synchronizacji z Spotify",
-        status: 'error',
-        details: error.message
+        status: "error",
+        details: error.message,
       };
     }
   }
-  
+
   /**
    * Pobiera dane Spotify dla użytkownika.
    *
@@ -315,7 +319,7 @@ export class SpotifyService {
     userId: string,
     limit: number = 10,
     offset: number = 0
-  ): Promise<{ data: SpotifyDataDTO[], count: number, limit: number, offset: number }> {
+  ): Promise<{ data: SpotifyDataDTO[]; count: number; limit: number; offset: number }> {
     // Pobranie liczby wszystkich rekordów
     const { count, error: countError } = await supabaseClient
       .from("spotify_data")
@@ -339,20 +343,20 @@ export class SpotifyService {
     }
 
     // Mapowanie danych do DTO
-    const mappedData = data.map(item => ({
+    const mappedData = data.map((item) => ({
       id: item.id,
       user_id: parseInt(item.user_id),
       album_id: item.album_id,
       artist_id: item.artist_id,
       data: item.data as SpotifyDataDetails,
-      created_at: item.created_at
+      created_at: item.created_at,
     }));
 
     return {
       data: mappedData,
       count: count || 0,
       limit,
-      offset
+      offset,
     };
   }
 
@@ -365,8 +369,8 @@ export class SpotifyService {
    */
   private static async fetchSpotifyData(userId: string): Promise<SpotifyDataDetails> {
     // Symulacja opóźnienia API
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // Przykładowe dane w formacie zwracanym przez API Spotify
     return {
       album_name: "Sample Album",
@@ -380,16 +384,16 @@ export class SpotifyService {
           name: "Sample Track 1",
           duration_ms: 240000,
           explicit: false,
-          preview_url: "https://spotify.com/preview/track_1"
+          preview_url: "https://spotify.com/preview/track_1",
         },
         {
           id: "track_2",
           name: "Sample Track 2",
           duration_ms: 180000,
           explicit: true,
-          preview_url: "https://spotify.com/preview/track_2"
-        }
-      ]
+          preview_url: "https://spotify.com/preview/track_2",
+        },
+      ],
     };
   }
 }
@@ -408,71 +412,62 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Weryfikacja autoryzacji
     const token = cookies.get("sb-token")?.value;
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Brak autoryzacji" }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Sprawdzenie zawartości żądania
     const contentType = request.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      return new Response(
-        JSON.stringify({ error: "Wymagana zawartość typu application/json" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Wymagana zawartość typu application/json" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Parsowanie danych wejściowych
     const requestBody = await request.json();
-    
+
     // Walidacja danych wejściowych używając Zod
     const schema = z.object({
-      user_id: z.number().positive()
+      user_id: z.number().positive(),
     });
-    
+
     try {
       schema.parse(requestBody);
     } catch (validationError) {
       return new Response(
-        JSON.stringify({ 
-          error: "Nieprawidłowe dane wejściowe", 
-          details: validationError.errors 
+        JSON.stringify({
+          error: "Nieprawidłowe dane wejściowe",
+          details: validationError.errors,
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
     // Wywołanie serwisu Spotify
     const result = await SpotifyService.syncSpotifyData(requestBody);
-    
-    return new Response(
-      JSON.stringify(result),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Błąd podczas przetwarzania żądania synchronizacji Spotify:", error);
-    
+
     return new Response(
-      JSON.stringify({ 
-        error: "Wystąpił błąd podczas przetwarzania żądania", 
-        message: error.message 
+      JSON.stringify({
+        error: "Wystąpił błąd podczas przetwarzania żądania",
+        message: error.message,
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
@@ -491,25 +486,19 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     // Weryfikacja autoryzacji
     const token = cookies.get("sb-token")?.value;
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Brak autoryzacji" }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Brak autoryzacji" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Pobieranie ID użytkownika z parametrów URL
     const userId = params.id;
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Wymagane ID użytkownika" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Wymagane ID użytkownika" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Pobieranie parametrów paginacji z query string
@@ -519,57 +508,45 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
     // Sprawdzanie poprawności parametrów paginacji
     if (isNaN(limit) || limit < 1 || limit > 100) {
-      return new Response(
-        JSON.stringify({ error: "Parametr 'limit' musi być liczbą między 1 a 100" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Parametr 'limit' musi być liczbą między 1 a 100" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     if (isNaN(offset) || offset < 0) {
-      return new Response(
-        JSON.stringify({ error: "Parametr 'offset' musi być liczbą nieujemną" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Parametr 'offset' musi być liczbą nieujemną" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Pobieranie danych Spotify
     const spotifyData = await SpotifyService.getSpotifyData(userId, limit, offset);
-    
+
     // Sprawdzanie czy istnieją dane
     if (spotifyData.data.length === 0 && offset === 0) {
-      return new Response(
-        JSON.stringify({ error: "Nie znaleziono danych Spotify dla podanego użytkownika" }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      return new Response(JSON.stringify({ error: "Nie znaleziono danych Spotify dla podanego użytkownika" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    return new Response(
-      JSON.stringify(spotifyData),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return new Response(JSON.stringify(spotifyData), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Błąd podczas pobierania danych Spotify:", error);
-    
+
     return new Response(
-      JSON.stringify({ 
-        error: "Wystąpił błąd podczas przetwarzania żądania", 
-        message: error.message 
+      JSON.stringify({
+        error: "Wystąpił błąd podczas przetwarzania żądania",
+        message: error.message,
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
@@ -599,7 +576,7 @@ export interface SpotifyTrack {
 
 export interface SpotifySyncResponseDTO {
   message: string;
-  status: 'success' | 'error';
+  status: "success" | "error";
   details?: string;
 }
 
@@ -615,4 +592,4 @@ export interface SpotifyDataListResponseDTO {
 
 1. Aktualizacja dokumentacji API z nowymi endpointami
 2. Tworzenie przykładów wykorzystania API dla innych członków zespołu
-3. Aktualizacja README projektu z informacją o nowych funkcjonalnościach 
+3. Aktualizacja README projektu z informacją o nowych funkcjonalnościach

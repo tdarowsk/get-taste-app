@@ -45,6 +45,33 @@ export interface SpotifyTrack {
   preview_url?: string;
 }
 
+// Define interfaces for Spotify API responses
+interface SpotifyTrackObject {
+  id: string;
+  name: string;
+  artists: { id: string; name: string }[];
+  album?: {
+    images?: { url: string; height: number; width: number }[];
+    release_date?: string;
+  };
+  popularity?: number;
+  preview_url?: string;
+}
+
+interface SpotifyAlbumObject {
+  id: string;
+  name: string;
+  release_date: string;
+  total_tracks: number;
+  images?: { url: string; height: number; width: number }[];
+}
+
+interface SpotifyArtistObject {
+  id: string;
+  name: string;
+  images?: { url: string; height: number; width: number }[];
+}
+
 // Helper functions for Spotify data
 
 /**
@@ -197,29 +224,185 @@ async function fetchSpotifyData(): Promise<SpotifyDataDetails> {
  */
 export class SpotifyService {
   private readonly API_BASE_URL = "https://api.spotify.com/v1";
+  private readonly CLIENT_ID = "39c1fb4056f54cbc83009513dcbc63e8"; // From .env
   private accessToken: string | null = null;
+  private tokenExpiry = 0;
+
+  /**
+   * Gets an access token for the Spotify API
+   * Uses Client Credentials Flow for server-to-server requests
+   */
+  private async getAccessToken(): Promise<string> {
+    // Check if we already have a valid token
+    if (this.accessToken && Date.now() < this.tokenExpiry) {
+      return this.accessToken;
+    }
+
+    try {
+      // Get a new token using Client Credentials flow
+      const response = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          // The Authorization header contains "Basic <base64encoded(client_id:client_secret)>"
+          // Since we only have client_id, we'll send it in the body
+        },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: this.CLIENT_ID,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Error getting Spotify access token:", response.statusText);
+        throw new Error(`Spotify token error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      this.accessToken = data.access_token;
+      // Set expiry time (token expiry minus 60 seconds buffer)
+      this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+
+      // We know the token is set at this point
+      if (!this.accessToken) {
+        throw new Error("Failed to get Spotify access token");
+      }
+
+      return this.accessToken;
+    } catch (error) {
+      console.error("Failed to get Spotify access token:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets popular artists from Spotify API
+   * @param limit Maximum number of popular artists to return
+   * @returns Array of artist information with proper image URLs
+   */
+  async getPopularArtists(limit = 10): Promise<{ id: string; name: string; imageUrl: string }[]> {
+    try {
+      console.log("Fetching popular artists from Spotify API...");
+
+      // Get a token
+      const token = await this.getAccessToken();
+
+      // First, get top artists directly from Spotify's search API
+      const topArtistsResponse = await fetch(`${this.API_BASE_URL}/search?q=genre:pop&type=artist&limit=${limit}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!topArtistsResponse.ok) {
+        throw new Error(`Spotify API error: ${topArtistsResponse.statusText}`);
+      }
+
+      const topArtistsData = await topArtistsResponse.json();
+
+      // Process the artist data to get IDs, names, and images
+      if (topArtistsData?.artists?.items && Array.isArray(topArtistsData.artists.items)) {
+        const artists = topArtistsData.artists.items.map((artist: SpotifyArtistObject) => ({
+          id: artist.id,
+          name: artist.name,
+          imageUrl:
+            artist.images && artist.images.length > 0
+              ? artist.images[0].url
+              : "https://via.placeholder.com/300x300?text=No+Image",
+        }));
+
+        console.log("Successfully fetched artists with images:", artists);
+        return artists;
+      }
+
+      throw new Error("No artists found in Spotify API response");
+    } catch (error) {
+      console.error("Error fetching popular artists from Spotify:", error);
+      // Don't use fallback data - throw the error so the caller can handle it
+      throw new Error(`Failed to fetch artists from Spotify: ${error}`);
+    }
+  }
+
+  /**
+   * Get artist information by ID
+   * @param artistId The Spotify artist ID
+   * @returns Artist information
+   */
+  async getArtistInfo(artistId: string): Promise<{ name: string; imageUrl?: string } | null> {
+    try {
+      const token = await this.getAccessToken();
+
+      const response = await fetch(`${this.API_BASE_URL}/artists/${artistId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Spotify API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        name: data.name,
+        imageUrl: data.images?.[0]?.url,
+      };
+    } catch (error) {
+      console.error(`Error getting artist info from Spotify for ID ${artistId}:`, error);
+      return null;
+    }
+  }
 
   /**
    * Gets the artist's albums from Spotify API
    * @param artistId The Spotify artist ID
-   * @param includeGroups Optional filter for album types (album, single, appears_on, compilation)
-   * @param market Optional market code (ISO 3166-1 alpha-2 country code)
-   * @param limit Maximum number of albums to return (default: 10, max: 50)
+   * @returns Array of recommendation items representing albums
    */
-  async getArtistAlbums(
-    artistId: string,
-    includeGroups = "album,single",
-    market = "US",
-    limit = 10
-  ): Promise<RecommendationItem[]> {
+  async getArtistAlbums(artistId: string): Promise<RecommendationItem[]> {
     try {
-      // In a real implementation, we would:
-      // 1. Get a valid access token from our auth system
-      // 2. Make the API request to Spotify
-      // 3. Transform and return the data
+      // Get an access token
+      const token = await this.getAccessToken();
 
-      // For now, we'll simulate the response from Spotify
-      return this.getMockArtistAlbums(artistId);
+      // First, get the artist info for the name
+      const artistInfo = await this.getArtistInfo(artistId);
+      if (!artistInfo) {
+        throw new Error(`Could not get info for artist ID: ${artistId}`);
+      }
+
+      // Now get the albums
+      const response = await fetch(
+        `${this.API_BASE_URL}/artists/${artistId}/albums?include_groups=album,single&limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Spotify API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Transform albums to RecommendationItems
+      if (data?.items && Array.isArray(data.items)) {
+        return data.items.map((album: SpotifyAlbumObject) => ({
+          id: `album-${album.id}`,
+          name: album.name,
+          type: "album",
+          details: {
+            artist: artistInfo.name,
+            releaseDate: album.release_date,
+            totalTracks: album.total_tracks,
+            imageUrl: album.images?.[0]?.url,
+            spotifyId: album.id,
+          },
+        }));
+      }
+
+      return [];
     } catch (error) {
       console.error("Error fetching artist albums from Spotify:", error);
       return [];
@@ -227,134 +410,48 @@ export class SpotifyService {
   }
 
   /**
-   * Mock function to simulate getting artist albums from Spotify
-   * This is used for demonstration purposes until actual API integration is implemented
-   */
-  private getMockArtistAlbums(artistId: string): RecommendationItem[] {
-    // Mock data based on the Spotify API response structure
-    const artistName = this.getArtistNameById(artistId);
-
-    return [
-      {
-        id: `album-${artistId}-1`,
-        name: `${artistName} - Album 1`,
-        type: "album",
-        details: {
-          artist: artistName,
-          releaseDate: "2022-05-20",
-          totalTracks: 12,
-          imageUrl: "https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228",
-        },
-      },
-      {
-        id: `album-${artistId}-2`,
-        name: `${artistName} - Album 2`,
-        type: "album",
-        details: {
-          artist: artistName,
-          releaseDate: "2020-08-15",
-          totalTracks: 10,
-          imageUrl: "https://i.scdn.co/image/ab67616d00001e02b5d60a94c44a87d9c1768ba2",
-        },
-      },
-      {
-        id: `album-${artistId}-3`,
-        name: `${artistName} - Single Collection`,
-        type: "single",
-        details: {
-          artist: artistName,
-          releaseDate: "2021-03-10",
-          totalTracks: 5,
-          imageUrl: "https://i.scdn.co/image/ab67616d00001e02dbfc8e57c44bb54e10d7c6c7",
-        },
-      },
-    ];
-  }
-
-  /**
-   * Helper method to get artist name from ID
-   * In a real implementation, this would use a database lookup or API call
-   */
-  private getArtistNameById(artistId: string): string {
-    const artistMap: Record<string, string> = {
-      "0TnOYISbd1XYRBk9myaseg": "Drake",
-      "6vWDO969PvNqNYHIOW5v0m": "Beyoncé",
-      "1Xyo4u8uXC1ZmMpatF05PJ": "The Weeknd",
-      "6qqNVTkY8uBg9cP3Jd7DAH": "Billie Eilish",
-      "6M2wZ9GZgrQXHCFfjv46we": "Dua Lipa",
-      "5K4W6rqBFWDnAN6FQUkS6x": "Kanye West",
-      default: "Unknown Artist",
-    };
-
-    return artistMap[artistId] || artistMap["default"];
-  }
-
-  /**
    * Gets track information from Spotify API
    * @param trackId The Spotify track ID
-   * @param market Optional market code (ISO 3166-1 alpha-2 country code)
+   * @returns Track information as a recommendation item
    */
-  async getTrackInfo(trackId: string, market = "US"): Promise<RecommendationItem | null> {
+  async getTrackInfo(trackId: string): Promise<RecommendationItem | null> {
     try {
-      // In a real implementation, we would:
-      // 1. Get a valid access token
-      // 2. Make the API request to Spotify
-      // 3. Transform and return the data
+      // Get an access token
+      const token = await this.getAccessToken();
 
-      // For now, simulate the Spotify API response
-      return this.getMockTrackInfo(trackId);
+      // Make API request to get track info
+      const response = await fetch(`${this.API_BASE_URL}/tracks/${trackId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Spotify API error: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as SpotifyTrackObject;
+
+      // Extract artist name
+      const artistName = data.artists?.[0]?.name || "Unknown Artist";
+
+      // Transform to RecommendationItem
+      return {
+        id: `track-${trackId}`,
+        name: data.name,
+        type: "song",
+        details: {
+          artist: artistName,
+          imageUrl: data.album?.images?.[0]?.url,
+          spotifyId: trackId,
+          popularity: data.popularity,
+          releaseDate: data.album?.release_date,
+          previewUrl: data.preview_url,
+        },
+      };
     } catch (error) {
       console.error("Error fetching track info from Spotify:", error);
       return null;
     }
-  }
-
-  /**
-   * Mock function to simulate getting track information from Spotify
-   */
-  private getMockTrackInfo(trackId: string): RecommendationItem {
-    // Find the track name based on ID
-    const trackMap: Record<string, { name: string; artist: string; imageUrl: string }> = {
-      "0VjIjW4GlUZAMYd2vXMi3b": {
-        name: "Blinding Lights",
-        artist: "The Weeknd",
-        imageUrl: "https://i.scdn.co/image/ab67616d00001e02c8b444df094279e70d0ed856",
-      },
-      "2Fxmhks0bxGSBdJ92vM42m": {
-        name: "Bad Guy",
-        artist: "Billie Eilish",
-        imageUrl: "https://i.scdn.co/image/ab67616d00001e02deae7d931928fc1543e70203",
-      },
-      "39LLxExYz6ewLAcYrzQQyP": {
-        name: "Levitating",
-        artist: "Dua Lipa",
-        imageUrl: "https://i.scdn.co/image/ab67616d00001e0282b243023e9806c15b5f8130",
-      },
-      "5HCyWlXZPP0y6Gqq8TgA20": {
-        name: "Stay",
-        artist: "The Kid LAROI & Justin Bieber",
-        imageUrl: "https://i.scdn.co/image/ab67616d00001e02ca99583f5142d370240b8ada",
-      },
-      default: {
-        name: "Unknown Track",
-        artist: "Unknown Artist",
-        imageUrl: "https://i.scdn.co/image/ab67616d00001e02000000000000000000000000",
-      },
-    };
-
-    const trackInfo = trackMap[trackId] || trackMap["default"];
-
-    return {
-      id: `track-${trackId}`,
-      name: trackInfo.name,
-      type: "song",
-      details: {
-        artist: trackInfo.artist,
-        imageUrl: trackInfo.imageUrl,
-        spotifyId: trackId,
-        popularity: 90,
-        releaseDate: "2020-01-01",
-      },
-    };
   }
 }
