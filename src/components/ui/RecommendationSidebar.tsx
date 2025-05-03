@@ -2,11 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { RecommendationDTO, RecommendationItem } from "../../types";
 import { FeedbackType } from "../../types";
-import { mockMusicRecommendations, mockFilmRecommendations } from "../../mockData";
 import { UniqueRecommendationsService } from "../../lib/services/uniqueRecommendations.service";
-
-// Use imported mock data instead of local definitions
-const mockRecommendations: RecommendationDTO[] = [...mockMusicRecommendations, ...mockFilmRecommendations];
 
 // The time period for which items should not be shown after feedback (24 hours)
 const RECOMMENDATION_COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -194,7 +190,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
       }
 
       console.log("Request URL:", url.toString());
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), { credentials: "include" });
 
       if (!response.ok) {
         console.error("Failed to fetch recommendations:", response.status, response.statusText);
@@ -371,6 +367,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           type: "music", // Could be made dynamic based on user preference
           force_refresh: true,
@@ -380,21 +377,15 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
 
       let recommendations: RecommendationDTO[] = [];
 
+      // Ensure successful response
       if (!response.ok) {
-        console.log("API error or not found, using mock recommendations");
-        // Fall back to mock data with new IDs
-        recommendations = mockRecommendations.map((rec) => ({
-          ...rec,
-          user_id: String(userId),
-          id: Number(rec.id + Math.floor(Math.random() * 1000) + Date.now()),
-        }));
+        throw new Error(`Failed to fetch more recommendations: ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (data.data) {
+        recommendations = [data.data];
       } else {
-        const data = await response.json();
-        if (data.data) {
-          recommendations = [data.data];
-        } else {
-          recommendations = mockRecommendations;
-        }
+        recommendations = [];
       }
 
       // Extract items from recommendations
@@ -424,7 +415,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
       setNeedMoreRecommendations(false);
     } catch (err) {
       console.error("Error fetching more items:", err);
-      setError("Failed to fetch more items");
+      setError(err instanceof Error ? err.message : "Failed to fetch more items");
     } finally {
       setLoading(false);
     }

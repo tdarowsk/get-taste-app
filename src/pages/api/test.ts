@@ -1,9 +1,17 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import type { APIRoute } from "astro";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  res.status(200).json({
-    message: "API test endpoint is working",
-    method: req.method,
-    timestamp: new Date().toISOString(),
-  });
-}
+export const GET: APIRoute = async ({ request }) => {
+  return new Response(
+    JSON.stringify({
+      message: "API test endpoint is working",
+      method: request.method,
+      timestamp: new Date().toISOString(),
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+};

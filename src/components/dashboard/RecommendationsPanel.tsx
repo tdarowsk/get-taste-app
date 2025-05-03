@@ -24,7 +24,7 @@ export function RecommendationsPanel({
   userId,
   isNewUser = false,
 }: RecommendationsPanelProps) {
-  const [activeTab, setActiveTab] = useState<"recommendations" | "ratings" | "swipe">("swipe");
+  const [activeTab, setActiveTab] = useState<"recommendations" | "ratings" | "swipe">("recommendations");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Handler for when feedback is processed in the adaptive system

@@ -88,7 +88,7 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
   );
 
   return (
-    <div className="p-6 bg-white/5 backdrop-blur-sm rounded-b-lg">
+    <div data-testid="recommendations-list" className="p-6 bg-white/5 backdrop-blur-sm rounded-b-lg">
       <h3 className="text-lg font-medium mb-3 text-white">
         {viewModels[0]?.title || (type === "music" ? "Music Recommendations" : "Film Recommendations")}
       </h3>
@@ -103,7 +103,12 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
         {allItems.map((item) => (
-          <RecommendationCard key={item.id} item={item} type={item.type as "music" | "film"} />
+          <RecommendationCard
+            key={item.id}
+            data-testid="recommendation-card"
+            item={item}
+            type={item.type as "music" | "film"}
+          />
         ))}
       </div>
     </div>

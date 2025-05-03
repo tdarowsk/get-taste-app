@@ -3,6 +3,7 @@ import type { RecommendationDTO } from "../../../../types";
 import { SpotifyService } from "../../../../lib/services/spotify.service";
 import { RecommendationService } from "../../../../lib/services/recommendation.service";
 import { createSupabaseServerInstance } from "../../../../db/supabase.client";
+import { TMDB_API_KEY } from "../../../../env.config";
 
 // Initialize the SpotifyService
 const spotifyService = new SpotifyService();
@@ -245,111 +246,167 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
     // Get query parameters
     const url = new URL(request.url);
+    // Define type for TMDB discover results
+    interface RawMovie {
+      id: number;
+      title: string;
+      overview: string;
+      poster_path: string | null;
+      release_date: string;
+      vote_average: number;
+    }
     const type = url.searchParams.get("type") as "music" | "film" | null;
+    const isNewUserParam = url.searchParams.get("is_new_user") === "true";
     console.log("Recommendation type requested:", type || "all");
+    console.log("Is new user flag:", isNewUserParam);
+
+    // Bypass for new users: return both film 'discover' and music recommendations without auth
+    if (url.searchParams.get("is_new_user") === "true") {
+      console.log("Public discover for new user, bypassing auth");
+      // Film: fetch popular movies
+      const urlDiscover = `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc`;
+      console.log("Discover URL:", urlDiscover);
+      const discoverRes = await fetch(urlDiscover, {
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${TMDB_API_KEY}`,
+        },
+      });
+      console.log("Discover status:", discoverRes.status, discoverRes.statusText);
+      if (!discoverRes.ok) {
+        const text = await discoverRes.text();
+        console.error("Discover error body:", text);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch discover movies", status: discoverRes.status, body: text }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const discoverData = await discoverRes.json();
+      const rawMovies = Array.isArray(discoverData.results) ? (discoverData.results as RawMovie[]) : [];
+      const filmItems = rawMovies.map((m: RawMovie) => ({
+        id: `movie_${m.id}`,
+        name: m.title,
+        type: "film",
+        details: {
+          imageUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null,
+          description: m.overview,
+          releaseDate: m.release_date,
+          voteAverage: m.vote_average,
+        },
+      }));
+      const filmRec: RecommendationDTO = {
+        id: Math.floor(Math.random() * 100000) + 1,
+        user_id: userId,
+        type: "film",
+        data: {
+          title: "Popular Movies",
+          description: "Trending movies for new users",
+          items: filmItems,
+        },
+        created_at: new Date().toISOString(),
+      };
+      // Music: fetch via Spotify-based service
+      console.log("Fetching initial music recommendations for new user");
+      const musicRecsArray = await getRealMusicRecommendations(userId);
+      // Return combined array
+      return new Response(JSON.stringify([filmRec, ...musicRecsArray]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // Get real recommendations
     let recommendations: RecommendationDTO[] = [];
 
     try {
-      // Get film recommendations via service based on user preferences
+      // Film recommendations: use discover endpoint for new users without preferences
       if (!type || type === "film") {
-        console.log("Generating film recommendations based on user preferences");
-        const filmRec = await RecommendationService.generateRecommendations(userId, {
-          type: "film",
-          force_refresh: false,
-        });
-        recommendations.push(filmRec);
+        // Check if user has any film preferences
+        const filmPrefs = await RecommendationService.getUserPreferences(userId, "film");
+        let hasFilmPrefs = false;
+        if ("director" in filmPrefs) {
+          hasFilmPrefs =
+            Boolean(filmPrefs.director && filmPrefs.director.trim() !== "") ||
+            Boolean(filmPrefs.screenwriter && filmPrefs.screenwriter.trim() !== "") ||
+            Boolean(filmPrefs.cast && filmPrefs.cast.length > 0) ||
+            Boolean(filmPrefs.liked_movies && filmPrefs.liked_movies.length > 0);
+        }
+        // For new users, always fetch discover movies
+        if (!hasFilmPrefs || isNewUserParam) {
+          console.log("New user without film preferences, fetching popular movies via discover endpoint");
+          // Define local type for TMDB movie shape
+          interface RawMovie {
+            id: number;
+            title: string;
+            overview: string;
+            poster_path: string | null;
+            release_date: string;
+            vote_average: number;
+          }
+          const discoverRes = await fetch(
+            `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc`,
+            {
+              headers: {
+                accept: "application/json",
+                Authorization: `Bearer ${TMDB_API_KEY}`,
+              },
+            }
+          );
+          if (!discoverRes.ok) throw new Error("Failed to fetch discover movies");
+          const discoverData = await discoverRes.json();
+          const rawMovies = Array.isArray(discoverData.results) ? (discoverData.results as RawMovie[]) : [];
+          const items = rawMovies.map((m) => ({
+            id: `movie_${m.id}`,
+            name: m.title,
+            type: "film",
+            details: {
+              imageUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null,
+              description: m.overview,
+              releaseDate: m.release_date,
+              voteAverage: m.vote_average,
+            },
+          }));
+          recommendations.push({
+            id: Math.floor(Math.random() * 100000) + 1,
+            user_id: userId,
+            type: "film",
+            data: {
+              title: "Popular Movies",
+              description: "Trending movies for new users",
+              items,
+            },
+            created_at: new Date().toISOString(),
+          });
+        } else {
+          console.log("Generating film recommendations based on user preferences");
+          const filmRec = await RecommendationService.generateRecommendations(userId, {
+            type: "film",
+            force_refresh: false,
+          });
+          recommendations.push(filmRec);
+        }
       }
 
       // Get real music recommendations if type is music or undefined
       if (!type || type === "music") {
-        console.log("Getting music recommendations");
+        console.log("Getting music recommendations via Spotify service");
         try {
-          console.log("Calling RecommendationService.callOpenrouterAPI for music");
-          const musicRecommendations = await RecommendationService.callOpenrouterAPI(
-            {
-              user_id: userId,
-              genres: null,
-              artists: null,
-            },
-            "music"
-          );
-          console.log("Music recommendations received:", musicRecommendations);
-
-          if (musicRecommendations.items && musicRecommendations.items.length > 0) {
-            recommendations.push({
-              id: Math.floor(Math.random() * 10000) + 1,
-              user_id: userId,
-              type: "music",
-              data: {
-                title: "Music Recommendations",
-                description: "Personalized music recommendations",
-                items: musicRecommendations.items,
-              },
-              created_at: new Date().toISOString(),
-            });
-          } else {
-            console.log("No music items received, using fallback data");
-            recommendations.push({
-              id: Math.floor(Math.random() * 10000) + 1,
-              user_id: userId,
-              type: "music",
-              data: {
-                title: "Music Recommendations",
-                description: "Sample music recommendations (API returned no items)",
-                items: [
-                  {
-                    id: "mock-music-1",
-                    name: "Mock Artist 1",
-                    type: "artist",
-                    details: {
-                      imageUrl: "https://via.placeholder.com/300x300?text=Artist+1",
-                    },
-                  },
-                  {
-                    id: "mock-music-2",
-                    name: "Mock Track 1",
-                    type: "track",
-                    details: {
-                      artist: "Mock Artist 1",
-                      imageUrl: "https://via.placeholder.com/300x300?text=Track+1",
-                    },
-                  },
-                ],
-              },
-              created_at: new Date().toISOString(),
-            });
-          }
+          const musicRecs = await getRealMusicRecommendations(userId);
+          console.log("Music recommendations received:", musicRecs);
+          // Append each music recommendation from the array
+          musicRecs.forEach((rec) => recommendations.push(rec));
         } catch (musicError) {
           console.error("Error fetching music recommendations:", musicError);
-          // Add mock music recommendation
+          // On error, push a generic error RecommendationDTO
           recommendations.push({
             id: Math.floor(Math.random() * 10000) + 1,
             user_id: userId,
             type: "music",
             data: {
               title: "Music Recommendations",
-              description: "Sample music recommendations (API error fallback)",
-              items: [
-                {
-                  id: "mock-music-1",
-                  name: "Mock Artist 1",
-                  type: "artist",
-                  details: {
-                    imageUrl: "https://via.placeholder.com/300x300?text=Artist+1",
-                  },
-                },
-                {
-                  id: "mock-music-2",
-                  name: "Mock Track 1",
-                  type: "track",
-                  details: {
-                    artist: "Mock Artist 1",
-                    imageUrl: "https://via.placeholder.com/300x300?text=Track+1",
-                  },
-                },
-              ],
+              description: "Unable to fetch music recommendations",
+              items: [],
+              error: musicError instanceof Error ? musicError.message : String(musicError),
             },
             created_at: new Date().toISOString(),
           });
