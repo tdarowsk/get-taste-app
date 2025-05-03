@@ -105,6 +105,27 @@ OPENROUTER_API_KEY=your-openrouter-api-key
 
 Plik `.env` jest ignorowany przez system kontroli wersji, dlatego musisz utworzyć go lokalnie.
 
+## Testy E2E
+
+### Konfiguracja testów E2E
+
+Testy E2E wymagają prawidłowej konfiguracji zmiennych środowiskowych. Stwórz plik `.env.test` w głównym katalogu projektu i ustaw następujące zmienne:
+
+```
+# Supabase credentials for tests
+SUPABASE_URL=<Twój URL Supabase>
+SUPABASE_KEY=<Twój klucz API Supabase>
+
+# Test user credentials
+E2E_USERNAME=<testowy email>
+E2E_PASSWORD=<testowe hasło>
+
+# Base URL for tests
+BASE_URL=http://localhost:3000
+```
+
+**WAŻNE**: Nigdy nie umieszczaj prawdziwych kluczy API ani danych uwierzytelniających w kodzie, plikach konfiguracyjnych przechowywanych w repozytorium, ani w skryptach package.json. Zawsze używaj plików środowiskowych (`.env.test`) ignorowanych przez system kontroli wersji.
+
 ## Testing
 
 You can run automated tests with the following commands:

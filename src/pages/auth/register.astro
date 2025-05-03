@@ -16,28 +16,25 @@ const {
   data: { user },
 } = await supabase.auth.getUser();
 
-// Jeśli użytkownik jest zalogowany, przekieruj go na stronę główną
 if (user) {
   return Astro.redirect("/");
 }
-
-const handleRegisterSuccess = () => {
-  // Przekierowanie jest obsługiwane po stronie klienta w komponencie RegisterForm
-};
 ---
+
+// Removed server-side callback; this page relies on client-side event dispatch
 
 <Layout title="Rejestracja | getTaste">
   <div class="flex items-center justify-center min-h-[calc(100vh-100px)]">
-    <RegisterForm client:load onRegisterSuccess={handleRegisterSuccess} />
+    <RegisterForm client:load />
   </div>
 </Layout>
 
 <script>
-  // Skrypt klienta zapewniający przekierowanie po pomyślnej rejestracji
-  document.addEventListener("astro:page-load", () => {
-    // Po pomyślnej rejestracji przekierujemy do dashboardu
-    document.addEventListener("register:success", () => {
-      window.location.href = "/dashboard";
+  // Skrypt klienta zapewniający przekierowanie po udanej rejestracji
+  document.addEventListener("astro:page-load", function () {
+    // Po udanej rejestracji przenieś do logowania
+    document.addEventListener("register:success", function () {
+      window.location.href = "/auth/login";
     });
   });
 </script>

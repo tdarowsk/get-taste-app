@@ -7,7 +7,6 @@ import { RecommendationStack } from "./RecommendationStack";
 import { MetadataInsightPanel } from "./MetadataInsightPanel";
 import { MetadataType } from "../types/recommendations";
 import type { MetadataItem } from "../types/recommendations";
-import type { EnhancedRecommendationViewModel } from "../types/recommendations";
 
 interface ImprovedRecommendationsViewProps {
   userId: string;
@@ -21,7 +20,6 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
     isLoading,
     error,
     currentIndex,
-    setCurrentIndex,
     fetchRecommendations,
     submitFeedback,
     showNextRecommendation,
@@ -44,7 +42,7 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
     []
   );
 
-  const { weights, updateWeight, resetWeights } = useMetadataWeights(initialWeights);
+  const { weights, updateWeight } = useMetadataWeights(initialWeights);
 
   // Filtrowanie wag na podstawie wybranej kategorii
   const filteredWeights = useMemo(() => {

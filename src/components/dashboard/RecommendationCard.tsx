@@ -6,9 +6,10 @@ import { RecommendationDetail } from "./RecommendationDetail";
 interface RecommendationCardProps {
   item: RecommendationItemViewModel;
   type: "music" | "film";
+  "data-testid"?: string;
 }
 
-export function RecommendationCard({ item, type }: RecommendationCardProps) {
+export function RecommendationCard({ item, type, "data-testid": testId }: RecommendationCardProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Define placeholder image based on type
@@ -50,6 +51,7 @@ export function RecommendationCard({ item, type }: RecommendationCardProps) {
   return (
     <>
       <Card
+        data-testid={testId}
         className="overflow-hidden transition-all duration-300 h-full flex flex-col group bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20 shadow-lg rounded-lg cursor-pointer hover:transform hover:scale-105"
         onClick={handleCardClick}
       >

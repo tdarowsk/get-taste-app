@@ -12,10 +12,10 @@ export const prerender = false;
 // Jeśli nie jest, zostanie automatycznie przekierowany na stronę logowania
 
 // Pobierz użytkownika z middleware
-const { user } = Astro.locals;
+const { user } = Astro.locals as { user?: UserProfileDTO };
 
-// Sprawdź czy użytkownik istnieje
-if (!user) {
+// Skipping auth if disabled in tests
+if (process.env.DISABLE_AUTH !== "true" && !user) {
   return Astro.redirect("/auth/login");
 }
 

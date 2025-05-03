@@ -179,6 +179,7 @@ export function AdaptiveRecommendationsList({
           <button
             className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md"
             onClick={() => window.location.reload()}
+            data-testid="reload-button"
           >
             Get New Recommendations
           </button>
@@ -197,7 +198,10 @@ export function AdaptiveRecommendationsList({
         Swipe right to like, left to dislike. Your feedback trains the algorithm!
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+      <div
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4"
+        data-testid="swipe-grid"
+      >
         {activeItems.map((item) => (
           <SwipeableRecommendationCard
             key={item.id}

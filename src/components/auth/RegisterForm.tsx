@@ -4,9 +4,9 @@ import { usePasswordValidation } from "../../hooks/usePasswordValidation";
 
 interface RegisterFormProps {
   /**
-   * Callback wywołany po pomyślnej rejestracji
+   * Optional callback wywołany po pomyślnej rejestracji
    */
-  onRegisterSuccess: () => void;
+  onRegisterSuccess?: () => void;
 }
 
 /**
@@ -47,8 +47,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess })
         throw new Error(data.error || "Nie udało się utworzyć konta");
       }
 
-      // Wywołaj callback po pomyślnej rejestracji
-      onRegisterSuccess();
+      // Wywołaj callback po pomyślnej rejestracji oraz wyślij globalny event
+      onRegisterSuccess?.();
+      window.dispatchEvent(new CustomEvent("register:success"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Wystąpił nieoczekiwany błąd");
       throw err;

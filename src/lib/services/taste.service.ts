@@ -1,5 +1,5 @@
 import type { TasteDTO, UserTasteDTO } from "../../types";
-import { PreferencesService } from "./preferences.service";
+import { getUserPreferences } from "./preferences.service";
 
 /**
  * Serwis odpowiedzialny za analizę gustu użytkownika.
@@ -16,7 +16,7 @@ export const TasteService = {
   async getUserTaste(userId: string): Promise<UserTasteDTO> {
     try {
       // Pobierz preferencje użytkownika
-      const preferences = await PreferencesService.getUserPreferences(userId);
+      const preferences = await getUserPreferences(userId);
 
       // Analizuj gust muzyczny
       let musicTaste: TasteDTO | undefined;

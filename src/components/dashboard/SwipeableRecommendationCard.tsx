@@ -221,6 +221,7 @@ export function SwipeableRecommendationCard({ item, type, onSwipe }: SwipeableRe
     <>
       <Card
         ref={cardRef}
+        data-testid="swipe-card"
         className="overflow-hidden transition-all duration-300 h-full flex flex-col group bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20 shadow-lg rounded-lg cursor-pointer select-none"
         onClick={handleCardClick}
         onMouseDown={handleDragStart}
@@ -228,7 +229,7 @@ export function SwipeableRecommendationCard({ item, type, onSwipe }: SwipeableRe
         style={getCardStyles()}
       >
         {/* Feedback indicator */}
-        <div className={getFeedbackIndicatorStyles()}>
+        <div className={getFeedbackIndicatorStyles()} data-testid="feedback-indicator">
           {swipeState === "swiping-right" && "LIKE"}
           {swipeState === "swiping-left" && "NOPE"}
         </div>
@@ -262,6 +263,7 @@ export function SwipeableRecommendationCard({ item, type, onSwipe }: SwipeableRe
           <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">Swipe to rate</span>
           <div className="flex gap-2">
             <button
+              data-testid="button-dislike"
               className="p-1.5 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md"
               onClick={(e) => {
                 e.stopPropagation();
@@ -280,6 +282,7 @@ export function SwipeableRecommendationCard({ item, type, onSwipe }: SwipeableRe
               </svg>
             </button>
             <button
+              data-testid="button-like"
               className="p-1.5 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md"
               onClick={(e) => {
                 e.stopPropagation();
