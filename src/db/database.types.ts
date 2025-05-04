@@ -62,6 +62,8 @@ export interface Database {
           item_id: string;
           feedback_type: string;
           created_at: string;
+          genre: string | null;
+          artist: string | null;
         };
         Insert: {
           id?: number;
@@ -69,6 +71,8 @@ export interface Database {
           item_id: string;
           feedback_type: string;
           created_at?: string;
+          genre?: string | null;
+          artist?: string | null;
         };
         Update: {
           id?: number;
@@ -76,6 +80,8 @@ export interface Database {
           item_id?: string;
           feedback_type?: string;
           created_at?: string;
+          genre?: string | null;
+          artist?: string | null;
         };
         Relationships: [
           {

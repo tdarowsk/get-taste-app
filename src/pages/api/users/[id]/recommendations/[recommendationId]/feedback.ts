@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import type { SubmitRecommendationFeedbackCommand } from "../../../../../../types";
+import type { RecommendationFeedbackType } from "../../../../../../types";
 import { createSupabaseServerInstance } from "../../../../../../db/supabase.client";
 
 export const prerender = false;
@@ -99,12 +99,31 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     */
 
     // Parse request body
-    const body = (await request.json()) as SubmitRecommendationFeedbackCommand;
-    console.log("Request body:", body);
+    const body = (await request.json()) as {
+      feedback_type: RecommendationFeedbackType;
+      genre?: string;
+      artist?: string;
+    };
+
+    console.log(`Received feedback request for recommendation ${recommendationId}:`, body);
+
+    // Validate request body
+    if (!body.feedback_type) {
+      console.error("Missing feedback_type in request body");
+      return new Response(
+        JSON.stringify({
+          error: "Feedback type is required",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Validate feedback type
-    if (!body.feedback_type || !["like", "dislike"].includes(body.feedback_type)) {
-      console.error("Invalid feedback type:", body.feedback_type);
+    if (!["like", "dislike"].includes(body.feedback_type)) {
+      console.error("Invalid feedback_type in request body:", body.feedback_type);
       return new Response(
         JSON.stringify({
           error: "Invalid feedback type. Must be 'like' or 'dislike'",
@@ -147,6 +166,8 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
             item_id: recommendationId.toString(),
             feedback_type: body.feedback_type,
             created_at: new Date().toISOString(),
+            genre: body.genre || null,
+            artist: body.artist || null,
           })
           .select()
           .single();

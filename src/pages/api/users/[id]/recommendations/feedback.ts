@@ -153,16 +153,19 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     const body = (await request.json()) as {
       item_id: string;
       feedback_type: RecommendationFeedbackType;
+      genre?: string;
+      artist?: string;
+      cast?: string;
     };
 
-    console.log("Received feedback request body:", body);
+    console.log("Received feedback body:", body);
 
-    // Validate feedback data
-    if (!body.item_id) {
-      console.error("Missing item_id in request body");
+    // Validate request body
+    if (!body.item_id || !body.feedback_type) {
+      console.error("Missing required fields in request body");
       return new Response(
         JSON.stringify({
-          error: "Item ID is required",
+          error: "Missing required fields",
         }),
         {
           status: 400,
@@ -189,6 +192,9 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       user_id: userId,
       item_id: body.item_id,
       feedback_type: body.feedback_type,
+      genre: body.genre,
+      artist: body.artist,
+      cast: body.cast,
     });
 
     // Save feedback to Supabase
@@ -198,6 +204,9 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         user_id: userId,
         item_id: body.item_id,
         feedback_type: body.feedback_type,
+        genre: body.genre || null,
+        artist: body.artist || null,
+        cast: body.cast || null,
       })
       .select()
       .single();

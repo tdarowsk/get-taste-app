@@ -161,6 +161,9 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     const body = (await request.json()) as {
       item_id: string;
       feedback_type: RecommendationFeedbackType;
+      genre?: string;
+      artist?: string;
+      cast?: string;
     };
 
     console.log("Received feedback request body:", body);
@@ -197,6 +200,9 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       user_id: userId,
       item_id: body.item_id,
       feedback_type: body.feedback_type,
+      genre: body.genre,
+      artist: body.artist,
+      cast: body.cast,
     });
 
     // Attempt to record item feedback in the database
@@ -208,6 +214,9 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
           item_id: body.item_id,
           feedback_type: body.feedback_type,
           created_at: new Date().toISOString(),
+          genre: body.genre || null,
+          artist: body.artist || null,
+          cast: body.cast || null,
         })
         .select()
         .single();

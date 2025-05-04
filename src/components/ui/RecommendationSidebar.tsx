@@ -7,10 +7,37 @@ import { UniqueRecommendationsService } from "../../lib/services/uniqueRecommend
 // The time period for which items should not be shown after feedback (24 hours)
 const RECOMMENDATION_COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+// Function to fetch movie details from our backend API
+const fetchMovieDetailsFromBackend = async (movieId: string) => {
+  try {
+    // Fetch movie details from our backend API endpoint
+    const response = await fetch(`/api/tmdb/movie/${movieId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch movie details: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching movie details:", error);
+    throw error;
+  }
+};
+
 interface FeedbackHistoryItem {
   id: string;
   timestamp: number;
   feedbackType: FeedbackType;
+}
+
+interface MovieDetails {
+  genres?: { id: number; name: string }[];
+  release_date?: string;
+  runtime?: number;
+  vote_average?: number;
+  director?: string;
+  overview?: string;
+  cast?: string[];
 }
 
 interface ItemCardProps {
@@ -19,9 +46,18 @@ interface ItemCardProps {
   isActive: boolean;
 }
 
+interface RecommendationSidebarProps {
+  userId: string;
+  className?: string;
+  isNewUser?: boolean;
+}
+
 const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
   const [direction, setDirection] = useState(0);
   const [swiped, setSwiped] = useState(false);
+  const [movieDetails, setMovieDetails] = useState<MovieDetails | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Reset the direction when a new card becomes active
   useEffect(() => {
@@ -30,6 +66,72 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
       setSwiped(false);
     }
   }, [isActive, item.id]);
+
+  // Fetch movie details from our backend API when card becomes active and is a film
+  useEffect(() => {
+    if (isActive && item.type === "film") {
+      fetchMovieDetails(item.id);
+    }
+  }, [isActive, item.id, item.type]);
+
+  // Function to fetch movie details from our backend API
+  const fetchMovieDetails = async (itemId: string) => {
+    try {
+      setLoading(true);
+      // Extract the actual movie ID from our composite ID format
+      const movieId = itemId.split("-")[0];
+
+      // For movie_id format, we need to extract just the number
+      const cleanMovieId = movieId.startsWith("movie_") ? movieId.substring(6) : movieId;
+
+      console.log(`Fetching details for movie ID: ${cleanMovieId}`);
+
+      // Use our backend API to get movie details
+      const data = await fetchMovieDetailsFromBackend(cleanMovieId);
+      console.log("Movie details from backend:", data);
+
+      setMovieDetails({
+        genres: data.genres,
+        release_date: data.release_date,
+        runtime: data.runtime,
+        vote_average: data.vote_average,
+        overview: data.overview,
+        cast: data.cast,
+      });
+    } catch (error) {
+      console.error("Error fetching movie details:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to handle swipe with movie details
+  const handleSwipeWithDetails = (direction: FeedbackType) => {
+    // Extract genre names to a string for feedback - format as comma-separated string without spaces
+    const genreString = movieDetails?.genres?.map((g) => g.name).join(",") || null;
+
+    // Extract cast names to a string for feedback - take top 5 actors
+    const castString = movieDetails?.cast?.slice(0, 5).join(",") || null;
+
+    console.log("Movie details for feedback:", {
+      id: item.id,
+      movieDetails,
+      formattedGenres: genreString,
+      formattedCast: castString,
+    });
+
+    // Store movie details in item.details for feedback
+    if (item.type === "film" && movieDetails) {
+      if (!item.details) item.details = {};
+      if (genreString) item.details.genre = genreString;
+      if (castString) item.details.cast = castString;
+    }
+
+    console.log(`Sending feedback with genres: ${genreString}, cast: ${castString}`);
+
+    // Call parent onSwipe with extra metadata
+    onSwipe(item.id, direction);
+  };
 
   // Check if this item has been rated before
   const hasBeenRatedBefore = () => {
@@ -63,13 +165,13 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
           setDirection(1);
           setSwiped(true);
           setTimeout(() => {
-            onSwipe(item.id, FeedbackType.LIKE);
+            handleSwipeWithDetails(FeedbackType.LIKE);
           }, 200);
         } else if (dragX < -100) {
           setDirection(-1);
           setSwiped(true);
           setTimeout(() => {
-            onSwipe(item.id, FeedbackType.DISLIKE);
+            handleSwipeWithDetails(FeedbackType.DISLIKE);
           }, 200);
         }
       }}
@@ -80,7 +182,11 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
       transition={{ duration: 0.2 }}
       style={{ cursor: "grab" }}
     >
-      <div className="p-4 bg-white rounded-lg shadow-md border border-gray-200">
+      <div
+        className="p-4 bg-white rounded-lg shadow-md border border-gray-200 relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         {previousRating.exists && (
           <div
             className={`absolute top-0 right-0 px-2 py-1 text-xs text-white rounded-bl-lg ${
@@ -93,8 +199,67 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
 
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-semibold">{item.name}</h3>
-          <span className="text-xs text-gray-500 capitalize">{item.type}</span>
+          <div className="flex items-center">
+            {item.type === "film" && (movieDetails?.overview || (item.details && "description" in item.details)) && (
+              <span className="mr-2 text-xs text-blue-500 cursor-help" title="Hover for details">
+                ⓘ
+              </span>
+            )}
+            <span className="text-xs text-gray-500 capitalize">{item.type}</span>
+          </div>
         </div>
+
+        {/* Movie overview tooltip */}
+        {isHovered &&
+          item.type === "film" &&
+          (movieDetails?.overview || (item.details && "description" in item.details)) && (
+            <div className="absolute left-0 bottom-full p-3 bg-black bg-opacity-90 text-white text-sm rounded-md shadow-lg z-10 w-auto min-w-[200px] max-w-[400px] mb-2 transition-all duration-200 ease-in-out">
+              <div className="font-semibold mb-1 border-b border-gray-600 pb-1">Movie Overview</div>
+              <p className="text-xs leading-relaxed my-2">
+                {movieDetails?.overview ||
+                  (item.details && "description" in item.details ? String(item.details.description) : "")}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                {movieDetails?.vote_average && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Rating:</span>
+                    <span className="ml-1 px-1.5 py-0.5 bg-yellow-500 text-black font-bold rounded">
+                      {movieDetails.vote_average.toFixed(1)}/10
+                    </span>
+                  </div>
+                )}
+                {movieDetails?.runtime && (
+                  <div className="flex items-center">
+                    <span className="font-semibold">Runtime:</span>
+                    <span className="ml-1">{movieDetails.runtime} min</span>
+                  </div>
+                )}
+              </div>
+              {movieDetails?.genres && movieDetails.genres.length > 0 && (
+                <div className="mt-2 text-xs">
+                  <span className="font-semibold">Genres: </span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {movieDetails.genres.map((genre) => (
+                      <span key={genre.id} className="px-2 py-0.5 bg-gray-700 rounded-full">
+                        {genre.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {movieDetails?.cast && movieDetails.cast.length > 0 && (
+                <div className="mt-2 text-xs">
+                  <span className="font-semibold">Cast: </span>
+                  <div className="mt-1 text-xs">
+                    {movieDetails.cast.slice(0, 5).join(", ")}
+                    {movieDetails.cast.length > 5 && "..."}
+                  </div>
+                </div>
+              )}
+              {/* Tooltip arrow */}
+              <div className="absolute w-3 h-3 bg-black bg-opacity-90 transform rotate-45 left-4 -bottom-1.5"></div>
+            </div>
+          )}
 
         <div className="flex items-start gap-4">
           {/* Display image if available */}
@@ -116,6 +281,28 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
             {/* Display artist directly for songs/albums */}
             {typeof item.details?.artist === "string" && (
               <p className="text-sm text-gray-700 italic">by {item.details.artist}</p>
+            )}
+
+            {/* Display movie details if available */}
+            {item.type === "film" && (
+              <div className="mt-2">
+                {movieDetails?.release_date && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Release:</span> {new Date(movieDetails.release_date).getFullYear()}
+                  </p>
+                )}
+                {movieDetails?.genres && movieDetails.genres.length > 0 && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Genre:</span> {movieDetails.genres.map((g) => g.name).join(", ")}
+                  </p>
+                )}
+                {movieDetails?.runtime && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Runtime:</span> {movieDetails.runtime} min
+                  </p>
+                )}
+                {loading && <p className="text-xs text-gray-500 italic">Loading details...</p>}
+              </div>
             )}
 
             {item.details && (
@@ -154,12 +341,6 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
     </motion.div>
   );
 };
-
-interface RecommendationSidebarProps {
-  userId: string;
-  className?: string;
-  isNewUser?: boolean;
-}
 
 const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, className, isNewUser = false }) => {
   // Flatten all recommendation items into a single array
@@ -259,6 +440,13 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         setCurrentIndex(allItems.length);
       }
 
+      // Find the current item in the array
+      const currentItem = allItems.find((item) => item.id === itemId);
+      if (!currentItem) {
+        console.error(`Item with ID ${itemId} not found in allItems array`);
+        return;
+      }
+
       // Add to feedback history using the service (saves to localStorage)
       UniqueRecommendationsService.addToHistory(userId, itemId, feedbackType);
       console.log(`Saved feedback to localStorage for item ${itemId}`);
@@ -271,17 +459,49 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         // Try the primary endpoint first
         let savedSuccessfully = false;
         try {
-          console.log(`Attempting to save feedback to primary endpoint for item ${itemId}...`);
+          console.log("Attempting to save feedback to primary endpoint for item " + itemId);
           const primaryUrl = new URL(`/api/users/${userId}/item-feedback`, window.location.origin);
+
+          // Znajdź item w oryginalnej tablicy allItems
+          const genre = currentItem?.details?.genre || null;
+          const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
+          const cast = currentItem?.details?.cast || null;
+
+          console.log("Item metadata for feedback - primary endpoint:", {
+            id: itemId,
+            genre,
+            artist,
+            cast,
+            details: currentItem?.details,
+          });
+
+          // Create payload with basic fields first
+          let body = JSON.stringify({
+            item_id: itemId,
+            feedback_type: feedbackType,
+          });
+
+          // Try with metadata if available
+          try {
+            if (genre || artist || cast) {
+              body = JSON.stringify({
+                item_id: itemId,
+                feedback_type: feedbackType,
+                genre: genre,
+                artist: artist,
+                cast: cast,
+              });
+            }
+          } catch (e) {
+            console.warn("Could not include metadata in feedback payload:", e);
+          }
+
           const primaryResponse = await fetch(primaryUrl.toString(), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              item_id: itemId,
-              feedback_type: feedbackType,
-            }),
+            body: body,
           });
 
           if (primaryResponse.ok) {
@@ -301,15 +521,47 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
           try {
             console.log(`Attempting to save feedback to fallback endpoint for item ${itemId}...`);
             const fallbackUrl = new URL(`/api/users/${userId}/recommendations/feedback`, window.location.origin);
+
+            // Znajdź item w oryginalnej tablicy allItems
+            const genre = currentItem?.details?.genre || null;
+            const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
+            const cast = currentItem?.details?.cast || null;
+
+            console.log("Item metadata for feedback - fallback endpoint:", {
+              id: itemId,
+              genre,
+              artist,
+              cast,
+              details: currentItem?.details,
+            });
+
+            // Create payload with basic fields first
+            let body = JSON.stringify({
+              item_id: itemId,
+              feedback_type: feedbackType,
+            });
+
+            // Try with metadata if available
+            try {
+              if (genre || artist || cast) {
+                body = JSON.stringify({
+                  item_id: itemId,
+                  feedback_type: feedbackType,
+                  genre: genre,
+                  artist: artist,
+                  cast: cast,
+                });
+              }
+            } catch (e) {
+              console.warn("Could not include metadata in feedback payload:", e);
+            }
+
             const fallbackResponse = await fetch(fallbackUrl.toString(), {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({
-                item_id: itemId,
-                feedback_type: feedbackType,
-              }),
+              body: body,
             });
 
             if (fallbackResponse.ok) {

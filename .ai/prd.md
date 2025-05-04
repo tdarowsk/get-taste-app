@@ -174,6 +174,19 @@ Kryteria akceptacji:
 - System dynamicznie aktualizuje wagi poszczególnych cech metadanych w zależności od częstotliwości ich występowania w polubionych treściach.
 - Użytkownik może zobaczyć uzasadnienie, dlaczego dana rekomendacja została mu przedstawiona (np. "polecane, ponieważ lubisz reżysera X").
 
+US-015  
+Tytuł: Inteligentne rekomendacje z wykorzystaniem OpenRouter.ai  
+Opis: Jako użytkownik, chcę otrzymywać inteligentne rekomendacje generowane przez zaawansowane modele AI dostępne poprzez OpenRouter.ai na podstawie historii moich polubień, aby odkrywać nowe treści, które mogłyby mi się spodobać, ale które sam bym nie znalazł.  
+Kryteria akceptacji:
+
+- System wykorzystuje API OpenRouter.ai do generowania rekomendacji w oparciu o historię polubionych treści użytkownika.
+- Modele AI analizują nie tylko metadane, ale również kontekst kulturowy i trendy, proponując treści wykraczające poza oczywiste wybory.
+- Rekomendacje uwzględniają szerszy kontekst kulturowy i związki między różnymi dziełami (np. inspiracje, podobne motywy).
+- System wybiera optymalny model AI z dostępnych przez OpenRouter.ai w zależności od typu rekomendacji i ilości dostępnych danych.
+- Koszty zapytań API są monitorowane i optymalizowane, aby zapewnić efektywność ekonomiczną.
+- Użytkownik otrzymuje zaskakujące, ale trafne rekomendacje, które poszerzają jego horyzonty muzyczne i filmowe.
+- System podaje uzasadnienie rekomendacji w formie krótkiego opisu wyjaśniającego, dlaczego dana pozycja może się spodobać użytkownikowi.
+
 ## 6. Metryki sukcesu
 
 1. Co najmniej 90% użytkowników posiada w pełni uzupełnione profile z poprawnymi danymi dotyczącymi preferencji.
