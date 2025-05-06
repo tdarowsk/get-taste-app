@@ -28,17 +28,23 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate pagination parameters
     if (isNaN(limit) || limit < 1 || limit > 100) {
-      return new Response(JSON.stringify({ error: "Parameter 'limit' must be a number between 1 and 100" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Parameter 'limit' must be a number between 1 and 100" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     if (isNaN(offset) || offset < 0) {
-      return new Response(JSON.stringify({ error: "Parameter 'offset' must be a non-negative number" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Parameter 'offset' must be a non-negative number" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Get Spotify data
@@ -46,10 +52,13 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
     // Check if data exists
     if (spotifyData.data.length === 0 && offset === 0) {
-      return new Response(JSON.stringify({ error: "No Spotify data found for the specified user" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "No Spotify data found for the specified user" }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     return new Response(JSON.stringify(spotifyData), {
@@ -57,8 +66,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
-    console.error("Error retrieving Spotify data:", error);
-
     return new Response(
       JSON.stringify({
         error: "An error occurred while processing the request",

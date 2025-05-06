@@ -22,7 +22,6 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -39,7 +38,6 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -51,17 +49,8 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
       );
     }
 
-    console.log("URL User ID:", userId, "Type:", typeof userId);
-    console.log("Session User ID:", session.user.id, "Type:", typeof session.user.id);
-
     // Compare user IDs as strings
     if (String(userId) !== String(session.user.id)) {
-      console.error("User ID mismatch:", {
-        urlId: userId,
-        sessionId: session.user.id,
-        urlIdType: typeof userId,
-        sessionIdType: typeof session.user.id,
-      });
       return new Response(
         JSON.stringify({
           error: "Invalid user ID",
@@ -92,8 +81,7 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error retrieving recommendation history:", error);
+  } catch {
     return new Response(
       JSON.stringify({
         error: "An error occurred while retrieving recommendation history",

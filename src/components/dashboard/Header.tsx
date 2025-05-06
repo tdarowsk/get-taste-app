@@ -38,10 +38,8 @@ export function Header({ user }: HeaderProps) {
         // Redirect to home page after successful logout
         window.location.href = "/";
       } else {
-        console.error("Błąd wylogowania:", data.error);
       }
     } catch (error) {
-      console.error("Błąd podczas wylogowania:", error);
     } finally {
       setIsLoggingOut(false);
     }

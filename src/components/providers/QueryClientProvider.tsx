@@ -1,4 +1,7 @@
-import { QueryClient, QueryClientProvider as ReactQueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider as ReactQueryClientProvider,
+} from "@tanstack/react-query";
 import { useState } from "react";
 
 interface QueryClientProviderProps {

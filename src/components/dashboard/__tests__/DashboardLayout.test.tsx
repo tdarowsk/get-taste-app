@@ -4,7 +4,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock subcomponents
 vi.mock("../Header", () => ({
-  Header: ({ user }: { user: { id: string } }) => <div data-testid="header">HEADER_USER:{user.id}</div>,
+  Header: ({ user }: { user: { id: string } }) => (
+    <div data-testid="header">HEADER_USER:{user.id}</div>
+  ),
 }));
 vi.mock("../RecommendationsPanel", () => ({
   RecommendationsPanel: ({
@@ -32,7 +34,11 @@ vi.mock("../RecommendationsPanel", () => ({
 }));
 vi.mock("../../ui/RecommendationSidebar", () => ({
   default: ({ userId, isNewUser }: { userId: string; isNewUser: boolean }) => (
-    <div data-testid="recommendation-sidebar" data-user-id={userId} data-new-user={String(isNewUser)} />
+    <div
+      data-testid="recommendation-sidebar"
+      data-user-id={userId}
+      data-new-user={String(isNewUser)}
+    />
   ),
 }));
 
@@ -53,7 +59,13 @@ import { DashboardLayout } from "../DashboardLayout";
 import type { UserProfileDTO } from "../../../types";
 
 describe("DashboardLayout", () => {
-  const mockUser: UserProfileDTO = { id: "u1", email: "", nick: "", created_at: "", updated_at: "" };
+  const mockUser: UserProfileDTO = {
+    id: "u1",
+    email: "",
+    nick: "",
+    created_at: "",
+    updated_at: "",
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();

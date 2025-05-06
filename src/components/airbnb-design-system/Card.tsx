@@ -179,7 +179,11 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 export const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
   ({ className, children, ...props }, ref) => {
     return (
-      <h3 ref={ref} className={cn("text-lg font-semibold text-gray-900 mb-1", className)} {...props}>
+      <h3
+        ref={ref}
+        className={cn("text-lg font-semibold text-gray-900 mb-1", className)}
+        {...props}
+      >
         {children}
       </h3>
     );
@@ -225,7 +229,13 @@ export const CardImage = React.forwardRef<HTMLImageElement, CardImageProps>(
   ({ className, src, alt, ...props }, ref) => {
     return (
       <div className="relative w-full aspect-[3/2] overflow-hidden">
-        <img ref={ref} src={src} alt={alt} className={cn("w-full h-full object-cover", className)} {...props} />
+        <img
+          ref={ref}
+          src={src}
+          alt={alt}
+          className={cn("w-full h-full object-cover", className)}
+          {...props}
+        />
       </div>
     );
   }

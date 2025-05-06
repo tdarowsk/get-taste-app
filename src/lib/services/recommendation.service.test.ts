@@ -88,10 +88,17 @@ describe("RecommendationService.callOpenrouterAPI", () => {
   it("throws an error when the trending fetch fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce({ ok: false, status: 500, statusText: "Server Error", text: async () => "error" })
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Server Error",
+        text: async () => "error",
+      })
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await expect(RecommendationService.callOpenrouterAPI({} as any, "film")).rejects.toThrow("TMDB API error");
+    await expect(RecommendationService.callOpenrouterAPI({} as any, "film")).rejects.toThrow(
+      "TMDB API error"
+    );
   });
 });

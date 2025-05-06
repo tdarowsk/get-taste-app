@@ -1,5 +1,10 @@
 import { supabaseClient } from "../../db/supabase.client";
-import type { SpotifyDataDTO, SpotifySyncCommand, SpotifySyncResponseDTO, RecommendationItem } from "../../types";
+import type {
+  SpotifyDataDTO,
+  SpotifySyncCommand,
+  SpotifySyncResponseDTO,
+  RecommendationItem,
+} from "../../types";
 import { z } from "zod";
 
 // Schema for Spotify data validation
@@ -81,7 +86,9 @@ interface SpotifyArtistObject {
  * @returns Status of the synchronization
  * @throws Error if database or Spotify API errors occur
  */
-export async function syncSpotifyData(command: SpotifySyncCommand): Promise<SpotifySyncResponseDTO> {
+export async function syncSpotifyData(
+  command: SpotifySyncCommand
+): Promise<SpotifySyncResponseDTO> {
   // Validate input data
   try {
     spotifySyncSchema.parse(command);
@@ -117,7 +124,6 @@ export async function syncSpotifyData(command: SpotifySyncCommand): Promise<Spot
       status: "success",
     };
   } catch (error: unknown) {
-    console.error(`Error during Spotify synchronization: ${error instanceof Error ? error.message : String(error)}`);
     return {
       message: "An error occurred during Spotify synchronization",
       status: "error",
@@ -254,7 +260,6 @@ export class SpotifyService {
       });
 
       if (!response.ok) {
-        console.error("Error getting Spotify access token:", response.statusText);
         throw new Error(`Spotify token error: ${response.statusText}`);
       }
 
@@ -270,7 +275,6 @@ export class SpotifyService {
 
       return this.accessToken;
     } catch (error) {
-      console.error("Failed to get Spotify access token:", error);
       throw error;
     }
   }
@@ -282,17 +286,18 @@ export class SpotifyService {
    */
   async getPopularArtists(limit = 10): Promise<{ id: string; name: string; imageUrl: string }[]> {
     try {
-      console.log("Fetching popular artists from Spotify API...");
-
       // Get a token
       const token = await this.getAccessToken();
 
       // First, get top artists directly from Spotify's search API
-      const topArtistsResponse = await fetch(`${this.API_BASE_URL}/search?q=genre:pop&type=artist&limit=${limit}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const topArtistsResponse = await fetch(
+        `${this.API_BASE_URL}/search?q=genre:pop&type=artist&limit=${limit}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!topArtistsResponse.ok) {
         throw new Error(`Spotify API error: ${topArtistsResponse.statusText}`);
@@ -311,13 +316,11 @@ export class SpotifyService {
               : "https://via.placeholder.com/300x300?text=No+Image",
         }));
 
-        console.log("Successfully fetched artists with images:", artists);
         return artists;
       }
 
       throw new Error("No artists found in Spotify API response");
     } catch (error) {
-      console.error("Error fetching popular artists from Spotify:", error);
       // Don't use fallback data - throw the error so the caller can handle it
       throw new Error(`Failed to fetch artists from Spotify: ${error}`);
     }
@@ -349,7 +352,6 @@ export class SpotifyService {
         imageUrl: data.images?.[0]?.url,
       };
     } catch (error) {
-      console.error(`Error getting artist info from Spotify for ID ${artistId}:`, error);
       return null;
     }
   }
@@ -404,7 +406,6 @@ export class SpotifyService {
 
       return [];
     } catch (error) {
-      console.error("Error fetching artist albums from Spotify:", error);
       return [];
     }
   }
@@ -450,7 +451,6 @@ export class SpotifyService {
         },
       };
     } catch (error) {
-      console.error("Error fetching track info from Spotify:", error);
       return null;
     }
   }

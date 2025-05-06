@@ -1,21 +1,24 @@
 import React from "react";
-import type { MetadataWeight } from "../types/recommendations";
-import { MetadataType } from "../types/recommendations";
+import { useFormContext } from "react-hook-form";
+import { FormRangeSlider } from "./ui/FormRangeSlider";
+import type { RecommendationFormValues } from "../types/forms";
 
 interface MetadataFilterSelectorProps {
-  weights: MetadataWeight[];
-  onWeightsChange: (weights: MetadataWeight[]) => void;
+  onResetWeights?: () => void;
 }
 
-export function MetadataFilterSelector({ weights, onWeightsChange }: MetadataFilterSelectorProps) {
-  const handleWeightChange = (type: MetadataType, newWeight: number) => {
-    const updatedWeights = weights.map((weight) => (weight.type === type ? { ...weight, weight: newWeight } : weight));
-    onWeightsChange(updatedWeights);
-  };
+export function MetadataFilterSelector({ onResetWeights }: MetadataFilterSelectorProps) {
+  const { getValues, setValue } = useFormContext<RecommendationFormValues>();
+
+  const weights = getValues("weights");
 
   const resetWeights = () => {
-    const resetWeights = weights.map((weight) => ({ ...weight, weight: 0.5 }));
-    onWeightsChange(resetWeights);
+    if (onResetWeights) {
+      onResetWeights();
+    } else {
+      const resetWeights = weights.map((weight) => ({ ...weight, weight: 0.5 }));
+      setValue("weights", resetWeights, { shouldDirty: true });
+    }
   };
 
   return (
@@ -32,25 +35,15 @@ export function MetadataFilterSelector({ weights, onWeightsChange }: MetadataFil
       </div>
 
       <div className="space-y-4">
-        {weights.map((weight) => (
-          <div key={weight.type} className="space-y-1">
-            <div className="flex justify-between">
-              <label htmlFor={`weight-${weight.type}`} className="text-sm font-medium">
-                {weight.name}
-              </label>
-              <span className="text-sm text-muted-foreground">{Math.round(weight.weight * 100)}%</span>
-            </div>
-            <input
-              id={`weight-${weight.type}`}
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={weight.weight}
-              onChange={(e) => handleWeightChange(weight.type, parseFloat(e.target.value))}
-              className="w-full"
-            />
-          </div>
+        {weights.map((weight, index) => (
+          <FormRangeSlider
+            key={weight.type}
+            name={`weights.${index}.weight`}
+            label={weight.name}
+            min={0}
+            max={1}
+            step={0.1}
+          />
         ))}
       </div>
     </div>

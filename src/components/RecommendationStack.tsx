@@ -29,7 +29,9 @@ export function RecommendationStack({
 
   const currentRecommendation = recommendations[currentIndex];
 
-  const transformToItemViewModel = (recommendation: EnhancedRecommendationViewModel): RecommendationItemViewModel => {
+  const transformToItemViewModel = (
+    recommendation: EnhancedRecommendationViewModel
+  ): RecommendationItemViewModel => {
     const firstItem = recommendation.recommendation.data.items?.[0];
     return {
       id: String(recommendation.recommendation.id),
@@ -47,9 +49,7 @@ export function RecommendationStack({
     try {
       await onFeedback(currentRecommendation.recommendation.id, feedbackType);
       onNext();
-    } catch (error) {
-      console.error("Error processing swipe:", error);
-    }
+    } catch (error) {}
   };
 
   const itemViewModel = transformToItemViewModel(currentRecommendation);

@@ -6,12 +6,16 @@ import { render, screen } from "@testing-library/react";
 
 // Mock DashboardLayout to inspect props
 vi.mock("../../dashboard/DashboardLayout", () => ({
-  DashboardLayout: ({ user }: { user: { id: string } }) => <div data-testid="dashboard-layout">USER_ID:{user.id}</div>,
+  DashboardLayout: ({ user }: { user: { id: string } }) => (
+    <div data-testid="dashboard-layout">USER_ID:{user.id}</div>
+  ),
 }));
 
 // Mock UI module to avoid deep UI imports
 vi.mock("../../ui", () => ({
-  ToastProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="toast">{children}</div>,
+  ToastProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="toast">{children}</div>
+  ),
 }));
 
 import { DashboardWrapper } from "../DashboardWrapper";

@@ -29,8 +29,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
         },
       }
     );
-  } catch (error) {
-    console.error("Błąd sprawdzania statusu autentykacji:", error);
+  } catch {
     return new Response(
       JSON.stringify({
         success: false,

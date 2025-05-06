@@ -4,18 +4,14 @@ import { createSupabaseServerInstance } from "../../../../../../db/supabase.clie
 
 export const GET: APIRoute = async ({ params, request, cookies }) => {
   try {
-    console.log("========== REASON API START ==========");
     // Extract user ID and recommendation ID from URL
     const userId = params.id;
     const recommendationId = Array.isArray(params.recommendationId)
       ? parseInt(params.recommendationId[0] || "")
       : parseInt(params.recommendationId || "");
 
-    console.log("URL parameters:", { userId, recommendationId });
-
     // Validate parameters
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -28,7 +24,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     }
 
     if (isNaN(recommendationId)) {
-      console.error("Invalid recommendation ID:", params.recommendationId);
       return new Response(
         JSON.stringify({
           error: "Invalid recommendation ID",
@@ -52,7 +47,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -63,11 +57,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
         }
       );
     }
-
-    console.log("URL User ID:", userId, "Type:", typeof userId);
-    console.log("Session User ID:", session.user.id, "Type:", typeof session.user.id);
-    console.log("Comparing:", String(userId), "vs", String(session.user.id));
-    console.log("Are they equal?", String(userId) === String(session.user.id));
 
     // TODO: W przyszłości zaimplementować rzeczywistą logikę generowania powodów
     const reason: RecommendationReason = {
@@ -86,16 +75,11 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       ],
     };
 
-    console.log("Returning reason data:", reason);
-    console.log("========== REASON API END ==========");
-
     return new Response(JSON.stringify(reason), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error retrieving recommendation reason:", error);
-
+  } catch {
     // Return fallback data on error
     const fallbackReason = {
       primaryReason: "Recommended for you",

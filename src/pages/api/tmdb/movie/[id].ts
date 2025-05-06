@@ -31,8 +31,8 @@ async function getCreditsByMovieId(movieId: string) {
     const cast = data.cast?.map((person: CastMember) => person.original_name) || [];
 
     return cast;
-  } catch (error) {
-    console.error("Error fetching movie credits:", error);
+  } catch {
+    // Jeśli nie uda się pobrać obsady, zwróć pustą tablicę
     return [];
   }
 }
@@ -50,8 +50,6 @@ export const GET: APIRoute = async ({ params }) => {
       });
     }
 
-    console.log(`Backend fetching details for movie ID: ${id}`);
-
     // Fetch movie details and credits in parallel
     const [movieDetailsPromise, movieCreditsPromise] = await Promise.all([
       // Fetch movie details from TMDb API
@@ -67,9 +65,6 @@ export const GET: APIRoute = async ({ params }) => {
 
     // Handle movie details response
     if (!movieDetailsPromise.ok) {
-      const errorText = await movieDetailsPromise.text();
-      console.error(`TMDB API error: ${movieDetailsPromise.status} ${movieDetailsPromise.statusText}`, errorText);
-
       return new Response(
         JSON.stringify({
           error: "Failed to fetch movie details",
@@ -97,13 +92,11 @@ export const GET: APIRoute = async ({ params }) => {
         "Content-Type": "application/json",
       },
     });
-  } catch (error) {
-    console.error("Error fetching movie details:", error);
-
+  } catch (_error) {
     return new Response(
       JSON.stringify({
         error: "Server error while fetching movie details",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: _error instanceof Error ? _error.message : "Unknown error",
       }),
       {
         status: 500,

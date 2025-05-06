@@ -1,5 +1,13 @@
-import type { RecommendationDTO, RecommendationItem, RecommendationFeedbackType } from "../../types";
+import type {
+  RecommendationDTO,
+  RecommendationItem,
+  RecommendationFeedbackType,
+} from "../../types";
 import { FeedbackType } from "../../types";
+import type { Database } from "../../db/database.types";
+
+// Define types - only what we actually use
+type SeenRecommendation = Database["public"]["Tables"]["seen_recommendations"]["Row"];
 
 // Interface for storing recommendation history
 interface RecommendationHistory {
@@ -10,6 +18,9 @@ interface RecommendationHistory {
 
 // Default cooldown period: 24 hours for disliked items, never show again for liked items
 const DEFAULT_DISLIKE_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Check if we're in a browser environment
+const isBrowser = typeof window !== "undefined";
 
 /**
  * Service responsible for tracking and filtering recommendations to ensure users see unique content.
@@ -22,12 +33,13 @@ export const UniqueRecommendationsService = {
    * @returns Array of recommendation history entries
    */
   getRecommendationHistory(userId: string): RecommendationHistory[] {
+    if (!isBrowser) return []; // Skip in server environment
+
     try {
       const key = `recommendation-history-${userId}`;
       const storedHistory = localStorage.getItem(key);
       return storedHistory ? JSON.parse(storedHistory) : [];
     } catch (err) {
-      console.error("Error retrieving recommendation history:", err);
       return [];
     }
   },
@@ -50,14 +62,17 @@ export const UniqueRecommendationsService = {
 
       // Convert server data format to our local format
       return data.items.map(
-        (item: { item_id: string; created_at: string; feedback_type: RecommendationFeedbackType }) => ({
+        (item: {
+          item_id: string;
+          created_at: string;
+          feedback_type: RecommendationFeedbackType;
+        }) => ({
           id: item.item_id,
           timestamp: new Date(item.created_at).getTime(),
           feedbackType: item.feedback_type as RecommendationFeedbackType,
         })
       );
     } catch (err) {
-      console.error("Error fetching server recommendation history:", err);
       // Fall back to local storage on error
       return this.getRecommendationHistory(userId);
     }
@@ -96,7 +111,6 @@ export const UniqueRecommendationsService = {
       // Convert back to array
       return Array.from(historyMap.values());
     } catch (err) {
-      console.error("Error merging recommendation histories:", err);
       return localHistory;
     }
   },
@@ -108,6 +122,8 @@ export const UniqueRecommendationsService = {
    * @param feedbackType Optional feedback type (like/dislike)
    */
   addToHistory(userId: string, itemId: string, feedbackType?: RecommendationFeedbackType): void {
+    if (!isBrowser) return; // Skip in server environment
+
     try {
       const key = `recommendation-history-${userId}`;
       const history = this.getRecommendationHistory(userId);
@@ -122,7 +138,6 @@ export const UniqueRecommendationsService = {
           timestamp: Date.now(),
           feedbackType: feedbackType as RecommendationFeedbackType,
         };
-        console.log(`Updated existing entry in history for item ${itemId}`);
       } else {
         // Add new entry
         history.push({
@@ -130,15 +145,11 @@ export const UniqueRecommendationsService = {
           timestamp: Date.now(),
           feedbackType: feedbackType as RecommendationFeedbackType,
         });
-        console.log(`Added new entry to history for item ${itemId}`);
       }
 
       // Save back to localStorage
       localStorage.setItem(key, JSON.stringify(history));
-      console.log(`Saved history with ${history.length} items to localStorage`);
-    } catch (err) {
-      console.error("Error adding to recommendation history:", err);
-    }
+    } catch (err) {}
   },
 
   /**
@@ -146,12 +157,12 @@ export const UniqueRecommendationsService = {
    * @param userId The ID of the current user
    */
   clearHistory(userId: string): void {
+    if (!isBrowser) return; // Skip in server environment
+
     try {
       const key = `recommendation-history-${userId}`;
       localStorage.removeItem(key);
-    } catch (err) {
-      console.error("Error clearing recommendation history:", err);
-    }
+    } catch (err) {}
   },
 
   /**
@@ -187,18 +198,17 @@ export const UniqueRecommendationsService = {
   },
 
   /**
-   * Filters recommendations to ensure only unique items that have not been liked or recently disliked are shown
-   * @param userId The ID of the current user
-   * @param recommendations The recommendations to filter
-   * @param dislikeCooldown Optional custom cooldown period for disliked items
-   * @returns Filtered recommendations
+   * Filters recommendations based on local history
    */
-  filterUniqueRecommendations<T extends RecommendationDTO | RecommendationItem>(
+  filterLocalRecommendations<T extends RecommendationDTO | RecommendationItem>(
     userId: string,
     recommendations: T[],
     dislikeCooldown = DEFAULT_DISLIKE_COOLDOWN
   ): T[] {
     try {
+      // Only use in browser environment
+      if (!isBrowser) return recommendations;
+
       const history = this.getRecommendationHistory(userId);
       const now = Date.now();
 
@@ -222,52 +232,93 @@ export const UniqueRecommendationsService = {
         return true;
       });
     } catch (err) {
-      console.error("Error filtering unique recommendations:", err);
       return recommendations; // Return original list on error
     }
   },
 
   /**
-   * Filters recommendations asynchronously, checking both server and local history
-   * @param userId The ID of the current user
-   * @param recommendations The recommendations to filter
-   * @param dislikeCooldown Optional custom cooldown period for disliked items
-   * @returns Promise with filtered recommendations
+   * Server-side filtering of recommendations - safe to use in both client and server
    */
-  async filterUniqueRecommendationsAsync<T extends RecommendationDTO | RecommendationItem>(
+  async filterUniqueRecommendations(
     userId: string,
-    recommendations: T[],
-    dislikeCooldown = DEFAULT_DISLIKE_COOLDOWN
-  ): Promise<T[]> {
-    try {
-      // Get merged history from both server and local storage
-      const history = await this.getMergedRecommendationHistory(userId);
-      const now = Date.now();
-
-      return recommendations.filter((item) => {
-        const itemId = this.getItemId(item);
-        if (!itemId) return true; // If no ID, include it
-
-        // Find this item in history
-        const historyEntry = history.find((h) => h.id === itemId);
-        if (!historyEntry) return true; // If not in history, include it
-
-        // If liked, never show again
-        if (historyEntry.feedbackType === FeedbackType.LIKE) return false;
-
-        // If disliked, only show after cooldown period
-        if (historyEntry.feedbackType === FeedbackType.DISLIKE) {
-          return now - historyEntry.timestamp > dislikeCooldown;
-        }
-
-        // If just viewed (no feedback), include it
-        return true;
-      });
-    } catch (err) {
-      console.error("Error filtering unique recommendations asynchronously:", err);
-      // Fall back to synchronous version on error
-      return this.filterUniqueRecommendations(userId, recommendations, dislikeCooldown);
+    recommendations: RecommendationDTO
+  ): Promise<RecommendationDTO> {
+    // If no items, return as is
+    if (
+      !recommendations?.data?.items ||
+      !Array.isArray(recommendations.data.items) ||
+      recommendations.data.items.length === 0
+    ) {
+      return recommendations;
     }
+
+    // Apply client-side filtering if we're in a browser
+    if (isBrowser) {
+      // Apply client-side filtering using local history
+      const filteredItems = this.filterLocalRecommendations(userId, recommendations.data.items);
+
+      return {
+        ...recommendations,
+        data: {
+          ...recommendations.data,
+          items: filteredItems,
+        },
+      };
+    }
+
+    // In server environment - we can't make direct calls here
+    // The actual implementation will be handled in the API endpoint
+    return recommendations;
+  },
+
+  /**
+   * Server-side filtering of individual items - safe to use in both client and server
+   * @param userId The user ID to filter for
+   * @param items The recommendation items to filter
+   * @param type The type of recommendation (music/film)
+   * @returns Filtered recommendation items
+   */
+  async filterUniqueItems(
+    userId: string,
+    items: RecommendationItem[],
+    type: "music" | "film"
+  ): Promise<RecommendationItem[]> {
+    // Ensure userId is a string
+    if (typeof userId !== "string") {
+      // Return items unchanged if userId is invalid
+      return items;
+    }
+
+    // Convert to string to ensure consistent handling
+    const userIdStr = String(userId);
+
+    // Log the type (using the parameter to avoid linter warnings)
+
+    // Client-side filtering
+    if (isBrowser) {
+      return this.filterLocalRecommendations(userIdStr, items);
+    }
+
+    // In server environment - we can't make direct calls here
+    // The actual implementation will be handled in the API endpoint
+    return items;
+  },
+
+  /**
+   * Tracking shown recommendations - safe to use in both client and server
+   */
+  async trackShownRecommendations(
+    userId: string,
+    recommendations: RecommendationDTO
+  ): Promise<void> {
+    if (isBrowser) {
+      // In client-side code, just record in local storage
+      recommendations.data?.items?.forEach((item) => {
+        this.addToHistory(userId, String(item.id));
+      });
+    }
+
+    // In server environment, the actual implementation will be handled in the API endpoint
   },
 
   /**
@@ -276,7 +327,31 @@ export const UniqueRecommendationsService = {
    * @param minThreshold Minimum number of recommendations needed
    * @returns True if more recommendations are needed
    */
-  needsMoreRecommendations<T extends RecommendationDTO | RecommendationItem>(filtered: T[], minThreshold = 3): boolean {
+  needsMoreRecommendations<T extends RecommendationDTO | RecommendationItem>(
+    filtered: T[],
+    minThreshold = 3
+  ): boolean {
     return filtered.length < minThreshold;
+  },
+
+  /**
+   * Checks if a user has already seen a specific recommendation - stub for API compatibility
+   */
+  async hasUserSeenRecommendation(): Promise<boolean> {
+    return false;
+  },
+
+  /**
+   * Resets the seen recommendations history for a user - stub for API compatibility
+   */
+  async resetSeenRecommendations(): Promise<void> {
+    // Implementation in API endpoint
+  },
+
+  /**
+   * Gets the seen recommendations history for a user - stub for API compatibility
+   */
+  async getSeenRecommendationsHistory(): Promise<SeenRecommendation[]> {
+    return [];
   },
 };

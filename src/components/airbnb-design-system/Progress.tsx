@@ -98,7 +98,9 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
         {(label || showValue) && (
           <div className="flex justify-between items-center mb-1">
             {label && <div className="text-sm font-medium text-gray-700">{label}</div>}
-            {showValue && <div className="text-sm font-medium text-gray-500">{Math.round(percent)}%</div>}
+            {showValue && (
+              <div className="text-sm font-medium text-gray-500">{Math.round(percent)}%</div>
+            )}
           </div>
         )}
 
@@ -113,7 +115,9 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           <div
             className={cn(
               colorStyles[color],
-              variant === "indeterminate" ? "animate-progress" : "transition-all duration-300 ease-in-out",
+              variant === "indeterminate"
+                ? "animate-progress"
+                : "transition-all duration-300 ease-in-out",
               shapeStyles[shape]
             )}
             style={{ width: variant === "indeterminate" ? "100%" : `${percent}%` }}
@@ -293,7 +297,16 @@ interface LinearBufferProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "
 
 export const LinearBuffer = React.forwardRef<HTMLDivElement, LinearBufferProps>(
   (
-    { className, value = 0, buffer = 0, size = "medium", color = "primary", label, shape = "rounded", ...props },
+    {
+      className,
+      value = 0,
+      buffer = 0,
+      size = "medium",
+      color = "primary",
+      label,
+      shape = "rounded",
+      ...props
+    },
     ref
   ) => {
     // Obliczenie procentu ukończenia
@@ -337,7 +350,11 @@ export const LinearBuffer = React.forwardRef<HTMLDivElement, LinearBufferProps>(
     return (
       <div className={cn("w-full", className)} ref={ref} {...props}>
         <div
-          className={cn("w-full bg-gray-100 overflow-hidden relative", sizeStyles[size], shapeStyles[shape])}
+          className={cn(
+            "w-full bg-gray-100 overflow-hidden relative",
+            sizeStyles[size],
+            shapeStyles[shape]
+          )}
           role="progressbar"
           aria-valuenow={value}
           aria-valuemin={0}

@@ -17,7 +17,10 @@ export function usePasswordValidation() {
    * @param confirmPassword - potwierdzenie hasła
    * @returns Obiekt ze stanem walidacji
    */
-  const validatePasswordAndUpdateState = (password: string, confirmPassword: string): PasswordValidationState => {
+  const validatePasswordAndUpdateState = (
+    password: string,
+    confirmPassword: string
+  ): PasswordValidationState => {
     return validatePassword(password, confirmPassword, setPasswordError);
   };
 

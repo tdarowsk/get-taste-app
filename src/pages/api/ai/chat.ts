@@ -55,8 +55,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     );
   } catch (error) {
-    console.error("Error in AI chat endpoint:", error);
-
     // Return appropriate error response
     return new Response(
       JSON.stringify({

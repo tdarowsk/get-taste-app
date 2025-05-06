@@ -20,7 +20,9 @@ export function MetadataItem({ item, selected = false, onClick }: MetadataItemPr
     >
       <div className="flex items-center">
         <span className="text-sm font-medium">{item.name}</span>
-        <span className="ml-2 text-xs bg-muted text-muted-foreground px-1 py-0.5 rounded">{item.count}×</span>
+        <span className="ml-2 text-xs bg-muted text-muted-foreground px-1 py-0.5 rounded">
+          {item.count}×
+        </span>
       </div>
 
       <div className="w-16 h-3 bg-muted rounded-full overflow-hidden">

@@ -48,7 +48,10 @@ export class UserService {
    * @returns Zaktualizowany obiekt profilu użytkownika lub null, jeśli użytkownik nie istnieje
    * @throws Error w przypadku błędu bazy danych lub konfliktu unikalności
    */
-  public static async updateUserProfile(userId: string, data: UpdateUserCommand): Promise<UserProfileDTO | null> {
+  public static async updateUserProfile(
+    userId: string,
+    data: UpdateUserCommand
+  ): Promise<UserProfileDTO | null> {
     // Sprawdzenie czy użytkownik istnieje
     const userExists = await this.getUserProfile(userId);
     if (!userExists) return null;

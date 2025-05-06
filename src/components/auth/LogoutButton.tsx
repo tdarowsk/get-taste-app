@@ -56,7 +56,6 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
         window.location.href = "/auth/login";
       }
     } catch (error) {
-      console.error("Błąd wylogowania:", error);
     } finally {
       setIsLoading(false);
     }

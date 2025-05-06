@@ -27,8 +27,8 @@ const supabase = createSupabaseServerInstance({
 
 // Konwersja danych użytkownika do formatu UserProfileDTO
 const userProfile: UserProfileDTO = {
-  id: user.id, // Keep as string UUID
-  email: user.email || "",
+  id: user?.id || "", // Added optional chaining
+  email: user?.email || "", // Added optional chaining
   nick: "User", // Domyślna wartość
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -41,8 +41,6 @@ if (data?.user?.user_metadata) {
   if (data.user.created_at) userProfile.created_at = data.user.created_at;
   if (data.user.updated_at) userProfile.updated_at = data.user.updated_at;
 }
-
-console.log("Dashboard: Dane użytkownika:", userProfile);
 ---
 
 <MainLayout title="getTaste | Twoje rekomendacje">

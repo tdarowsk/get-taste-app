@@ -100,17 +100,17 @@ export interface UpdateFilmPreferencesCommand {
 export interface UserTasteDTO {
   name: string;
   description: string;
-  music?: TasteDTO;
-  film?: TasteDTO;
+  music: MusicTasteProfile;
+  film: FilmTasteProfile;
 }
 
 /** DTO for specific taste category */
 export interface TasteDTO {
-  genres: string[];
-  mood: string[];
-  style: string;
-  intensity: number;
-  variety: number;
+  genres?: string[];
+  mood?: string[];
+  style?: string;
+  intensity?: number;
+  variety?: number;
 }
 
 /* =========================
@@ -120,19 +120,20 @@ export interface TasteDTO {
 /** DTO for recommendations (from recommendations table) */
 export interface RecommendationDTO {
   id: number;
-  user_id: string; // Changed from number to string to match Supabase Auth UUID
+  user_id: string;
   type: "music" | "film";
   data: RecommendationDataDetails;
   created_at: string;
-  feedback?: RecommendationFeedback;
 }
 
 /** Detailed structure for recommendation data */
 export interface RecommendationDataDetails {
-  title?: string;
-  description?: string;
-  items?: RecommendationItem[];
-  [key: string]: unknown; // Allow for additional properties
+  title: string;
+  description: string;
+  items: RecommendationItem[];
+  recommendations?: RecommendationItem[];
+  results?: RecommendationItem[];
+  errorMessage?: string;
 }
 
 /** Structure for recommendation item */
@@ -140,13 +141,15 @@ export interface RecommendationItem {
   id: string;
   name: string;
   type: string;
-  details?: Record<string, unknown>;
+  details: Record<string, unknown>;
+  explanation?: string;
+  confidence?: number;
 }
 
 /** Command Model for generating new recommendations (POST /users/{id}/recommendations) */
 export interface CreateRecommendationsCommand {
   type: "music" | "film";
-  force_refresh: boolean;
+  force_refresh?: boolean;
 }
 
 /** Enum for recommendation feedback type */
@@ -253,18 +256,19 @@ export interface SpotifyDataListResponseDTO {
 
 /** Response format type for structured LLM responses */
 export interface ResponseFormat {
-  type: "json_schema";
-  json_schema: {
-    name: string;
-    strict: boolean;
+  type: "text" | "json_object" | "json_schema";
+  json_schema?: {
+    name?: string;
+    strict?: boolean;
     schema: object;
   };
 }
 
 /** Chat message structure */
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "function";
   content: string;
+  name?: string;
 }
 
 /** Chat completion request structure */
@@ -282,14 +286,11 @@ export interface ChatCompletionRequest {
 export interface ChatCompletionResponse {
   id: string;
   model: string;
-  created: number;
   object: string;
+  created: number;
   choices: {
+    message: ChatMessage;
     index: number;
-    message: {
-      role: string;
-      content: string;
-    };
     finish_reason: string;
   }[];
   usage: {
@@ -304,11 +305,53 @@ export interface ModelInfo {
   id: string;
   name: string;
   description: string;
-  provider: string;
+  context_length: number;
   pricing: {
     prompt: number;
     completion: number;
   };
-  context_length: number;
-  capabilities: string[];
+}
+
+/**
+ * Typy preferencji użytkownika
+ */
+export interface MusicTasteProfile {
+  genres: string[];
+  mood: string[];
+  style: string;
+  intensity: number;
+  variety: number;
+}
+
+export interface FilmTasteProfile {
+  genres: string[];
+  mood: string[];
+  style: string;
+  intensity: number;
+  variety: number;
+}
+
+export interface MusicPreferences {
+  genres?: string[];
+  artists?: string[];
+  years?: string[];
+  tempos?: string[];
+  moods?: string[];
+  instruments?: string[];
+  language?: string;
+  themes?: string[];
+  popularity?: number;
+  variety?: number;
+}
+
+export interface FilmPreferences {
+  genres?: string[];
+  directors?: string[];
+  actors?: string[];
+  years?: string[];
+  language?: string;
+  themes?: string[];
+  duration?: number;
+  rating?: number;
+  popularity?: number;
 }

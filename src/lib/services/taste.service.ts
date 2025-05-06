@@ -27,7 +27,11 @@ export const TasteService = {
       // Analizuj gust filmowy
       let filmTaste: TasteDTO | undefined;
       if (preferences.film) {
-        filmTaste = this.analyzeFilmTaste(preferences.film.genres, preferences.film.director, preferences.film.cast);
+        filmTaste = this.analyzeFilmTaste(
+          preferences.film.genres,
+          preferences.film.director,
+          preferences.film.cast
+        );
       }
 
       // Wygeneruj nazwę i opis gustu
@@ -41,7 +45,6 @@ export const TasteService = {
         film: filmTaste,
       };
     } catch (error) {
-      console.error("Błąd podczas analizy gustu użytkownika:", error);
       throw error;
     }
   },
@@ -197,7 +200,10 @@ export const TasteService = {
   determineFilmStyle(genres: string[], director: string | null): string {
     if (genres.includes("action") && genres.includes("thriller")) {
       return "energetyczne napięcie";
-    } else if (genres.includes("drama") && (genres.includes("romance") || genres.includes("comedy"))) {
+    } else if (
+      genres.includes("drama") &&
+      (genres.includes("romance") || genres.includes("comedy"))
+    ) {
       return "emocjonalne historie";
     } else if (genres.includes("horror") || genres.includes("thriller")) {
       return "mroczne opowieści";
@@ -360,7 +366,8 @@ export const TasteService = {
       if (musicTaste.intensity > 7 && filmTaste.intensity > 7) {
         description += "zamiłowaniem do intensywnych doświadczeń zarówno w muzyce, jak i filmie. ";
       } else if (musicTaste.variety > 7 && filmTaste.variety > 7) {
-        description += "szerokim spektrum zainteresowań w różnorodnych gatunkach muzycznych i filmowych. ";
+        description +=
+          "szerokim spektrum zainteresowań w różnorodnych gatunkach muzycznych i filmowych. ";
       } else if (musicTaste.intensity < 4 && filmTaste.intensity < 4) {
         description += "zamiłowaniem do subtelnych i refleksyjnych utworów oraz filmów. ";
       } else {

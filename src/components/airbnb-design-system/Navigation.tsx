@@ -19,7 +19,12 @@ export const Navigation = React.forwardRef<HTMLElement, NavigationProps>(
   ({ className, children, horizontal = true, ...props }, ref) => {
     return (
       <nav ref={ref} className={cn("bg-white", horizontal ? "py-3" : "py-4", className)} {...props}>
-        <div className={cn(horizontal ? "flex items-center" : "flex flex-col", horizontal ? "gap-x-6" : "gap-y-3")}>
+        <div
+          className={cn(
+            horizontal ? "flex items-center" : "flex flex-col",
+            horizontal ? "gap-x-6" : "gap-y-3"
+          )}
+        >
           {children}
         </div>
       </nav>
@@ -46,7 +51,11 @@ interface NavigationContainerProps extends React.HTMLAttributes<HTMLDivElement> 
 export const NavigationContainer = React.forwardRef<HTMLDivElement, NavigationContainerProps>(
   ({ className, children, fullWidth = false, ...props }, ref) => {
     return (
-      <div ref={ref} className={cn(fullWidth ? "w-full px-4" : "container mx-auto px-4", className)} {...props}>
+      <div
+        ref={ref}
+        className={cn(fullWidth ? "w-full px-4" : "container mx-auto px-4", className)}
+        {...props}
+      >
         {children}
       </div>
     );
@@ -97,7 +106,11 @@ interface NavigationLinksProps extends React.HTMLAttributes<HTMLDivElement> {
 export const NavigationLinks = React.forwardRef<HTMLDivElement, NavigationLinksProps>(
   ({ className, children, ...props }, ref) => {
     return (
-      <div ref={ref} className={cn("flex items-center gap-1 sm:gap-2 md:gap-4", className)} {...props}>
+      <div
+        ref={ref}
+        className={cn("flex items-center gap-1 sm:gap-2 md:gap-4", className)}
+        {...props}
+      >
         {children}
       </div>
     );
@@ -235,7 +248,10 @@ export const NavigationMobileMenu = React.forwardRef<HTMLDivElement, NavigationM
     return (
       <div
         ref={ref}
-        className={cn("sm:hidden absolute top-full left-0 right-0 bg-white shadow-lg z-20 border-t py-3", className)}
+        className={cn(
+          "sm:hidden absolute top-full left-0 right-0 bg-white shadow-lg z-20 border-t py-3",
+          className
+        )}
         {...props}
       >
         <div className="space-y-1 px-4">{children}</div>

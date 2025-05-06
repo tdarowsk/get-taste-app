@@ -28,7 +28,13 @@ interface AuthFormProps {
 /**
  * Bazowy komponent formularza autentykacji wykorzystywany do logowania, rejestracji i resetowania hasła
  */
-export const AuthForm: React.FC<AuthFormProps> = ({ title, onSubmit, children, submitText, footer }) => {
+export const AuthForm: React.FC<AuthFormProps> = ({
+  title,
+  onSubmit,
+  children,
+  submitText,
+  footer,
+}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

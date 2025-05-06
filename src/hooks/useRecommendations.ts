@@ -14,36 +14,37 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
   const [error, setError] = useState<Error | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const fetchRecommendationReason = useCallback(async (userId: string, recommendationId: number) => {
-    try {
-      const url = `/api/users/${encodeURIComponent(userId)}/recommendations/${recommendationId}/reason`;
-      console.log("Fetching recommendation reason from:", url);
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch recommendation reason");
+  const fetchRecommendationReason = useCallback(
+    async (userId: string, recommendationId: number) => {
+      try {
+        const url = `/api/users/${encodeURIComponent(userId)}/recommendations/${recommendationId}/reason`;
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("Failed to fetch recommendation reason");
+        }
+        return (await response.json()) as RecommendationReason;
+      } catch (error) {
+        return {
+          primaryReason: "Brak danych",
+          detailedReasons: [],
+          relatedItems: [],
+        } as RecommendationReason;
       }
-      return (await response.json()) as RecommendationReason;
-    } catch (error) {
-      console.error("Error fetching recommendation reason:", error);
-      return {
-        primaryReason: "Brak danych",
-        detailedReasons: [],
-        relatedItems: [],
-      } as RecommendationReason;
-    }
-  }, []);
+    },
+    []
+  );
 
   const fetchMetadataInsight = useCallback(async (userId: string, recommendationId: number) => {
     try {
       const url = `/api/users/${encodeURIComponent(userId)}/recommendations/${recommendationId}/metadata`;
-      console.log("Fetching metadata insight from:", url);
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Failed to fetch metadata insight");
       }
       return (await response.json()) as MetadataInsight;
     } catch (error) {
-      console.error("Error fetching metadata insight:", error);
       return {
         recommendationId,
         primaryFactors: [],
@@ -60,7 +61,7 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
 
       try {
         const url = `/api/users/${encodeURIComponent(userId)}/recommendations?type=${type}&force_refresh=${forceRefresh}`;
-        console.log("Fetching recommendations from:", url);
+
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -101,7 +102,6 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
   const submitFeedback = useCallback(
     async (recommendationId: number, feedbackType: RecommendationFeedbackType) => {
       try {
-        console.log(`Submitting feedback for recommendation ${recommendationId}: ${feedbackType}`);
         const response = await fetch(
           `/api/users/${encodeURIComponent(userId)}/recommendations/${recommendationId}/feedback`,
           {
@@ -115,13 +115,12 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
 
         if (!response.ok) {
           const errorData = await response.json();
-          console.error("Error submitting feedback:", errorData);
+
           throw new Error(errorData.error || "Error submitting feedback");
         }
 
         return await response.json();
       } catch (error) {
-        console.error("Error submitting feedback:", error);
         // Return a mock response instead of throwing to prevent UI crashes
         return {
           success: false,

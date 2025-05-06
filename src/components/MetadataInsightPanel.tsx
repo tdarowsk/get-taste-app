@@ -23,7 +23,11 @@ export function MetadataInsightPanel({ insight, onFilterSelect }: MetadataInsigh
 
   // Group items by type
   const groupedItems = useMemo(() => {
-    const allItems = [...insight.primaryFactors, ...insight.secondaryFactors, ...insight.uniqueFactors];
+    const allItems = [
+      ...insight.primaryFactors,
+      ...insight.secondaryFactors,
+      ...insight.uniqueFactors,
+    ];
 
     const grouped = new Map<MetadataType, MetadataItemType[]>();
 

@@ -7,7 +7,11 @@ interface RecommendationReasonProps {
   onToggle?: () => void;
 }
 
-export function RecommendationReason({ reason, expanded: controlledExpanded, onToggle }: RecommendationReasonProps) {
+export function RecommendationReason({
+  reason,
+  expanded: controlledExpanded,
+  onToggle,
+}: RecommendationReasonProps) {
   const [internalExpanded, setInternalExpanded] = useState(false);
 
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;

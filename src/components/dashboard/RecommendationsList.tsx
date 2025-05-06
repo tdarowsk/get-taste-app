@@ -1,18 +1,103 @@
 import { RecommendationCard } from "./RecommendationCard";
-import type { RecommendationViewModel } from "../../lib/types/viewModels";
+import type {
+  RecommendationViewModel,
+  RecommendationItemViewModel,
+} from "../../lib/types/viewModels";
 import { transformRecommendationToViewModel } from "../../lib/utils/transformers";
 import type { RecommendationDTO } from "../../types";
+import { useEffect, useState } from "react";
 
 interface RecommendationsListProps {
   recommendations: RecommendationDTO[] | undefined;
   isLoading: boolean;
   type: "music" | "film";
   isNewUser?: boolean;
+  userId?: string;
 }
 
-export function RecommendationsList({ recommendations, isLoading, type, isNewUser = false }: RecommendationsListProps) {
-  // Handle loading state
-  if (isLoading) {
+interface RecommendationItemWithType extends RecommendationItemViewModel {
+  type: "music" | "film";
+}
+
+export function RecommendationsList({
+  recommendations,
+  isLoading,
+  type,
+  isNewUser = false,
+  userId,
+}: RecommendationsListProps) {
+  const [viewModels, setViewModels] = useState<RecommendationViewModel[]>([]);
+  const [allItems, setAllItems] = useState<RecommendationItemWithType[]>([]);
+  const [hasProcessedData, setHasProcessedData] = useState(false);
+
+  // Process recommendations when they change
+  useEffect(() => {
+    if (recommendations && recommendations.length > 0) {
+      try {
+        // Apply filter for type
+        const filteredRecs = recommendations.filter((rec) => {
+          if (!rec) {
+            return false;
+          }
+
+          // Check if type is undefined or doesn't match
+          if (!rec.type) {
+            return false;
+          }
+
+          const isMatchingType = rec.type === type;
+
+          return isMatchingType;
+        });
+
+        if (filteredRecs.length === 0) {
+          setViewModels([]);
+          setAllItems([]);
+          setHasProcessedData(true);
+          return;
+        }
+
+        // Transform to view models
+        const vms = filteredRecs.map((dto) => {
+          return transformRecommendationToViewModel(dto);
+        });
+
+        setViewModels(vms);
+
+        // Extract all items
+        const items = vms.flatMap((vm) => {
+          if (!vm.items || !Array.isArray(vm.items) || vm.items.length === 0) {
+            return [];
+          }
+
+          return vm.items.map((item) => {
+            return {
+              ...item,
+              type: vm.type,
+            };
+          });
+        });
+
+        if (items.length > 0) {
+        } else {
+        }
+
+        setAllItems(items);
+        setHasProcessedData(true);
+      } catch (error) {
+        setHasProcessedData(true);
+      }
+    } else {
+      setViewModels([]);
+      setAllItems([]);
+      setHasProcessedData(true);
+    }
+  }, [recommendations, type]);
+
+  // Debug logging for incoming recommendations
+
+  // Handle loading state - only show if we're actually loading and haven't processed data yet
+  if (isLoading && !hasProcessedData) {
     return (
       <div className="flex items-center justify-center min-h-[300px] bg-white/5 backdrop-blur-sm">
         <div className="flex flex-col items-center">
@@ -21,7 +106,9 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
             <div className="absolute inset-3 rounded-full border-2 border-purple-500/30"></div>
           </div>
           <p className="text-gray-300 font-medium">
-            {isNewUser ? "Loading popular recommendations..." : "Loading your personalized recommendations..."}
+            {isNewUser
+              ? "Loading popular recommendations..."
+              : "Loading your personalized recommendations..."}
           </p>
         </div>
       </div>
@@ -29,7 +116,7 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
   }
 
   // Handle empty state
-  if (!recommendations || recommendations.length === 0)
+  if (hasProcessedData && allItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
         <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-full mb-6 border border-white/10">
@@ -54,43 +141,58 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
             ? "We're having trouble loading popular recommendations. Please try refreshing."
             : "Update your preferences to get personalized recommendations tailored to your taste"}
         </p>
-        <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md">
-          {isNewUser ? "Refresh" : "Set Your Preferences"}
-        </button>
-      </div>
-    );
-
-  // Filter recommendations by type
-  const filteredRecommendations = recommendations.filter((rec) => rec.type === type);
-
-  if (filteredRecommendations.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
-        <h3 className="text-xl font-semibold mb-2 text-white">No {type} recommendations available</h3>
-        <p className="text-gray-300 max-w-md mb-6">
-          {isNewUser
-            ? `Try switching to ${type === "music" ? "film" : "music"} recommendations or refresh the page`
-            : "Try switching to a different category or updating your preferences"}
-        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md"
+            onClick={() => window.location.reload()}
+          >
+            {isNewUser ? "Refresh Page" : "Set Your Preferences"}
+          </button>
+          <button
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-md hover:from-blue-700 hover:to-teal-700 transition-colors shadow-md"
+            onClick={() => {
+              fetch(`/api/recommendations/generate`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  userId: userId,
+                  type: type,
+                  force_refresh: true,
+                  force_ai: true,
+                }),
+              })
+                .then((response) => {
+                  if (!response.ok) {
+                    throw new Error("Failed to generate recommendations");
+                  }
+                  return response.json();
+                })
+                .then((data) => {
+                  window.location.reload();
+                })
+                .catch((error) => {
+                  alert("Error generating recommendations. Please try again.");
+                });
+            }}
+          >
+            Force Generate AI Recommendations
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Transform DTOs to ViewModels
-  const viewModels: RecommendationViewModel[] = filteredRecommendations.map(transformRecommendationToViewModel);
-
-  // Extract items from all recommendations
-  const allItems = viewModels.flatMap((recommendation) =>
-    recommendation.items.map((item) => ({
-      ...item,
-      type: recommendation.type,
-    }))
-  );
-
+  // Display recommendations
   return (
-    <div data-testid="recommendations-list" className="p-6 bg-white/5 backdrop-blur-sm rounded-b-lg">
+    <div
+      data-testid="recommendations-list"
+      className="p-6 bg-white/5 backdrop-blur-sm rounded-b-lg"
+    >
       <h3 className="text-lg font-medium mb-3 text-white">
-        {viewModels[0]?.title || (type === "music" ? "Music Recommendations" : "Film Recommendations")}
+        {viewModels[0]?.title ||
+          (type === "music" ? "Music Recommendations" : "Film Recommendations")}
       </h3>
 
       {isNewUser && (
@@ -102,14 +204,20 @@ export function RecommendationsList({ recommendations, isLoading, type, isNewUse
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
-        {allItems.map((item) => (
-          <RecommendationCard
-            key={item.id}
-            data-testid="recommendation-card"
-            item={item}
-            type={item.type as "music" | "film"}
-          />
-        ))}
+        {allItems.length > 0 ? (
+          allItems.map((item) => (
+            <RecommendationCard
+              key={item.id}
+              data-testid="recommendation-card"
+              item={item}
+              type={item.type as "music" | "film"}
+            />
+          ))
+        ) : (
+          <div className="col-span-full text-center p-10">
+            <p className="text-gray-400">No {type} recommendations available at the moment.</p>
+          </div>
+        )}
       </div>
     </div>
   );

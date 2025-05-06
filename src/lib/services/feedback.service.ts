@@ -1,6 +1,8 @@
 import { supabaseClient } from "../../db/supabase.client";
 import type { RecommendationFeedback, RecommendationFeedbackType } from "../../types";
 import { OpenRouterService } from "./openrouter.service";
+import { OPENROUTER_API_KEY } from "../../env.config";
+import { getAiPrompts, getSystemPrompts } from "../utils/ai-prompts";
 
 interface FeedbackMetadata {
   recommendation_id: number;
@@ -15,13 +17,13 @@ interface FeedbackMetadata {
  */
 export const FeedbackService = {
   /**
-   * Saves user feedback on a recommendation and uses it to update the recommendation algorithm.
+   * Zapisuje feedback użytkownika na temat rekomendacji (swipe).
    *
-   * @param userId - User ID
-   * @param recommendationId - Recommendation ID that was swiped on
-   * @param feedbackType - Type of feedback ("like" or "dislike")
-   * @param itemMetadata - Metadata about the recommendation item for algorithm training
-   * @returns The created feedback record
+   * @param userId - ID użytkownika
+   * @param recommendationId - ID rekomendacji, która została oceniona
+   * @param feedbackType - Typ feedbacku ("like" lub "dislike")
+   * @param itemMetadata - Metadane o ocenionej pozycji dla algorytmu uczącego
+   * @returns Utworzony rekord feedbacku
    */
   async saveSwipeFeedback(
     userId: string,
@@ -30,7 +32,15 @@ export const FeedbackService = {
     itemMetadata?: Record<string, unknown>
   ): Promise<RecommendationFeedback> {
     try {
-      // Get recommendation details for algorithm context
+      // Ensure userId is a valid string
+      if (typeof userId !== "string") {
+        throw new Error(`Nieprawidłowe ID użytkownika: ${userId}`);
+      }
+
+      // Convert to string to ensure consistent handling
+      const userIdStr = String(userId);
+
+      // Pobierz szczegóły rekomendacji dla kontekstu algorytmu
       const { data: recommendation, error: recError } = await supabaseClient
         .from("recommendations")
         .select("*")
@@ -38,14 +48,14 @@ export const FeedbackService = {
         .single();
 
       if (recError) {
-        throw new Error(`Failed to fetch recommendation: ${recError.message}`);
+        throw new Error(`Nie udało się pobrać rekomendacji: ${recError.message}`);
       }
 
-      // Save feedback in database
+      // Zapisz feedback w bazie danych
       const { data, error } = await supabaseClient
         .from("recommendation_feedback")
         .insert({
-          user_id: userId,
+          user_id: userIdStr,
           recommendation_id: recommendationId,
           feedback_type: feedbackType,
           metadata: itemMetadata || {},
@@ -54,10 +64,10 @@ export const FeedbackService = {
         .single();
 
       if (error) {
-        throw new Error(`Failed to save feedback: ${error.message}`);
+        throw new Error(`Nie udało się zapisać feedbacku: ${error.message}`);
       }
 
-      // Construct feedback metadata for algorithm training
+      // Przygotuj metadane feedbacku dla algorytmu uczącego
       const feedbackMetadata: FeedbackMetadata = {
         recommendation_id: recommendationId,
         recommendation_type: recommendation.type,
@@ -66,8 +76,15 @@ export const FeedbackService = {
         feedback_type: feedbackType,
       };
 
-      // Update algorithm asynchronously (don't wait for completion)
-      void this.updateAlgorithmWithFeedback(userId, feedbackMetadata);
+      // Zaktualizuj algorytm asynchronicznie (nie czekaj na zakończenie)
+      void this.updateAlgorithmWithFeedback(userIdStr, feedbackMetadata);
+
+      // Zaktualizuj rekord "seen_recommendations" jeśli istnieje
+      void this.updateSeenRecommendationFeedback(
+        userIdStr,
+        itemMetadata?.id as string,
+        feedbackType
+      );
 
       return {
         id: data.id,
@@ -77,75 +94,100 @@ export const FeedbackService = {
         created_at: data.created_at,
       };
     } catch (error) {
-      console.error(`Error saving swipe feedback: ${error}`);
       throw error;
     }
   },
 
   /**
-   * Updates the recommendation algorithm with user feedback.
-   * Uses OpenRouter AI to analyze patterns in user feedback.
-   *
-   * @param userId - User ID
-   * @param feedbackMetadata - Metadata about the feedback
+   * Aktualizuje feedback dla wcześniej wyświetlonej rekomendacji.
    */
-  async updateAlgorithmWithFeedback(userId: string, feedbackMetadata: FeedbackMetadata): Promise<void> {
+  async updateSeenRecommendationFeedback(
+    userId: string,
+    itemId: string,
+    feedbackType: RecommendationFeedbackType
+  ): Promise<void> {
     try {
-      // Get user's last 10 feedback entries to establish patterns
+      // Ensure userId is a valid string
+      if (typeof userId !== "string") {
+        return; // Exit early to avoid errors
+      }
+
+      // Convert to string to ensure consistent handling
+      const userIdStr = String(userId);
+
+      const { error } = await supabaseClient
+        .from("seen_recommendations")
+        .update({ feedback_type: feedbackType })
+        .eq("user_id", userIdStr)
+        .eq("item_id", itemId);
+
+      if (error) {
+      }
+    } catch (error) {}
+  },
+
+  /**
+   * Aktualizuje algorytm rekomendacji na podstawie feedbacku użytkownika.
+   * Wykorzystuje OpenRouter AI do analizy wzorców.
+   *
+   * @param userId - ID użytkownika
+   * @param feedbackMetadata - Metadane o feedbacku
+   */
+  async updateAlgorithmWithFeedback(
+    userId: string,
+    feedbackMetadata: FeedbackMetadata
+  ): Promise<void> {
+    try {
+      // Ensure userId is a valid string
+      if (typeof userId !== "string") {
+        return; // Exit early to avoid errors
+      }
+
+      // Convert to string to ensure consistent handling
+      const userIdStr = String(userId);
+
+      // Pobierz ostatnie 10 feedbacków użytkownika, aby ustalić wzorce
       const { data: recentFeedback, error: feedbackError } = await supabaseClient
         .from("recommendation_feedback")
         .select("*, recommendations(*)")
-        .eq("user_id", userId)
+        .eq("user_id", userIdStr)
         .order("created_at", { ascending: false })
         .limit(10);
 
       if (feedbackError) {
-        throw new Error(`Failed to fetch recent feedback: ${feedbackError.message}`);
+        throw new Error(`Nie udało się pobrać ostatnich feedbacków: ${feedbackError.message}`);
       }
 
-      // Get user preferences
+      // Pobierz preferencje użytkownika
       const preferenceTable =
         feedbackMetadata.recommendation_type === "music" ? "music_preferences" : "film_preferences";
       const { data: preferences, error: prefError } = await supabaseClient
         .from(preferenceTable)
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", userIdStr)
         .single();
 
       if (prefError && prefError.code !== "PGRST116") {
-        // PGRST116 is "no rows returned" - this is fine for new users
-        throw new Error(`Failed to fetch user preferences: ${prefError.message}`);
+        // PGRST116 to "brak zwróconych wierszy" - to jest OK dla nowych użytkowników
+        throw new Error(`Nie udało się pobrać preferencji użytkownika: ${prefError.message}`);
       }
 
-      // Skip algorithm update if OpenRouter is not configured
-      // This would be replaced with proper configuration in production
-      if (!process.env.OPENROUTER_API_KEY) {
-        console.log("OpenRouter not configured, skipping algorithm update");
+      // Pomiń aktualizację algorytmu, jeśli OpenRouter nie jest skonfigurowany
+      if (!OPENROUTER_API_KEY) {
         return;
       }
 
-      // Create a prompt for the AI to analyze the user's preferences and feedback
-      const prompt = `
-        I'm analyzing a user's taste in ${feedbackMetadata.recommendation_type}. 
-        
-        User preferences: ${JSON.stringify(preferences || {})}
-        
-        Recent feedback:
-        ${JSON.stringify(recentFeedback)}
-        
-        Latest action: The user ${feedbackMetadata.feedback_type === "like" ? "liked" : "disliked"} 
-        ${feedbackMetadata.item_name} with properties: ${JSON.stringify(feedbackMetadata.item_metadata)}
-        
-        Analyze the patterns in this user's taste and feedback. Then update their preference profile.
-        Focus on identifying:
-        1. Genres they consistently like or dislike
-        2. Specific attributes they prefer (e.g., artists, directors, eras)
-        3. How their taste has evolved over time
-        
-        Return a JSON object with updated preference suggestions.
-      `;
+      // Skonfiguruj OpenRouter
+      OpenRouterService.configure(OPENROUTER_API_KEY);
 
-      // Call OpenRouter to analyze patterns
+      // Utwórz prompt dla AI do analizy preferencji i feedbacku użytkownika
+      const prompt = getAiPrompts().updatePreferencesFromFeedback(
+        preferences || {},
+        recentFeedback || [],
+        feedbackMetadata.recommendation_type
+      );
+
+      // Wywołaj OpenRouter do analizy wzorców
       const response = await OpenRouterService.jsonCompletion<{
         updatedPreferences: Record<string, unknown>;
         analysisNotes: string;
@@ -156,41 +198,42 @@ export const FeedbackService = {
           properties: {
             updatedPreferences: {
               type: "object",
-              description: "Suggested updates to user preferences based on feedback analysis",
+              description:
+                "Sugerowane aktualizacje preferencji użytkownika na podstawie analizy feedbacku",
             },
             analysisNotes: {
               type: "string",
-              description: "Notes about observed patterns in user behavior",
+              description: "Notatki o zaobserwowanych wzorcach w zachowaniu użytkownika",
             },
           },
           required: ["updatedPreferences"],
         },
         {
-          systemPrompt:
-            "You are a taste analysis algorithm that identifies patterns in user preferences. Be precise and focus on factual analysis of data provided.",
+          systemPrompt: getSystemPrompts().preferenceUpdater(),
           temperature: 0.2,
           model: "anthropic/claude-3-haiku-20240307",
         }
       );
 
-      // Use the analysis to update user preferences if significant changes are suggested
+      // Wykorzystaj analizę do aktualizacji preferencji użytkownika, jeśli są istotne zmiany
       if (response.updatedPreferences && Object.keys(response.updatedPreferences).length > 0) {
-        await this.updateUserPreferences(userId, feedbackMetadata.recommendation_type, response.updatedPreferences);
+        await this.updateUserPreferences(
+          userIdStr,
+          feedbackMetadata.recommendation_type,
+          response.updatedPreferences
+        );
       }
-
-      console.log(`Algorithm successfully updated with feedback for user ${userId}`);
     } catch (error) {
-      console.error(`Error updating algorithm with feedback: ${error}`);
-      // Don't rethrow - this is a background process that shouldn't affect user experience
+      // Nie rzucaj ponownie - to jest proces w tle, który nie powinien wpływać na doświadczenie użytkownika
     }
   },
 
   /**
-   * Updates user preferences based on algorithm analysis.
+   * Aktualizuje preferencje użytkownika na podstawie analizy algorytmu.
    *
-   * @param userId - User ID
-   * @param contentType - Type of content ("music" or "film")
-   * @param updatedPreferences - New preference data
+   * @param userId - ID użytkownika
+   * @param contentType - Typ zawartości ("music" lub "film")
+   * @param updatedPreferences - Nowe dane preferencji
    */
   async updateUserPreferences(
     userId: string,
@@ -198,46 +241,178 @@ export const FeedbackService = {
     updatedPreferences: Record<string, unknown>
   ): Promise<void> {
     try {
+      // Ensure userId is a valid string
+      if (typeof userId !== "string") {
+        return; // Exit early to avoid errors
+      }
+
+      // Convert to string to ensure consistent handling
+      const userIdStr = String(userId);
+
       const table = contentType === "music" ? "music_preferences" : "film_preferences";
 
-      // Check if preferences exist
+      // Sprawdź, czy preferencje istnieją
       const { data: existing, error: checkError } = await supabaseClient
         .from(table)
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", userIdStr)
         .maybeSingle();
 
       if (checkError) {
-        throw new Error(`Failed to check existing preferences: ${checkError.message}`);
+        throw new Error(`Nie udało się sprawdzić istniejących preferencji: ${checkError.message}`);
       }
 
+      // Add timestamp for updates
+      const updatedData = {
+        ...updatedPreferences,
+        // Only add updated_at if it's supported by the table schema
+        ...(table === "music_preferences" || table === "film_preferences"
+          ? { updated_at: new Date().toISOString() }
+          : {}),
+      };
+
       if (existing) {
-        // Update existing preferences
+        // Aktualizuj istniejące preferencje
         const { error: updateError } = await supabaseClient
           .from(table)
-          .update({
-            ...updatedPreferences,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", userId);
+          .update(updatedData)
+          .eq("user_id", userIdStr);
 
         if (updateError) {
-          throw new Error(`Failed to update preferences: ${updateError.message}`);
+          throw new Error(`Nie udało się zaktualizować preferencji: ${updateError.message}`);
         }
       } else {
-        // Create new preferences
+        // Utwórz nowe preferencje
         const { error: insertError } = await supabaseClient.from(table).insert({
-          user_id: userId,
+          user_id: userIdStr,
           ...updatedPreferences,
         });
 
         if (insertError) {
-          throw new Error(`Failed to insert preferences: ${insertError.message}`);
+          throw new Error(`Nie udało się wstawić preferencji: ${insertError.message}`);
         }
       }
     } catch (error) {
-      console.error(`Error updating user preferences: ${error}`);
-      // Don't rethrow - this is a background process that shouldn't affect user experience
+      // Nie rzucaj ponownie - to jest proces w tle, który nie powinien wpływać na doświadczenie użytkownika
+    }
+  },
+
+  /**
+   * Pobiera historię feedbacku użytkownika.
+   *
+   * @param userId - ID użytkownika
+   * @param type - Typ rekomendacji ("music" lub "film")
+   * @param limit - Limit liczby rekordów
+   * @returns Historia feedbacku użytkownika
+   */
+  async getUserFeedbackHistory(
+    userId: string,
+    type: "music" | "film",
+    limit = 10
+  ): Promise<Record<string, unknown>[]> {
+    try {
+      // Ensure userId is a valid string
+      if (typeof userId !== "string") {
+        return []; // Return empty array if userId is invalid
+      }
+
+      // Convert to string to ensure consistent handling
+      const userIdStr = String(userId);
+
+      const { data, error } = await supabaseClient
+        .from("recommendation_feedback")
+        .select("*, recommendations(*)")
+        .eq("user_id", userIdStr)
+        .eq("recommendations.type", type)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      return [];
+    }
+  },
+
+  /**
+   * Analizuje metadane preferowanej i niepreferowanej zawartości.
+   *
+   * @param userId - ID użytkownika
+   * @param contentType - Typ zawartości ("music" lub "film")
+   * @returns Analiza metadanych
+   */
+  async analyzeContentMetadata(
+    userId: string,
+    contentType: "music" | "film"
+  ): Promise<Record<string, unknown>> {
+    try {
+      // Ensure userId is a valid string
+      if (typeof userId !== "string") {
+        return {
+          status: "error",
+          reason: "INVALID_USER_ID",
+        };
+      }
+
+      // Convert to string to ensure consistent handling
+      const userIdStr = String(userId);
+
+      // Pobierz pozytywny feedback dla analizy "lubianych" treści
+      const { data: likedContent, error: likedError } = await supabaseClient
+        .from("recommendation_feedback")
+        .select("metadata, created_at")
+        .eq("user_id", userIdStr)
+        .eq("feedback_type", "like")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (likedError) {
+        throw new Error(`Nie udało się pobrać lubianych treści: ${likedError.message}`);
+      }
+
+      // Pobierz negatywny feedback dla analizy "nielubianych" treści
+      const { data: dislikedContent, error: dislikedError } = await supabaseClient
+        .from("recommendation_feedback")
+        .select("metadata, created_at")
+        .eq("user_id", userIdStr)
+        .eq("feedback_type", "dislike")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (dislikedError) {
+        throw new Error(`Nie udało się pobrać nielubianych treści: ${dislikedError.message}`);
+      }
+
+      // Pomiń analizę, jeśli OpenRouter nie jest skonfigurowany
+      if (!OPENROUTER_API_KEY) {
+        return {
+          status: "error",
+          reason: "API_KEY_MISSING",
+        };
+      }
+
+      // Skonfiguruj OpenRouter
+      OpenRouterService.configure(OPENROUTER_API_KEY);
+
+      // Analizuj wzorce przy użyciu OpenRouter
+      const result = await OpenRouterService.analyzeUserPatterns(
+        userIdStr,
+        [
+          ...likedContent.map((item) => ({ ...item, type: "liked" })),
+          ...dislikedContent.map((item) => ({ ...item, type: "disliked" })),
+        ],
+        contentType
+      );
+
+      return result;
+    } catch (error) {
+      return {
+        status: "error",
+        reason: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 };

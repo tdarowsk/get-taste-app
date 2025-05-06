@@ -18,8 +18,6 @@ export const GET: APIRoute = async () => {
       }
     );
   } catch (error) {
-    console.error("Error fetching AI models:", error);
-
     // Return appropriate error response
     return new Response(
       JSON.stringify({

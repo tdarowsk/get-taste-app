@@ -121,25 +121,25 @@ export interface Database {
       };
       recommendations: {
         Row: {
-          created_at: string;
-          data: Json;
           id: number;
-          type: string;
           user_id: string;
+          type: string;
+          data: Json;
+          created_at: string;
         };
         Insert: {
-          created_at?: string;
-          data: Json;
           id?: number;
-          type: string;
           user_id: string;
+          type: string;
+          data: Json;
+          created_at?: string;
         };
         Update: {
-          created_at?: string;
-          data?: Json;
           id?: number;
-          type?: string;
           user_id?: string;
+          type?: string;
+          data?: Json;
+          created_at?: string;
         };
         Relationships: [
           {
@@ -280,6 +280,99 @@ export interface Database {
         };
         Relationships: [];
       };
+      seen_recommendations: {
+        Row: {
+          id: number;
+          user_id: string;
+          item_id: string;
+          item_name: string;
+          item_type: string;
+          recommendation_id: number;
+          type: string;
+          created_at: string;
+          feedback_type?: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          item_id: string;
+          item_name: string;
+          item_type: string;
+          recommendation_id: number;
+          type: string;
+          created_at?: string;
+          feedback_type?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          item_id?: string;
+          item_name?: string;
+          item_type?: string;
+          recommendation_id?: number;
+          type?: string;
+          created_at?: string;
+          feedback_type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "seen_recommendations_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "seen_recommendations_recommendation_id_fkey";
+            columns: ["recommendation_id"];
+            isOneToOne: false;
+            referencedRelation: "recommendations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recommendation_feedback: {
+        Row: {
+          id: number;
+          user_id: string;
+          recommendation_id: number;
+          feedback_type: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          recommendation_id: number;
+          feedback_type: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          recommendation_id?: number;
+          feedback_type?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_feedback_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recommendation_feedback_recommendation_id_fkey";
+            columns: ["recommendation_id"];
+            isOneToOne: false;
+            referencedRelation: "recommendations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<never, never>;
     Functions: Record<never, never>;
@@ -316,7 +409,9 @@ export type Tables<
     : never;
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof Database },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof Database;
   }
@@ -337,7 +432,9 @@ export type TablesInsert<
     : never;
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof Database },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof Database;
   }
@@ -371,7 +468,9 @@ export type Enums<
     : never;
 
 export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"] | { schema: keyof Database },
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database;
   }

@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { mockMusicRecommendations, mockFilmRecommendations } from "../../mockData";
 
 interface GenerateRecommendationsVariables {
-  userId: number;
+  userId: string;
   type: "music" | "film";
   force_refresh: boolean;
   is_new_user?: boolean;
@@ -12,73 +11,125 @@ export function useGenerateRecommendations() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, type, force_refresh, is_new_user }: GenerateRecommendationsVariables) => {
+    mutationFn: async ({
+      userId,
+      type,
+      force_refresh,
+      is_new_user,
+    }: GenerateRecommendationsVariables) => {
       try {
-        const url = new URL(`/api/users/${userId}/recommendations`, window.location.origin);
+        const url = new URL(`/api/recommendations/generate`, window.location.origin);
 
-        const response = await fetch(url.toString(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type,
-            force_refresh,
-            is_new_user: is_new_user || false,
-          }),
-        });
+        // Create timeout controller for the fetch
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.warn("[Frontend] Aborting recommendations request due to timeout");
+          controller.abort();
+        }, 60000); // 60 second timeout
 
-        if (response.status === 404) {
-          console.log("API endpoint not found, simulating recommendation generation");
-          // Simulate a delay to mimic API processing
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+        try {
+          console.info(
+            `[Frontend] Sending recommendation request for type: ${type}, force_refresh: ${force_refresh}`
+          );
 
-          // If it's a new user, we should return popular/trending items
-          if (is_new_user) {
-            // A simplified mock version of what would be returned for new users
-            return {
-              success: true,
-              message: "Mock recommendations for new user generated successfully",
-              data: {
-                id: type === "music" ? 1001 : 1003,
-                user_id: userId,
-                type,
-                data: {
-                  title: type === "music" ? "Top Charting Artists" : "Highest Grossing Films of All Time",
-                  description: "Popular items for new users",
-                  items:
-                    type === "music" ? mockMusicRecommendations[0].data.items : mockFilmRecommendations[0].data.items,
-                },
-                created_at: new Date().toISOString(),
-              },
-            };
+          const response = await fetch(url.toString(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            signal: controller.signal,
+            body: JSON.stringify({
+              userId,
+              type,
+              force_refresh,
+              is_new_user: is_new_user || false,
+              force_ai: true,
+            }),
+          });
+
+          // Clear the timeout as the request completed
+          clearTimeout(timeoutId);
+
+          console.info(`[Frontend] Got response with status: ${response.status}`);
+
+          if (response.status === 401) {
+            throw new Error("Nieautoryzowany dostęp - wymagane zalogowanie");
           }
 
-          // Return standard mock data based on type
-          return {
-            success: true,
-            message: "Mock recommendations generated successfully",
-            data: type === "music" ? mockMusicRecommendations[0] : mockFilmRecommendations[0],
-          };
-        }
+          if (response.status === 404) {
+            throw new Error("Endpoint API nie został znaleziony");
+          }
 
-        if (!response.ok) {
-          throw new Error(`Failed to generate recommendations: ${response.statusText}`);
-        }
+          if (!response.ok) {
+            const errorText = await response.text();
 
-        return await response.json();
+            // Check if this is an OpenRouter API error (Forbidden)
+            try {
+              const errorObj = JSON.parse(errorText);
+              if (
+                errorObj &&
+                errorObj.error &&
+                ((errorObj.error.includes("OpenRouter") && errorObj.error.includes("403")) ||
+                  (errorObj.error.includes("OpenRouter") && errorObj.error.includes("Forbidden")))
+              ) {
+                // Return error information to show in the UI
+                console.warn("[Frontend] OpenRouter API error (likely rate limit)");
+                throw new Error("OpenRouter API temporarily unavailable. Please try again later.");
+              }
+            } catch (jsonError) {
+              // Continue with the normal error flow
+              console.error("[Frontend] Error parsing error response:", jsonError);
+            }
+
+            throw new Error(
+              `Failed to generate recommendations: ${response.statusText}. Details: ${errorText}`
+            );
+          }
+
+          const data = await response.json();
+          console.info(
+            `[Frontend] Successfully received recommendations with ${data?.data?.items?.length || 0} items`
+          );
+
+          // Check if we got an empty response
+          if (!data.data || !data.data.items || data.data.items.length === 0) {
+            console.warn("[Frontend] Server returned empty items array");
+            throw new Error(
+              "No recommendations found. Please try again or update your preferences."
+            );
+          }
+
+          // Invalidate the recommendations query to refresh data
+          queryClient.invalidateQueries({
+            queryKey: ["latestRecommendations"],
+          });
+
+          queryClient.invalidateQueries({
+            queryKey: ["recommendations"],
+          });
+
+          return data;
+        } catch (fetchError) {
+          // Clear the timeout to prevent memory leaks
+          clearTimeout(timeoutId);
+
+          // Handle abort errors specially
+          if (fetchError instanceof DOMException && fetchError.name === "AbortError") {
+            console.error("[Frontend] Request timed out after 60 seconds");
+            throw new Error("Request timed out after 60 seconds. Please try again later.");
+          }
+
+          throw fetchError;
+        }
       } catch (error) {
-        console.error(`Error generating recommendations:`, error);
-        // Log the error but don't break the UI
-        return {
-          success: true,
-          message: "Using mock data due to API error",
-          data: type === "music" ? mockMusicRecommendations[0] : mockFilmRecommendations[0],
-        };
+        console.error("[Frontend] Error in generateRecommendations:", error);
+        throw error; // Let the UI handle the error display
       }
     },
-    onSuccess: (_: unknown, variables: GenerateRecommendationsVariables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["recommendations", variables.userId, variables.type, variables.is_new_user],
-      });
+    onError: (error) => {
+      console.error("[Frontend] Mutation error:", error);
+    },
+    onSuccess: () => {
+      console.info("[Frontend] Mutation successful");
     },
   });
 }

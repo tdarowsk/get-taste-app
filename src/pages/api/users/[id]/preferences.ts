@@ -10,14 +10,11 @@ export const prerender = false;
  */
 export const GET: APIRoute = async ({ params, request, cookies }) => {
   try {
-    console.log("Fetching preferences for user:", params.id);
-
     // Extract user ID from the URL
     const userId = params.id;
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -35,7 +32,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       headers: request.headers,
     });
 
-    console.log(`Fetching music preferences for user ${userId}`);
     // Try to fetch real preferences from database
     const { data: musicPrefs, error: musicError } = await supabase
       .from("music_preferences")
@@ -44,10 +40,9 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       .maybeSingle();
 
     if (musicError) {
-      console.error("Error fetching music preferences:", musicError);
+      // Error fetching music preferences, will continue with mock data
     }
 
-    console.log(`Fetching film preferences for user ${userId}`);
     const { data: filmPrefs, error: filmError } = await supabase
       .from("film_preferences")
       .select("*")
@@ -55,7 +50,7 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       .maybeSingle();
 
     if (filmError) {
-      console.error("Error fetching film preferences:", filmError);
+      // Error fetching film preferences, will continue with mock data
     }
 
     // Define mock preferences for new users or if real data is unavailable
@@ -91,20 +86,12 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
           },
     };
 
-    console.log("Returning preferences:", {
-      hasMusicPrefs: !!musicPrefs,
-      hasFilmPrefs: !!filmPrefs,
-      musicGenresCount: userPreferences.music?.genres?.length || 0,
-      filmGenresCount: userPreferences.film?.genres?.length || 0,
-    });
-
     // Return success response with the preferences
     return new Response(JSON.stringify(userPreferences), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error processing preferences request:", error);
     return new Response(
       JSON.stringify({
         error: "An error occurred while retrieving user preferences",
@@ -124,8 +111,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
  */
 export const POST: APIRoute = async ({ params, request, cookies }) => {
   try {
-    console.log("Updating preferences for user:", params.id);
-
     // Check authentication
     const supabase = createSupabaseServerInstance({
       headers: request.headers,
@@ -138,7 +123,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -155,7 +139,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -169,7 +152,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Parse request body
     const body = await request.json();
-    console.log("Received preferences update:", body);
 
     // Validate that at least one of music or film is provided
     if (!body.music && !body.film) {
@@ -188,7 +170,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Update music preferences if provided
     if (body.music) {
-      console.log("Updating music preferences");
       const { error: musicError } = await supabase
         .from("music_preferences")
         .upsert({
@@ -200,7 +181,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         .select();
 
       if (musicError) {
-        console.error("Error updating music preferences:", musicError);
         return new Response(
           JSON.stringify({
             error: "Failed to update music preferences",
@@ -221,7 +201,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Update film preferences if provided
     if (body.film) {
-      console.log("Updating film preferences");
       const { error: filmError } = await supabase
         .from("film_preferences")
         .upsert({
@@ -236,7 +215,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         .select();
 
       if (filmError) {
-        console.error("Error updating film preferences:", filmError);
         return new Response(
           JSON.stringify({
             error: "Failed to update film preferences",
@@ -258,8 +236,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       };
     }
 
-    console.log("Preferences updated successfully");
-
     // Return success response with the updated preferences
     return new Response(
       JSON.stringify({
@@ -272,7 +248,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       }
     );
   } catch (error) {
-    console.error("Error updating preferences:", error);
     return new Response(
       JSON.stringify({
         error: "An error occurred while updating preferences",

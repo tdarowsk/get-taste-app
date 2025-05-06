@@ -19,7 +19,6 @@ const fetchMovieDetailsFromBackend = async (movieId: string) => {
 
     return await response.json();
   } catch (error) {
-    console.error("Error fetching movie details:", error);
     throw error;
   }
 };
@@ -84,11 +83,8 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
       // For movie_id format, we need to extract just the number
       const cleanMovieId = movieId.startsWith("movie_") ? movieId.substring(6) : movieId;
 
-      console.log(`Fetching details for movie ID: ${cleanMovieId}`);
-
       // Use our backend API to get movie details
       const data = await fetchMovieDetailsFromBackend(cleanMovieId);
-      console.log("Movie details from backend:", data);
 
       setMovieDetails({
         genres: data.genres,
@@ -99,7 +95,6 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
         cast: data.cast,
       });
     } catch (error) {
-      console.error("Error fetching movie details:", error);
     } finally {
       setLoading(false);
     }
@@ -113,21 +108,12 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
     // Extract cast names to a string for feedback - take top 5 actors
     const castString = movieDetails?.cast?.slice(0, 5).join(",") || null;
 
-    console.log("Movie details for feedback:", {
-      id: item.id,
-      movieDetails,
-      formattedGenres: genreString,
-      formattedCast: castString,
-    });
-
     // Store movie details in item.details for feedback
     if (item.type === "film" && movieDetails) {
       if (!item.details) item.details = {};
       if (genreString) item.details.genre = genreString;
       if (castString) item.details.cast = castString;
     }
-
-    console.log(`Sending feedback with genres: ${genreString}, cast: ${castString}`);
 
     // Call parent onSwipe with extra metadata
     onSwipe(item.id, direction);
@@ -144,11 +130,11 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
           .filter((historyItem: FeedbackHistoryItem) => historyItem.id === item.id)
           .sort((a: FeedbackHistoryItem, b: FeedbackHistoryItem) => b.timestamp - a.timestamp)[0];
 
-        return previousFeedback ? { exists: true, type: previousFeedback.feedbackType } : { exists: false };
+        return previousFeedback
+          ? { exists: true, type: previousFeedback.feedbackType }
+          : { exists: false };
       }
-    } catch (err) {
-      console.error("Error checking feedback history:", err);
-    }
+    } catch (err) {}
     return { exists: false };
   };
 
@@ -200,11 +186,12 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-semibold">{item.name}</h3>
           <div className="flex items-center">
-            {item.type === "film" && (movieDetails?.overview || (item.details && "description" in item.details)) && (
-              <span className="mr-2 text-xs text-blue-500 cursor-help" title="Hover for details">
-                ⓘ
-              </span>
-            )}
+            {item.type === "film" &&
+              (movieDetails?.overview || (item.details && "description" in item.details)) && (
+                <span className="mr-2 text-xs text-blue-500 cursor-help" title="Hover for details">
+                  ⓘ
+                </span>
+              )}
             <span className="text-xs text-gray-500 capitalize">{item.type}</span>
           </div>
         </div>
@@ -217,7 +204,9 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
               <div className="font-semibold mb-1 border-b border-gray-600 pb-1">Movie Overview</div>
               <p className="text-xs leading-relaxed my-2">
                 {movieDetails?.overview ||
-                  (item.details && "description" in item.details ? String(item.details.description) : "")}
+                  (item.details && "description" in item.details
+                    ? String(item.details.description)
+                    : "")}
               </p>
               <div className="flex flex-wrap gap-2 mt-2 text-xs">
                 {movieDetails?.vote_average && (
@@ -264,7 +253,9 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
         <div className="flex items-start gap-4">
           {/* Display image if available */}
           {item.details && "imageUrl" in item.details && (
-            <div className={`${["album", "song"].includes(item.type) ? "w-24 h-24" : "w-32 h-32"} flex-shrink-0`}>
+            <div
+              className={`${["album", "song"].includes(item.type) ? "w-24 h-24" : "w-32 h-32"} flex-shrink-0`}
+            >
               <img
                 src={String(item.details.imageUrl)}
                 alt={`${item.name} cover`}
@@ -288,12 +279,14 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
               <div className="mt-2">
                 {movieDetails?.release_date && (
                   <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Release:</span> {new Date(movieDetails.release_date).getFullYear()}
+                    <span className="font-semibold">Release:</span>{" "}
+                    {new Date(movieDetails.release_date).getFullYear()}
                   </p>
                 )}
                 {movieDetails?.genres && movieDetails.genres.length > 0 && (
                   <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Genre:</span> {movieDetails.genres.map((g) => g.name).join(", ")}
+                    <span className="font-semibold">Genre:</span>{" "}
+                    {movieDetails.genres.map((g) => g.name).join(", ")}
                   </p>
                 )}
                 {movieDetails?.runtime && (
@@ -309,7 +302,8 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
               <div className="mt-2 text-xs text-gray-600 grid grid-cols-2 gap-1">
                 {Object.entries(item.details)
                   .filter(
-                    ([key]) => !key.includes("imageUrl") && !key.includes("spotifyId") && key !== "artist" // Skip artist since we display it separately
+                    ([key]) =>
+                      !key.includes("imageUrl") && !key.includes("spotifyId") && key !== "artist" // Skip artist since we display it separately
                   )
                   .map(([key, value]) => {
                     // Convert value to a string safely
@@ -324,7 +318,9 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
 
                     return (
                       <div key={key} className="truncate">
-                        <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, " $1").trim()}: </span>
+                        <span className="font-semibold capitalize">
+                          {key.replace(/([A-Z])/g, " $1").trim()}:{" "}
+                        </span>
                         <span>{displayValue}</span>
                       </div>
                     );
@@ -342,7 +338,11 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
   );
 };
 
-const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, className, isNewUser = false }) => {
+const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
+  userId,
+  className,
+  isNewUser = false,
+}) => {
   // Flatten all recommendation items into a single array
   const [allItems, setAllItems] = useState<RecommendationItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -361,7 +361,6 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
     setError(null);
 
     try {
-      console.log("Fetching recommendations for user:", userId);
       // Build URL with query parameters
       const url = new URL(`/api/users/${userId}/recommendations`, window.location.origin);
 
@@ -370,19 +369,15 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         url.searchParams.append("is_new_user", "true");
       }
 
-      console.log("Request URL:", url.toString());
       const response = await fetch(url.toString(), { credentials: "include" });
 
       if (!response.ok) {
-        console.error("Failed to fetch recommendations:", response.status, response.statusText);
         throw new Error(`Failed to fetch recommendations: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log("Received recommendations data:", data);
 
       if (!data || data.length === 0) {
-        console.error("No recommendations available");
         throw new Error("No recommendations available");
       }
 
@@ -390,7 +385,6 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
       const extractedItems: RecommendationItem[] = [];
       data.forEach((rec: RecommendationDTO) => {
         if (rec.data?.items && Array.isArray(rec.data.items)) {
-          console.log("Processing recommendation:", rec);
           // Add a unique ID to each item to ensure uniqueness across recommendations
           const itemsWithUniqueIds = rec.data.items.map((item: RecommendationItem) => ({
             ...item,
@@ -400,26 +394,22 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         }
       });
 
-      console.log("Extracted items:", extractedItems);
+      // Filter items using local storage history
 
-      // Shuffle the items for variety
-      const shuffledItems = extractedItems.sort(() => Math.random() - 0.5);
-      console.log("Shuffled items:", shuffledItems);
-
-      // Filter out items based on user's history (using async method to check server + local)
-      const filteredItems = await UniqueRecommendationsService.filterUniqueRecommendationsAsync(
+      const filteredItems = UniqueRecommendationsService.filterLocalRecommendations(
         userId,
-        shuffledItems,
+        extractedItems,
         RECOMMENDATION_COOLDOWN_PERIOD
       );
-      console.log("Filtered items:", filteredItems);
 
       // Check if we need more recommendations
-      setNeedMoreRecommendations(UniqueRecommendationsService.needsMoreRecommendations(filteredItems));
+      setNeedMoreRecommendations(
+        UniqueRecommendationsService.needsMoreRecommendations(filteredItems)
+      );
 
-      setAllItems(filteredItems);
+      const shuffledItems = filteredItems.sort(() => Math.random() - 0.5);
+      setAllItems(shuffledItems);
     } catch (err) {
-      console.error("Error in fetchRecommendations:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
       setAllItems([]);
     } finally {
@@ -429,8 +419,6 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
 
   // Handle swipe action for an item
   const handleSwipe = async (itemId: string, feedbackType: FeedbackType) => {
-    console.log(`Processing swipe for item ${itemId} with feedback: ${feedbackType}`);
-
     try {
       // First update the current index to show the next item immediately
       if (currentIndex < allItems.length - 1) {
@@ -443,13 +431,11 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
       // Find the current item in the array
       const currentItem = allItems.find((item) => item.id === itemId);
       if (!currentItem) {
-        console.error(`Item with ID ${itemId} not found in allItems array`);
         return;
       }
 
       // Add to feedback history using the service (saves to localStorage)
       UniqueRecommendationsService.addToHistory(userId, itemId, feedbackType);
-      console.log(`Saved feedback to localStorage for item ${itemId}`);
 
       // Remove the item from the current list
       setAllItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
@@ -459,21 +445,12 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         // Try the primary endpoint first
         let savedSuccessfully = false;
         try {
-          console.log("Attempting to save feedback to primary endpoint for item " + itemId);
           const primaryUrl = new URL(`/api/users/${userId}/item-feedback`, window.location.origin);
 
           // Znajdź item w oryginalnej tablicy allItems
           const genre = currentItem?.details?.genre || null;
           const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
           const cast = currentItem?.details?.cast || null;
-
-          console.log("Item metadata for feedback - primary endpoint:", {
-            id: itemId,
-            genre,
-            artist,
-            cast,
-            details: currentItem?.details,
-          });
 
           // Create payload with basic fields first
           let body = JSON.stringify({
@@ -492,9 +469,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
                 cast: cast,
               });
             }
-          } catch (e) {
-            console.warn("Could not include metadata in feedback payload:", e);
-          }
+          } catch (e) {}
 
           const primaryResponse = await fetch(primaryUrl.toString(), {
             method: "POST",
@@ -505,35 +480,23 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
           });
 
           if (primaryResponse.ok) {
-            console.log(`✅ Feedback saved to database successfully via primary endpoint for item ${itemId}`);
             savedSuccessfully = true;
           } else {
-            console.warn(
-              `❌ Failed to save feedback to primary endpoint: ${primaryResponse.status} ${primaryResponse.statusText}`
-            );
           }
-        } catch (primaryError) {
-          console.warn("Error with primary feedback endpoint:", primaryError);
-        }
+        } catch (primaryError) {}
 
         // If primary endpoint failed, try fallback
         if (!savedSuccessfully) {
           try {
-            console.log(`Attempting to save feedback to fallback endpoint for item ${itemId}...`);
-            const fallbackUrl = new URL(`/api/users/${userId}/recommendations/feedback`, window.location.origin);
+            const fallbackUrl = new URL(
+              `/api/users/${userId}/recommendations/feedback`,
+              window.location.origin
+            );
 
             // Znajdź item w oryginalnej tablicy allItems
             const genre = currentItem?.details?.genre || null;
             const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
             const cast = currentItem?.details?.cast || null;
-
-            console.log("Item metadata for feedback - fallback endpoint:", {
-              id: itemId,
-              genre,
-              artist,
-              cast,
-              details: currentItem?.details,
-            });
 
             // Create payload with basic fields first
             let body = JSON.stringify({
@@ -552,9 +515,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
                   cast: cast,
                 });
               }
-            } catch (e) {
-              console.warn("Could not include metadata in feedback payload:", e);
-            }
+            } catch (e) {}
 
             const fallbackResponse = await fetch(fallbackUrl.toString(), {
               method: "POST",
@@ -565,31 +526,19 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
             });
 
             if (fallbackResponse.ok) {
-              console.log(`✅ Feedback saved to fallback endpoint successfully for item ${itemId}`);
               savedSuccessfully = true;
             } else {
-              console.warn(
-                `❌ Fallback feedback endpoint also failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`
-              );
             }
-          } catch (fallbackError) {
-            console.warn("Error with fallback feedback endpoint:", fallbackError);
-          }
+          } catch (fallbackError) {}
         }
 
         // If both endpoints failed but we have localStorage, that's okay
         if (!savedSuccessfully) {
-          console.log(
-            `⚠️ Could not save feedback to any API endpoint for item ${itemId}. Feedback is stored locally only.`
-          );
         }
       } catch (apiError) {
         // Silent fail - feedback is still stored locally
-        console.warn("Could not send feedback to API, storing locally only", apiError);
       }
-    } catch (err) {
-      console.error("Error processing item feedback:", err);
-    }
+    } catch (err) {}
   };
 
   // Clear feedback history
@@ -625,7 +574,6 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
           force_refresh: true,
         }),
       });
-      console.log(response);
 
       let recommendations: RecommendationDTO[] = [];
 
@@ -640,6 +588,8 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         recommendations = [];
       }
 
+      // Filtruj, aby pokazać tylko nowe lub pomijane wcześniej rekomendacje
+
       // Extract items from recommendations
       const extractedItems: RecommendationItem[] = [];
       recommendations.forEach((rec) => {
@@ -653,20 +603,18 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
         }
       });
 
-      // Filter and shuffle
-      const filteredItems = await UniqueRecommendationsService.filterUniqueRecommendationsAsync(
+      // Filter using client-side history
+      const filteredItems = UniqueRecommendationsService.filterLocalRecommendations(
         userId,
         extractedItems,
         RECOMMENDATION_COOLDOWN_PERIOD
       );
 
       const shuffledItems = filteredItems.sort(() => Math.random() - 0.5);
-
       setAllItems(shuffledItems);
       setCurrentIndex(0);
       setNeedMoreRecommendations(false);
     } catch (err) {
-      console.error("Error fetching more items:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch more items");
     } finally {
       setLoading(false);
@@ -725,7 +673,12 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({ userId, c
           // Cards are stacked, with the current one visible
           <div className="relative w-full max-w-md h-96">
             {allItems.map((item, index) => (
-              <ItemCard key={item.id} item={item} onSwipe={handleSwipe} isActive={index === currentIndex} />
+              <ItemCard
+                key={item.id}
+                item={item}
+                onSwipe={handleSwipe}
+                isActive={index === currentIndex}
+              />
             ))}
           </div>
         )}

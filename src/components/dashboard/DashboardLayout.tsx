@@ -22,15 +22,82 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
     refreshRecommendations,
     isGeneratingRecommendations,
     isNewUser,
+    validUserId,
   } = useDashboard(user.id);
+
+  // Log the user ID and valid user ID to debug
 
   // Load recommendations when component mounts
   useEffect(() => {
-    console.log(recommendations);
-    if (!isRecommendationsLoading && !recommendations) {
+    // Only try to fetch recommendations if we have a valid user ID
+    // and we're not already loading or generating recommendations
+    if (
+      validUserId &&
+      !isRecommendationsLoading &&
+      !isGeneratingRecommendations &&
+      (!recommendations || recommendations.length === 0)
+    ) {
       refreshRecommendations();
+    } else if (recommendations && recommendations.length > 0) {
     }
-  }, [isRecommendationsLoading, recommendations, refreshRecommendations]);
+  }, [
+    isRecommendationsLoading,
+    recommendations,
+    refreshRecommendations,
+    validUserId,
+    isGeneratingRecommendations,
+  ]);
+
+  // Refresh recommendations when the type changes
+  useEffect(() => {
+    if (validUserId && recommendations && recommendations.length > 0) {
+      // Filter out undefined or invalid recommendations
+      const validRecommendations = recommendations.filter((rec) => rec && rec.type);
+
+      if (validRecommendations.length < recommendations.length) {
+      }
+
+      // Check if we have recommendations of the active type
+      const hasActiveTypeRecs = validRecommendations.some((rec) => rec.type === activeType);
+
+      if (!hasActiveTypeRecs) {
+        refreshRecommendations();
+      } else {
+      }
+    }
+  }, [activeType, recommendations, refreshRecommendations, validUserId]);
+
+  // Force a refresh of recommendations after a timeout if recommendations are still loading
+  useEffect(() => {
+    let timeout: number;
+
+    if (
+      validUserId &&
+      isRecommendationsLoading &&
+      (!recommendations || recommendations.length === 0)
+    ) {
+      timeout = window.setTimeout(() => {
+        refreshRecommendations();
+      }, 10000); // 10 seconds timeout
+    }
+
+    return () => {
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [validUserId, isRecommendationsLoading, recommendations, refreshRecommendations]);
+
+  // Add debugging for rendering state
+
+  // Check if we have any valid recommendations after filtering
+  const hasValidRecommendations =
+    recommendations &&
+    recommendations.length > 0 &&
+    recommendations.some(
+      (rec) =>
+        rec && rec.type && rec.data && Array.isArray(rec.data.items) && rec.data.items.length > 0
+    );
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -59,8 +126,8 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
               <div>
                 <h3 className="text-sm font-medium text-blue-300">Welcome to getTaste!</h3>
                 <p className="text-xs text-blue-400">
-                  We&apos;re showing you popular recommendations to get you started. Update your preferences for
-                  personalized suggestions!
+                  We&apos;re showing you popular recommendations to get you started. Update your
+                  preferences for personalized suggestions!
                 </p>
               </div>
             </div>
@@ -94,7 +161,9 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
             <div className="w-full lg:w-64 xl:w-72 hidden lg:block shrink-0">
               <div className="sticky top-24 rounded-lg p-5 shadow-lg bg-white/5 backdrop-blur-sm border border-white/10">
                 <h3 className="text-base font-semibold mb-3 text-white">Your Preferences</h3>
-                <p className="text-gray-300 text-xs">Set your preferences to get better recommendations</p>
+                <p className="text-gray-300 text-xs">
+                  Set your preferences to get better recommendations
+                </p>
                 <div className="mt-4 pt-3 border-t border-white/10">
                   <div className="space-y-3">
                     <div className="bg-gradient-to-r from-blue-900/30 to-blue-800/30 p-3 rounded-md border border-blue-700/30">
@@ -118,7 +187,11 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
             {/* Swipe Recommendations sidebar */}
             <div className="w-full lg:w-72 xl:w-80 shrink-0 mb-6 lg:mb-0 order-first lg:order-last">
               <div className="sticky top-24 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 shadow-lg overflow-hidden h-[calc(100vh-120px)]">
-                <RecommendationSidebar userId={user.id} className="h-full" isNewUser={isNewUser} />
+                <RecommendationSidebar
+                  userId={validUserId || ""}
+                  className="h-full"
+                  isNewUser={isNewUser}
+                />
               </div>
             </div>
           </div>

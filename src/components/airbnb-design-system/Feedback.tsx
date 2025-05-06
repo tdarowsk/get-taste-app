@@ -132,7 +132,13 @@ interface ToastProps {
    * Pozycja toastu
    * @default "bottom-center"
    */
-  position?: "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right";
+  position?:
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right";
 }
 
 export const Toast: React.FC<ToastProps> = ({
@@ -265,7 +271,12 @@ export const Toast: React.FC<ToastProps> = ({
       role="status"
       aria-live="polite"
     >
-      <div className={cn("flex items-center shadow-lg rounded-lg text-white pr-2 pl-3 py-2", typeStyles[type])}>
+      <div
+        className={cn(
+          "flex items-center shadow-lg rounded-lg text-white pr-2 pl-3 py-2",
+          typeStyles[type]
+        )}
+      >
         <div className="flex-shrink-0 mr-2">{icons[type]}</div>
         <div className="flex-1 mr-2 text-sm py-1">{message}</div>
         <button
@@ -347,7 +358,14 @@ export const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
           fill="none"
           viewBox="0 0 24 24"
         >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
           <path
             className="opacity-75"
             fill="currentColor"
