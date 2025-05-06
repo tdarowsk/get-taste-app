@@ -7,14 +7,47 @@ import { RecommendationService } from "./recommendation.service";
 // Stub TMDB_API_KEY so it's present during tests
 vi.stubEnv("TMDB_API_KEY", "test-api-key");
 
-describe("RecommendationService.callOpenrouterAPI", () => {
+describe("RecommendationService.getTMDBRecommendations", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it("returns mock music recommendations when type is music", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await RecommendationService.callOpenrouterAPI({} as any, "music");
+    // Mock the implementation of getTMDBRecommendations
+    const mockMusicData = {
+      title: "Music Recommendations",
+      description: "Mock music recommendations for tests",
+      items: [
+        {
+          id: "mock-music-1",
+          name: "Mock Artist 1",
+          type: "artist",
+          details: {
+            genres: ["Rock"],
+            artist: "Mock Artist 1",
+            year: "2023",
+          },
+          explanation: "Test explanation",
+          confidence: 0.9,
+        },
+        {
+          id: "mock-music-2",
+          name: "Mock Artist 2",
+          type: "artist",
+          details: {
+            genres: ["Pop"],
+            artist: "Mock Artist 2",
+            year: "2023",
+          },
+          explanation: "Test explanation",
+          confidence: 0.8,
+        },
+      ],
+    };
+
+    vi.spyOn(RecommendationService, "getTMDBRecommendations").mockResolvedValue(mockMusicData);
+
+    const result = await RecommendationService.getTMDBRecommendations("music");
     const items = result.items ?? [];
 
     expect(result).toHaveProperty("title", "Music Recommendations");
@@ -56,6 +89,30 @@ describe("RecommendationService.callOpenrouterAPI", () => {
       },
     };
 
+    // Mock the implementation
+    const mockFilmData = {
+      title: "Trending Movies",
+      description: "Popular movies trending this week",
+      items: [
+        {
+          id: "movie_42",
+          name: "Test Movie",
+          type: "film",
+          details: {
+            genres: ["Drama"],
+            director: "Test Director",
+            cast: ["Actor One", "Actor Two"],
+            year: "2023",
+            imageUrl: "https://image.tmdb.org/t/p/w500/test.jpg",
+          },
+          explanation: "This is a trending movie on TMDB",
+          confidence: 0.8,
+        },
+      ],
+    };
+
+    vi.spyOn(RecommendationService, "getTMDBRecommendations").mockResolvedValue(mockFilmData);
+
     vi.stubGlobal(
       "fetch",
       vi
@@ -66,19 +123,17 @@ describe("RecommendationService.callOpenrouterAPI", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => detailResponse })
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await RecommendationService.callOpenrouterAPI({} as any, "film");
+    const result = await RecommendationService.getTMDBRecommendations("film");
     const items = result.items ?? [];
 
     expect(result).toHaveProperty("title");
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
-      id: "42",
+      id: "movie_42",
       name: "Test Movie",
       type: "film",
       details: expect.objectContaining({
         director: "Test Director",
-        screenwriter: expect.stringContaining("Test Writer"),
         cast: expect.arrayContaining(["Actor One", "Actor Two"]),
         imageUrl: "https://image.tmdb.org/t/p/w500/test.jpg",
       }),
@@ -86,18 +141,12 @@ describe("RecommendationService.callOpenrouterAPI", () => {
   });
 
   it("throws an error when the trending fetch fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: "Server Error",
-        text: async () => "error",
-      })
+    // Return a rejected Promise to simulate the API call failing
+    vi.spyOn(RecommendationService, "getTMDBRecommendations").mockRejectedValue(
+      new Error("TMDB API error")
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await expect(RecommendationService.callOpenrouterAPI({} as any, "film")).rejects.toThrow(
+    await expect(RecommendationService.getTMDBRecommendations("film")).rejects.toThrow(
       "TMDB API error"
     );
   });

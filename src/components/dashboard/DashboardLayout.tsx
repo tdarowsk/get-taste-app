@@ -25,21 +25,14 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
     validUserId,
   } = useDashboard(user.id);
 
+  // Wywołaj refreshRecommendations natychmiast
+  refreshRecommendations();
+
   // Log the user ID and valid user ID to debug
 
   // Load recommendations when component mounts
   useEffect(() => {
-    // Only try to fetch recommendations if we have a valid user ID
-    // and we're not already loading or generating recommendations
-    if (
-      validUserId &&
-      !isRecommendationsLoading &&
-      !isGeneratingRecommendations &&
-      (!recommendations || recommendations.length === 0)
-    ) {
-      refreshRecommendations();
-    } else if (recommendations && recommendations.length > 0) {
-    }
+    // Usuwamy wywołanie refreshRecommendations() stąd, bo teraz jest wywołane wcześniej
   }, [
     isRecommendationsLoading,
     recommendations,
@@ -187,11 +180,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
             {/* Swipe Recommendations sidebar */}
             <div className="w-full lg:w-72 xl:w-80 shrink-0 mb-6 lg:mb-0 order-first lg:order-last">
               <div className="sticky top-24 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 shadow-lg overflow-hidden h-[calc(100vh-120px)]">
-                <RecommendationSidebar
-                  userId={validUserId || ""}
-                  className="h-full"
-                  isNewUser={isNewUser}
-                />
+                <RecommendationSidebar userId={user.id} className="h-full" isNewUser={isNewUser} />
               </div>
             </div>
           </div>
