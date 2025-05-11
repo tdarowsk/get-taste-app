@@ -457,145 +457,89 @@ export const RecommendationService = {
         trendingData.results.slice(0, 10).map(async (movie: TmdbTrendingMovie) => {
           console.log(`[getTMDBRecommendations] Processing movie ${movie.id}: ${movie.title}`);
 
-          // Fetch additional movie details to get director and cast
+          // Najpierw próbujemy pobrać szczegóły filmu, jeśli są dostępne
           let director = "Unknown Director";
-          let cast: string[] = ["Unknown Cast"];
-          let genres: string[] = [];
+          let genreNames: string[] = [];
+          let castMembers: TmdbCastMember[] = [];
+          let releaseYear = "";
 
           try {
             console.log(`[getTMDBRecommendations] Fetching details for movie ${movie.id}`);
-            const movieDetailsRes = await fetch(
-              `https://api.themoviedb.org/3/movie/${movie.id}?append_to_response=credits`,
-              {
-                method: "GET",
-                headers: {
-                  accept: "application/json",
-                  Authorization: `Bearer ${tmdbApiKey}`,
-                },
-              }
-            );
+            const movieDetails = await this.fetchTMDBMovieDetails(movie.id);
 
-            if (movieDetailsRes.ok) {
-              const movieDetails = await movieDetailsRes.json();
+            // Pobierz rok wydania
+            if (movie.release_date) {
+              releaseYear = movie.release_date.substring(0, 4);
+            }
+
+            // Pobierz gatunki filmu, jeśli dostępne
+            if (movieDetails.genres && Array.isArray(movieDetails.genres)) {
+              genreNames = movieDetails.genres.map((genre: TmdbGenre) => genre.name);
               console.log(
-                `[getTMDBRecommendations] Got details for movie ${movie.id}, has credits: ${!!movieDetails.credits}`
+                `[getTMDBRecommendations] Found genres for movie ${movie.id}: ${genreNames.join(", ")}`
               );
+            }
 
-              // Extract director
-              const directors = movieDetails.credits?.crew?.filter(
-                (person: TmdbCrewMember) => person.job === "Director"
+            // Pobierz obsadę, jeśli dostępna
+            if (movieDetails.credits?.cast && Array.isArray(movieDetails.credits.cast)) {
+              castMembers = movieDetails.credits.cast.slice(0, 5);
+              console.log(
+                `[getTMDBRecommendations] Found ${castMembers.length} cast members for movie ${movie.id}`
               );
-              if (directors && directors.length > 0) {
-                director = directors[0].name || "Unknown Director";
-                console.log(
-                  `[getTMDBRecommendations] Found director for movie ${movie.id}: ${director}`
-                );
-              } else {
-                console.log(`[getTMDBRecommendations] No director found for movie ${movie.id}`);
-              }
+            }
 
-              // Extract cast
-              if (movieDetails.credits?.cast && movieDetails.credits.cast.length > 0) {
-                cast = movieDetails.credits.cast
-                  .slice(0, 5)
-                  .map((actor: TmdbCastMember) => actor.name || "Unknown Actor")
-                  .filter((name: string) => name !== "Unknown Actor");
-
-                console.log(
-                  `[getTMDBRecommendations] Found ${cast.length} cast members for movie ${movie.id}`
-                );
-
-                // Ensure we have at least one cast member
-                if (cast.length === 0) {
-                  cast = ["Unknown Cast"];
-                  console.log(
-                    `[getTMDBRecommendations] No valid cast members found for movie ${movie.id}, using default`
-                  );
-                }
-              } else {
-                console.log(`[getTMDBRecommendations] No cast information for movie ${movie.id}`);
-              }
-
-              // Extract genres
-              if (movieDetails.genres && movieDetails.genres.length > 0) {
-                genres = movieDetails.genres.map((genre: TmdbGenre) => genre.name);
-                console.log(
-                  `[getTMDBRecommendations] Found genres for movie ${movie.id}: ${genres.join(", ")}`
-                );
-              } else if (movie.genre_ids && movie.genre_ids.length > 0) {
-                genres = movie.genre_ids.map((id) => String(id));
-                console.log(
-                  `[getTMDBRecommendations] Using numeric genre IDs for movie ${movie.id}: ${genres.join(", ")}`
-                );
-              } else {
-                console.log(`[getTMDBRecommendations] No genres found for movie ${movie.id}`);
-              }
+            // Extract director
+            const directors = movieDetails.credits?.crew?.filter(
+              (person: TmdbCrewMember) => person.job === "Director"
+            );
+            if (directors && directors.length > 0) {
+              director = directors[0].name || "Unknown Director";
+              console.log(
+                `[getTMDBRecommendations] Found director for movie ${movie.id}: ${director}`
+              );
+              console.log(`[getTMDBRecommendations] Director is set on the movie object`);
             } else {
-              console.warn(
-                `[getTMDBRecommendations] Failed to fetch details for movie ${movie.id}: ${movieDetailsRes.status}`
-              );
+              console.log(`[getTMDBRecommendations] No director found for movie ${movie.id}`);
             }
           } catch (error) {
             console.error(
-              `[getTMDBRecommendations] Error fetching details for movie ${movie.id}:`,
+              `[getTMDBRecommendations] Error fetching movie ${movie.id} details:`,
               error
             );
           }
 
-          // Ensure we have genres
-          if (genres.length === 0) {
-            genres = ["Drama", "Action"];
-            console.log(`[getTMDBRecommendations] Using fallback genres for movie ${movie.id}`);
-          }
+          const title = movie.title || "Unknown Movie";
 
-          // Ensure we have a valid title
-          const title = movie.title || "Unknown Title";
-
-          // Ensure we have a valid description
-          const description = movie.overview || "No description available";
-
-          // Calculate release year with fallback
-          const releaseYear = movie.release_date
-            ? movie.release_date.substring(0, 4)
-            : new Date().getFullYear().toString();
-
-          // Ensure we have an image URL with fallback
-          const imageUrl = movie.poster_path
-            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-            : "https://placehold.it/500x750?text=No+Image+Available";
-
-          const movieData = {
-            id: `movie_${movie.id}`,
+          // Konstruowanie obiektu wynikowego - tworzymy obiekt bezpośrednio
+          const recommendationItem = {
+            id: `tmdb-${movie.id}`,
             name: title,
-            type: "film" as const,
+            type: "film",
             details: {
-              genres: genres,
               director: director,
-              cast: cast,
+              description: movie.overview || "",
               year: releaseYear,
-              imageUrl: imageUrl,
-              description: description,
-              releaseDate: movie.release_date || "Unknown release date",
-              voteAverage: movie.vote_average || 0,
+              genres: genreNames,
+              cast: castMembers.map((member) => member.name),
               poster_path: movie.poster_path,
+              vote_average: movie.vote_average,
+              source: "TMDB",
+              originalId: movie.id,
             },
-            explanation: "This is a trending movie on TMDB",
+            explanation: `TMDB recommendation based on popularity`,
             confidence: 0.8,
           };
 
+          // Debugowanie wynikowego obiektu
           console.log(
-            `%c [AI Movie Data] ${movie.id}: ${title}`,
-            "color: green; font-weight: bold; font-size: 14px",
-            {
-              director,
-              genres,
-              year: releaseYear,
-              cast: cast.slice(0, 3),
-              hasImage: !!movie.poster_path,
-            }
+            `[getTMDBRecommendations] Created recommendation item for ${title} with ID ${recommendationItem.id}`
           );
+          console.log(
+            `[getTMDBRecommendations] Director is: ${recommendationItem.details.director}`
+          );
+          console.log(`[getTMDBRecommendations] Full details:`, recommendationItem.details);
 
-          return movieData;
+          return recommendationItem;
         })
       );
 
@@ -667,6 +611,51 @@ export const RecommendationService = {
         },
       ],
     };
+  },
+
+  /**
+   * Fetches detailed movie information from TMDB API including credits
+   * @private
+   */
+  async fetchTMDBMovieDetails(movieId: number): Promise<{
+    genres?: TmdbGenre[];
+    credits?: {
+      cast: TmdbCastMember[];
+      crew: TmdbCrewMember[];
+    };
+    [key: string]: unknown;
+  }> {
+    try {
+      const tmdbApiKey = TMDB_API_KEY;
+
+      if (!tmdbApiKey) {
+        console.error("TMDB API key not configured");
+        return { genres: [], credits: { cast: [], crew: [] } };
+      }
+
+      // Fetch complete movie details including credits
+      const response = await fetch(
+        `https://api.themoviedb.org/3/movie/${movieId}?append_to_response=credits`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${tmdbApiKey}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`[fetchTMDBMovieDetails] API error: ${response.status}`);
+        return { genres: [], credits: { cast: [], crew: [] } };
+      }
+
+      const movieDetails = await response.json();
+      return movieDetails;
+    } catch (error) {
+      console.error(`[fetchTMDBMovieDetails] Error: ${error}`);
+      return { genres: [], credits: { cast: [], crew: [] } };
+    }
   },
 
   /**
