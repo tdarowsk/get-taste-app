@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "../ui";
 
 interface FilmPreferencesProps {
@@ -245,41 +244,79 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
 
         // Both approaches failed - update UI only as a last resort
         console.log("Both endpoints failed, updating UI state only");
-      }
+        setGenres(defaultGenres);
 
-      // If we reach here, assume both approaches failed
-      // Update UI only as a final fallback
-      console.log("Using fallback - updating UI state only");
-      setGenres(defaultGenres);
+        toast({
+          title: "UI Updated (No Backend)",
+          description:
+            "Default genres are only shown in the UI. Backend update failed. Changes will not persist.",
+          variant: "default",
+        });
+
+        if (onPreferencesChange) {
+          onPreferencesChange();
+        }
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
 
       toast({
-        title: "Preferences displayed",
-        description:
-          "Default film genres have been applied to your profile display, but may not be saved.",
+        title: "Error",
+        description: `Failed to apply default genres: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Funkcja do odświeżania preferencji używając UserPreferencesService
+  const refreshFilmPreferences = async () => {
+    if (!userId) return;
+
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      // Wywołaj endpoint odświeżania preferencji
+      const response = await fetch(`/api/users/${userId}/refresh-preferences`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Preferencje zaktualizowane",
+          description: "Twoje preferencje zostały odświeżone na podstawie polubionych filmów.",
+        });
+      } else {
+        toast({
+          title: "Informacja",
+          description:
+            data.message || "Nie znaleziono polubionych filmów do wygenerowania preferencji.",
+          variant: "default",
+        });
+      }
+
+      // Odśwież dane
+      await refreshPreferences();
 
       if (onPreferencesChange) {
         onPreferencesChange();
       }
     } catch (error) {
-      console.error("Error setting default genres:", error);
-      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
-      setErrorMessage(errorMsg);
-
-      // Even if there's an error, allow the user to see genres in the UI
-      setGenres(defaultGenres);
+      setErrorMessage(error instanceof Error ? error.message : String(error));
 
       toast({
-        title: "Preferences displayed",
-        description:
-          "Default film genres have been applied to your profile display, but may not be saved.",
+        title: "Błąd",
+        description: `Nie udało się odświeżyć preferencji: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
         variant: "destructive",
       });
-
-      if (onPreferencesChange) {
-        onPreferencesChange();
-      }
     } finally {
       setIsLoading(false);
     }
@@ -348,21 +385,6 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
               </Button>
             </div>
           </div>
-
-          {likedMovies.length > 0 && (
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-md p-4">
-              <h4 className="text-md font-medium text-white mb-2">Movies You&apos;ve Liked</h4>
-              <ScrollArea className="h-24">
-                <ul className="space-y-1 text-sm text-gray-300">
-                  {likedMovies.map((movie) => (
-                    <li key={movie} className="truncate">
-                      • {movie}
-                    </li>
-                  ))}
-                </ul>
-              </ScrollArea>
-            </div>
-          )}
         </div>
       ) : (
         <div className="bg-amber-900/30 border border-amber-500/30 rounded p-4 text-amber-200 text-sm">
@@ -402,6 +424,17 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
           </Button>
         </div>
       )}
+
+      <div className="mt-3 text-xs text-gray-400">
+        <Button
+          variant="link"
+          size="sm"
+          className="text-gray-400 hover:text-gray-300 p-0 h-auto"
+          onClick={refreshFilmPreferences}
+        >
+          Odśwież preferencje
+        </Button>
+      </div>
     </div>
   );
 }
