@@ -16,6 +16,7 @@ const {
   data: { user },
 } = await supabase.auth.getUser();
 
+// Jeśli użytkownik jest zalogowany, przekieruj go na stronę główną
 if (user) {
   return Astro.redirect("/");
 }
@@ -26,13 +27,3 @@ if (user) {
     <RegisterForm client:load />
   </div>
 </Layout>
-
-<script>
-  // Skrypt klienta zapewniający przekierowanie po udanej rejestracji
-  document.addEventListener("astro:page-load", function () {
-    // Po udanej rejestracji przenieś do logowania
-    document.addEventListener("register:success", function () {
-      window.location.href = "/auth/login";
-    });
-  });
-</script>

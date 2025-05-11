@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AuthForm, AuthInput } from "./AuthForm";
 
 interface LoginFormProps {
@@ -13,9 +13,25 @@ interface LoginFormProps {
  */
 export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Sprawdź czy użytkownik został przekierowany po udanej rejestracji
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("registration") && urlParams.get("registration") === "success") {
+      setSuccessMessage("Rejestracja zakończona pomyślnie. Możesz się teraz zalogować.");
+    } else if (
+      urlParams.has("alreadyRegistered") &&
+      urlParams.get("alreadyRegistered") === "true"
+    ) {
+      setSuccessMessage("Ten adres email jest już zarejestrowany. Możesz się zalogować.");
+    }
+  }, []);
 
   const handleSubmit = async (formData: Record<string, string>) => {
     try {
+      setError(null);
+      setSuccessMessage(null);
       const { email, password } = formData;
 
       const response = await fetch("/api/auth/login", {
@@ -97,6 +113,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         </div>
       }
     >
+      {successMessage && (
+        <div className="bg-green-900/30 border border-green-500 text-green-300 py-3 px-4 rounded-md mb-4">
+          {successMessage}
+        </div>
+      )}
+
       <AuthInput label="Email" type="email" id="email" name="email" required autoComplete="email" />
 
       <AuthInput

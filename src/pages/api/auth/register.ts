@@ -9,7 +9,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!email || !password) {
       return new Response(
         JSON.stringify({
-          success: false,
           error: "Email i hasło są wymagane",
         }),
         { status: 400 }
@@ -30,9 +29,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
     if (error) {
+      // Specjalna obsługa dla błędu "user already registered"
+      if (error.message.includes("already registered")) {
+        return new Response(
+          JSON.stringify({
+            error: "Ten adres email jest już zarejestrowany. Przejdź do ekranu logowania.",
+            redirectToLogin: true,
+          }),
+          { status: 400 }
+        );
+      }
+
       return new Response(
         JSON.stringify({
-          success: false,
           error: error.message,
         }),
         { status: 400 }
@@ -41,7 +50,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
         user: data.user,
       }),
       { status: 200 }
@@ -49,7 +57,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   } catch {
     return new Response(
       JSON.stringify({
-        success: false,
         error: "Wystąpił błąd podczas rejestracji",
       }),
       { status: 500 }
