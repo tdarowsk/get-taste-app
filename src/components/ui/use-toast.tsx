@@ -20,12 +20,10 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType>({
   toast: (_props: ToastProps) => {
     // This is just a placeholder that will be overridden by the provider
-    console.warn("Toast called outside of provider context");
   },
   toasts: [],
   clearToast: (_index: number) => {
     // This is just a placeholder that will be overridden by the provider
-    console.warn("clearToast called outside of provider context");
   },
 });
 
@@ -79,7 +77,15 @@ const ToastContainer = () => {
   );
 };
 
-const Toast = ({ toast, index, onClose }: { toast: ToastProps; index: number; onClose: () => void }) => {
+const Toast = ({
+  toast,
+  index,
+  onClose,
+}: {
+  toast: ToastProps;
+  index: number;
+  onClose: () => void;
+}) => {
   const { title, description, variant = "default" } = toast;
 
   const bgColors = {
@@ -110,7 +116,9 @@ const Toast = ({ toast, index, onClose }: { toast: ToastProps; index: number; on
       <div className="flex items-start justify-between">
         <div>
           {title && <h3 className={`font-medium ${textColors[variant]}`}>{title}</h3>}
-          {description && <p className={`text-sm mt-1 ${textColors[variant]} opacity-80`}>{description}</p>}
+          {description && (
+            <p className={`text-sm mt-1 ${textColors[variant]} opacity-80`}>{description}</p>
+          )}
         </div>
 
         <button
@@ -119,7 +127,12 @@ const Toast = ({ toast, index, onClose }: { toast: ToastProps; index: number; on
           aria-label="Close"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>

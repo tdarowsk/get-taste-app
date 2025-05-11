@@ -9,13 +9,15 @@ interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {
   children: React.ReactNode;
 }
 
-export const Form = React.forwardRef<HTMLFormElement, FormProps>(({ className, children, ...props }, ref) => {
-  return (
-    <form ref={ref} className={cn("space-y-6", className)} {...props}>
-      {children}
-    </form>
-  );
-});
+export const Form = React.forwardRef<HTMLFormElement, FormProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <form ref={ref} className={cn("space-y-6", className)} {...props}>
+        {children}
+      </form>
+    );
+  }
+);
 
 Form.displayName = "Form";
 
@@ -27,13 +29,15 @@ interface FormGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export const FormGroup = React.forwardRef<HTMLDivElement, FormGroupProps>(({ className, children, ...props }, ref) => {
-  return (
-    <div ref={ref} className={cn("space-y-4", className)} {...props}>
-      {children}
-    </div>
-  );
-});
+export const FormGroup = React.forwardRef<HTMLDivElement, FormGroupProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <div ref={ref} className={cn("space-y-4", className)} {...props}>
+        {children}
+      </div>
+    );
+  }
+);
 
 FormGroup.displayName = "FormGroup";
 
@@ -53,7 +57,11 @@ interface FormLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
 export const FormLabel = React.forwardRef<HTMLLabelElement, FormLabelProps>(
   ({ className, children, required, ...props }, ref) => {
     return (
-      <label ref={ref} className={cn("block text-sm font-medium text-gray-700 mb-1", className)} {...props}>
+      <label
+        ref={ref}
+        className={cn("block text-sm font-medium text-gray-700 mb-1", className)}
+        {...props}
+      >
         {children}
         {required && <span className="text-rose-500 ml-1">*</span>}
       </label>
@@ -111,13 +119,15 @@ interface FormFieldProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(({ className, children, ...props }, ref) => {
-  return (
-    <div ref={ref} className={cn("space-y-1", className)} {...props}>
-      {children}
-    </div>
-  );
-});
+export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <div ref={ref} className={cn("space-y-1", className)} {...props}>
+        {children}
+      </div>
+    );
+  }
+);
 
 FormField.displayName = "FormField";
 
@@ -129,20 +139,22 @@ interface FormDividerProps extends React.HTMLAttributes<HTMLDivElement> {
   label?: string;
 }
 
-export const FormDivider = React.forwardRef<HTMLDivElement, FormDividerProps>(({ className, label, ...props }, ref) => {
-  return (
-    <div ref={ref} className={cn("relative my-8", className)} {...props}>
-      <div className="absolute inset-0 flex items-center">
-        <div className="w-full border-t border-gray-200" />
-      </div>
-      {label && (
-        <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-sm text-gray-500">{label}</span>
+export const FormDivider = React.forwardRef<HTMLDivElement, FormDividerProps>(
+  ({ className, label, ...props }, ref) => {
+    return (
+      <div ref={ref} className={cn("relative my-8", className)} {...props}>
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
         </div>
-      )}
-    </div>
-  );
-});
+        {label && (
+          <div className="relative flex justify-center">
+            <span className="bg-white px-3 text-sm text-gray-500">{label}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 FormDivider.displayName = "FormDivider";
 
@@ -181,7 +193,14 @@ export const FormSubmit = React.forwardRef<HTMLButtonElement, FormSubmitProps>(
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
               <path
                 className="opacity-75"
                 fill="currentColor"
@@ -218,7 +237,11 @@ interface FormProgressProps {
   stepLabels?: string[];
 }
 
-export const FormProgress: React.FC<FormProgressProps> = ({ currentStep, totalSteps, stepLabels }) => {
+export const FormProgress: React.FC<FormProgressProps> = ({
+  currentStep,
+  totalSteps,
+  stepLabels,
+}) => {
   return (
     <div className="pb-8">
       <div className="flex items-center justify-between mb-2">
@@ -235,7 +258,8 @@ export const FormProgress: React.FC<FormProgressProps> = ({ currentStep, totalSt
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
                     isCompleted && "bg-rose-500 text-white",
-                    isCurrent && "border-2 border-rose-500 bg-white text-rose-500 ring-2 ring-rose-500/20",
+                    isCurrent &&
+                      "border-2 border-rose-500 bg-white text-rose-500 ring-2 ring-rose-500/20",
                     isUpcoming && "border border-gray-300 bg-white text-gray-400"
                   )}
                 >

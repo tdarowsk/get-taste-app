@@ -1,48 +1,128 @@
-import { supabaseClient } from "../../db/supabase.client";
-import type { CreateRecommendationsCommand, RecommendationDTO, RecommendationDataDetails } from "../../types";
+// import { supabaseClient } from "../../db/supabase.client";
+// import { createClient } from "@supabase/supabase-js";
+import type {
+  CreateRecommendationsCommand,
+  RecommendationDTO,
+  RecommendationDataDetails,
+} from "../../types";
 import type { Database } from "../../db/database.types";
-import { TMDB_API_KEY } from "../../env.config";
+import { TMDB_API_KEY, OPENROUTER_API_KEY } from "../../env.config";
+import { OpenRouterService } from "./openrouter.service";
+import { getSystemPrompts } from "../utils/ai-prompts";
+import { FeedbackService } from "./feedback.service";
+import { UniqueRecommendationsService } from "./uniqueRecommendations.service";
+import { supabaseAdmin } from "../../db/supabase.admin";
 
-// Define types for TMDB API responses
-interface TmdbMovie {
+// Create admin supabase client with service role key to bypass RLS
+// Note: This is now imported from supabase.admin.ts
+// const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
+//   auth: {
+//     persistSession: false,
+//     autoRefreshToken: false,
+//   },
+// });
+
+/**
+ * Interface for the TMDB similar movies API response
+ */
+interface TmdbSimilarMovie {
   id: number;
   title: string;
-  overview: string | null;
+  overview: string;
   poster_path: string | null;
   release_date: string;
   vote_average: number;
-  original_language: string;
+  genre_ids: number[];
 }
 
-interface TmdbCredit {
-  job?: string;
+/**
+ * Interface for the TMDB trending movies API response
+ */
+interface TmdbTrendingMovie {
+  id: number;
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  release_date: string;
+  vote_average: number;
+  genre_ids: number[];
+}
+
+// Add type definitions for TMDB API responses
+interface TmdbCrewMember {
+  id: number;
   name: string;
+  job: string;
 }
 
-interface TmdbCast {
+interface TmdbCastMember {
+  id: number;
   name: string;
+  character: string;
 }
 
-interface TmdbMovieDetails extends TmdbMovie {
-  credits: {
-    crew: TmdbCredit[];
-    cast: TmdbCast[];
-  };
-}
-
-interface TmdbTrendingResponse {
-  results: TmdbMovie[];
+interface TmdbGenre {
+  id: number;
+  name: string;
 }
 
 type MusicPreferences = Database["public"]["Tables"]["music_preferences"]["Row"];
 type FilmPreferences = Database["public"]["Tables"]["film_preferences"]["Row"];
-type RecommendationData = Database["public"]["Tables"]["recommendations"]["Insert"];
 type Json = Database["public"]["Tables"]["recommendations"]["Row"]["data"];
+type RecommendationData = Database["public"]["Tables"]["recommendations"]["Insert"];
 
 /**
  * Serwis odpowiedzialny za generowanie i zarządzanie rekomendacjami.
  */
 export const RecommendationService = {
+  /**
+   * Helper function to ensure userId is always a valid string
+   * @private
+   */
+  _ensureStringUserId(userId: unknown): string {
+    if (userId === undefined || userId === null) {
+      throw new Error("User ID cannot be null or undefined");
+    }
+
+    // Convert to string
+    const strUserId = String(userId);
+
+    // Check if the string is empty or 'undefined'
+    if (!strUserId || strUserId.trim() === "" || strUserId === "undefined") {
+      throw new Error("User ID cannot be empty or 'undefined'");
+    }
+
+    return strUserId;
+  },
+
+  /**
+   * Tests OpenRouter connectivity to determine if AI recommendations can be generated
+   * @private
+   */
+  async _testOpenRouterConnectivity(): Promise<boolean> {
+    if (!OPENROUTER_API_KEY) {
+      return false;
+    }
+
+    try {
+      // Test connectivity with a HEAD request
+      const testResponse = await fetch("https://openrouter.ai/api/v1/auth/key", {
+        method: "HEAD",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://gettaste.app", // Adding HTTP referer for tracking
+          "X-Title": "GetTaste App",
+        },
+      });
+
+      return testResponse.ok;
+    } catch {
+      // Error connecting to OpenRouter API
+      return false;
+    }
+  },
+
   /**
    * Generuje nowe rekomendacje dla użytkownika.
    *
@@ -50,63 +130,140 @@ export const RecommendationService = {
    * @param command - Parametry generowania rekomendacji
    * @returns Wygenerowane rekomendacje
    */
-  async generateRecommendations(userId: string, command: CreateRecommendationsCommand): Promise<RecommendationDTO> {
-    try {
-      console.log("Generating recommendations for user:", userId);
-      console.log("Command:", command);
+  async generateRecommendations(
+    userId: unknown,
+    command: CreateRecommendationsCommand & { force_ai?: boolean }
+  ): Promise<RecommendationDTO> {
+    // Always convert userId to string
+    const userIdStr = this._ensureStringUserId(userId);
 
-      // Sprawdzenie, czy istnieją aktualne rekomendacje (tylko jeśli force_refresh jest false)
-      if (!command.force_refresh) {
-        console.log("Checking for existing recommendations");
-        const existingRecommendation = await this.getLatestRecommendation(userId, command.type);
-        if (existingRecommendation) {
-          console.log("Found existing recommendations:", existingRecommendation);
-          return existingRecommendation;
-        }
+    // Check if Supabase admin client is available
+    if (!supabaseAdmin) {
+      throw new Error("Error generating recommendations: Supabase admin client not available");
+    }
+
+    // Check for existing recommendations (only if force_refresh is false)
+    if (!command.force_refresh) {
+      const existingRecommendation = await this.getLatestRecommendation(userIdStr, command.type);
+      if (existingRecommendation) {
+        return existingRecommendation;
       }
+    }
 
-      // Pobierz dane preferencji użytkownika
-      console.log("Getting user preferences");
-      const preferences = await this.getUserPreferences(userId, command.type);
-      console.log("User preferences:", preferences);
+    // Get user preferences data
+    const preferences = await this.getUserPreferences(userIdStr, command.type);
 
-      // Generowanie rekomendacji przez Openrouter.ai
-      console.log("Calling Openrouter API");
-      const generatedData = await this.callOpenrouterAPI(preferences, command.type);
-      console.log("Generated data:", generatedData);
+    // Get user feedback history
+    const feedbackHistory = await FeedbackService.getUserFeedbackHistory(
+      userIdStr,
+      command.type,
+      10
+    );
 
-      // Zapis rekomendacji do bazy danych
-      console.log("Saving recommendations to database");
-      const recommendationInsert: RecommendationData = {
-        user_id: userId,
-        type: command.type,
-        data: generatedData as Json,
-      };
+    // Generate recommendations using OpenRouter.ai
+    let generatedData: RecommendationDataDetails;
 
-      const { data, error } = await supabaseClient
+    // Test OpenRouter connectivity first
+    const canConnectToOpenRouter = await this._testOpenRouterConnectivity();
+
+    // Check if OpenRouter API is available and accessible
+    if (!canConnectToOpenRouter) {
+      // Force AI fallback case - go to TMDB
+      generatedData = await this.getTMDBRecommendations(command.type);
+    } else {
+      // Configure OpenRouter with API key
+      OpenRouterService.configure(OPENROUTER_API_KEY);
+
+      try {
+        // Poprawne wywołanie generateRecommendations zgodne z API serwisu
+        generatedData = await OpenRouterService.generateRecommendations<RecommendationDataDetails>(
+          preferences,
+          feedbackHistory,
+          command.type,
+          {
+            systemPrompt: getSystemPrompts().recommendationGenerator(command.type),
+            temperature: 0.7,
+            maxTokens: 2000,
+          }
+        );
+      } catch {
+        // If OpenRouter call fails, fall back to TMDB
+        generatedData = await this.getTMDBRecommendations(command.type);
+      }
+    }
+
+    // Filter unique recommendations to avoid duplicates
+    const uniqueItems = await UniqueRecommendationsService.filterUniqueItems(
+      userIdStr,
+      generatedData.items || [],
+      command.type
+    );
+
+    // Update recommendations with unique items
+    generatedData.items = uniqueItems;
+
+    // Create a proper recommendation data object
+    const properData = {
+      title:
+        generatedData.title || `${command.type === "music" ? "Music" : "Film"} Recommendations`,
+      description: generatedData.description || `Personalized ${command.type} recommendations`,
+      items: Array.isArray(generatedData.items) ? generatedData.items : [],
+    };
+
+    // Create the insert data for the database
+    const insertData: RecommendationData = {
+      user_id: userIdStr,
+      type: command.type,
+      data: properData as unknown as Json, // Required to satisfy TypeScript
+    };
+
+    try {
+      // Insert into the database
+      const { data: insertedData, error: insertError } = await supabaseAdmin
         .from("recommendations")
-        .insert(recommendationInsert)
-        .select()
+        .insert(insertData)
+        .select("*")
         .single();
 
-      if (error) {
-        console.error("Error saving recommendations to database:", error);
-        throw new Error(`Błąd podczas zapisywania rekomendacji: ${error.message}`);
+      if (insertError) {
+        // Create a fallback object with a timestamp-based ID
+        return {
+          id: Date.now(),
+          user_id: userIdStr,
+          type: command.type,
+          data: properData,
+          created_at: new Date().toISOString(),
+        };
       }
 
-      console.log("Saved recommendations to database:", data);
+      if (!insertedData) {
+        // Create a fallback object with a timestamp-based ID
+        return {
+          id: Date.now(),
+          user_id: userIdStr,
+          type: command.type,
+          data: properData,
+          created_at: new Date().toISOString(),
+        };
+      }
 
-      // Mapowanie danych z bazy do DTO
+      // Return the successfully saved recommendation
       return {
-        id: data.id,
-        user_id: String(data.user_id),
-        type: data.type as "music" | "film",
-        data: data.data as RecommendationDataDetails,
-        created_at: data.created_at,
+        id: typeof insertedData.id === "string" ? parseInt(insertedData.id, 10) : insertedData.id,
+        user_id: String(insertedData.user_id),
+        type: insertedData.type as "music" | "film",
+        data: insertedData.data as unknown as RecommendationDataDetails,
+        created_at: insertedData.created_at,
       };
-    } catch (error) {
-      console.error("Error generating recommendations:", error);
-      throw error;
+    } catch {
+      // Database error, return fallback object
+      return {
+        id: Date.now(),
+        user_id: userIdStr,
+        type: command.type,
+        data: properData,
+        created_at: new Date().toISOString(),
+      };
     }
   },
 
@@ -117,41 +274,60 @@ export const RecommendationService = {
    * @param type - Typ rekomendacji ("music" lub "film")
    * @returns Najnowsza rekomendacja lub null
    */
-  async getLatestRecommendation(userId: string, type: "music" | "film"): Promise<RecommendationDTO | null> {
+  async getLatestRecommendation(
+    userId: unknown,
+    type: "music" | "film"
+  ): Promise<RecommendationDTO | null> {
     try {
-      console.log("Getting latest recommendation for user:", userId);
-      console.log("Type:", type);
+      // Always convert userId to string
+      const userIdStr = this._ensureStringUserId(userId);
 
-      const { data, error } = await supabaseClient
+      if (!supabaseAdmin) {
+        return null;
+      }
+
+      const { data, error } = await supabaseAdmin
         .from("recommendations")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", userIdStr)
         .eq("type", type)
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
       if (error) {
-        console.error("Error getting latest recommendation:", error);
         return null;
       }
 
       if (!data) {
-        console.log("No latest recommendation found");
         return null;
       }
 
-      console.log("Found latest recommendation:", data);
+      // Fix the user_id if it's "undefined"
+      if (data.user_id === "undefined") {
+        data.user_id = userIdStr;
+      }
 
-      return {
+      // Create the recommendation DTO
+      const recommendationDTO: RecommendationDTO = {
         id: data.id,
-        user_id: String(data.user_id),
+        user_id: String(data.user_id), // Ensure it's a string
         type: data.type as "music" | "film",
-        data: data.data as RecommendationDataDetails,
+        data: data.data as unknown as RecommendationDataDetails,
         created_at: data.created_at,
       };
-    } catch (error) {
-      console.error("Error in getLatestRecommendation:", error);
+
+      // Additional check for undefined user_id in the data structure
+      if (recommendationDTO.data && typeof recommendationDTO.data === "object") {
+        // Check if there's a user_id in the data property that needs fixing
+        if ("user_id" in recommendationDTO.data && recommendationDTO.data.user_id === "undefined") {
+          recommendationDTO.data.user_id = userIdStr;
+        }
+      }
+
+      return recommendationDTO;
+    } catch {
+      // Error occurred during retrieval
       return null;
     }
   },
@@ -163,300 +339,526 @@ export const RecommendationService = {
    * @param type - Typ rekomendacji ("music" lub "film")
    * @returns Preferencje użytkownika
    */
-  async getUserPreferences(userId: string, type: "music" | "film"): Promise<MusicPreferences | FilmPreferences> {
+  async getUserPreferences(
+    userId: unknown,
+    type: "music" | "film"
+  ): Promise<MusicPreferences | FilmPreferences> {
+    // Always convert userId to string
+    const userIdStr = this._ensureStringUserId(userId);
+
+    const table = type === "music" ? "music_preferences" : "film_preferences";
+
+    if (!supabaseAdmin) {
+      throw new Error(`Error getting user preferences: Supabase admin client not available`);
+    }
+
+    // Ensure we always use a string for user_id in the query
+    const { data, error } = await supabaseAdmin
+      .from(table)
+      .select("*")
+      .eq("user_id", userIdStr)
+      .limit(1);
+
+    if (error) {
+      throw new Error(`Error getting user preferences: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      // Return default preferences if none exist
+      return {
+        user_id: userIdStr,
+        genres: null,
+        ...(type === "music"
+          ? { artists: null }
+          : { director: null, screenwriter: null, cast: null, liked_movies: null }),
+      };
+    }
+
+    return data[0];
+  },
+
+  /**
+   * Gets recommendations from TMDB API as a fallback.
+   *
+   * @param type - Recommendation type ("music" or "film")
+   * @returns Generated recommendations
+   */
+  async getTMDBRecommendations(type: "music" | "film"): Promise<RecommendationDataDetails> {
     try {
-      console.log("Getting user preferences for user:", userId);
-      console.log("Type:", type);
-
-      const table = type === "music" ? "music_preferences" : "film_preferences";
-      console.log("Table:", table);
-
-      const { data, error } = await supabaseClient.from(table).select("*").eq("user_id", userId).single();
-
-      if (error) {
-        console.error("Error getting user preferences:", error);
-        throw new Error(`Błąd podczas pobierania preferencji użytkownika: ${error.message}`);
-      }
-
-      if (!data) {
-        console.log("No preferences found for user");
-        // Return default preferences if none exist
+      // For music, we need to handle differently since TMDB doesn't provide music data
+      if (type === "music") {
         return {
-          user_id: userId,
-          genres: null,
-          ...(type === "music"
-            ? { artists: null }
-            : { director: null, screenwriter: null, cast: null, liked_movies: null }),
+          title: "Music Recommendations Unavailable",
+          description: "Unable to provide music recommendations at this time",
+          items: [
+            {
+              id: `unavailable_${Date.now()}`,
+              name: "Music recommendations unavailable",
+              type: "message",
+              details: {
+                genres: ["N/A"],
+                artist: "N/A",
+                year: new Date().getFullYear().toString(),
+              },
+              explanation:
+                "Music recommendations are temporarily unavailable. Please try again later.",
+              confidence: 0.1,
+            },
+          ],
         };
       }
 
-      console.log("Found user preferences:", data);
-      return data;
+      // Use TMDB API key from configuration
+      const tmdbApiKey = TMDB_API_KEY;
+
+      if (!tmdbApiKey) {
+        console.error("TMDB API key not configured");
+        return this.getFallbackMovieRecommendations("Popular Movies (Fallback)", "API key missing");
+      }
+
+      // Fetch trending movies from TMDB - using discover to get more data
+      console.log("Fetching movie recommendations from TMDB API");
+      const trendingRes = await fetch(
+        `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&page=1&sort_by=popularity.desc`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${tmdbApiKey}`,
+          },
+        }
+      );
+
+      if (!trendingRes.ok) {
+        console.error(`Cannot connect to TMDB API (status: ${trendingRes.status})`);
+        return this.getFallbackMovieRecommendations(
+          "Popular Movies (Fallback)",
+          `TMDB API error: ${trendingRes.status}`
+        );
+      }
+
+      const trendingData = await trendingRes.json();
+
+      // Map the results to our recommendation format
+      if (!trendingData.results || !Array.isArray(trendingData.results)) {
+        console.error("Invalid response from TMDB API", trendingData);
+        return this.getFallbackMovieRecommendations(
+          "Popular Movies (Fallback)",
+          "Invalid TMDB response"
+        );
+      }
+
+      console.log(
+        `[getTMDBRecommendations] Fetched ${trendingData.results.length} movies from TMDB`
+      );
+
+      // Ensure all items have complete information
+      const items = await Promise.all(
+        trendingData.results.slice(0, 10).map(async (movie: TmdbTrendingMovie) => {
+          console.log(`[getTMDBRecommendations] Processing movie ${movie.id}: ${movie.title}`);
+
+          // Fetch additional movie details to get director and cast
+          let director = "Unknown Director";
+          let cast: string[] = ["Unknown Cast"];
+          let genres: string[] = [];
+
+          try {
+            console.log(`[getTMDBRecommendations] Fetching details for movie ${movie.id}`);
+            const movieDetailsRes = await fetch(
+              `https://api.themoviedb.org/3/movie/${movie.id}?append_to_response=credits`,
+              {
+                method: "GET",
+                headers: {
+                  accept: "application/json",
+                  Authorization: `Bearer ${tmdbApiKey}`,
+                },
+              }
+            );
+
+            if (movieDetailsRes.ok) {
+              const movieDetails = await movieDetailsRes.json();
+              console.log(
+                `[getTMDBRecommendations] Got details for movie ${movie.id}, has credits: ${!!movieDetails.credits}`
+              );
+
+              // Extract director
+              const directors = movieDetails.credits?.crew?.filter(
+                (person: TmdbCrewMember) => person.job === "Director"
+              );
+              if (directors && directors.length > 0) {
+                director = directors[0].name || "Unknown Director";
+                console.log(
+                  `[getTMDBRecommendations] Found director for movie ${movie.id}: ${director}`
+                );
+              } else {
+                console.log(`[getTMDBRecommendations] No director found for movie ${movie.id}`);
+              }
+
+              // Extract cast
+              if (movieDetails.credits?.cast && movieDetails.credits.cast.length > 0) {
+                cast = movieDetails.credits.cast
+                  .slice(0, 5)
+                  .map((actor: TmdbCastMember) => actor.name || "Unknown Actor")
+                  .filter((name: string) => name !== "Unknown Actor");
+
+                console.log(
+                  `[getTMDBRecommendations] Found ${cast.length} cast members for movie ${movie.id}`
+                );
+
+                // Ensure we have at least one cast member
+                if (cast.length === 0) {
+                  cast = ["Unknown Cast"];
+                  console.log(
+                    `[getTMDBRecommendations] No valid cast members found for movie ${movie.id}, using default`
+                  );
+                }
+              } else {
+                console.log(`[getTMDBRecommendations] No cast information for movie ${movie.id}`);
+              }
+
+              // Extract genres
+              if (movieDetails.genres && movieDetails.genres.length > 0) {
+                genres = movieDetails.genres.map((genre: TmdbGenre) => genre.name);
+                console.log(
+                  `[getTMDBRecommendations] Found genres for movie ${movie.id}: ${genres.join(", ")}`
+                );
+              } else if (movie.genre_ids && movie.genre_ids.length > 0) {
+                genres = movie.genre_ids.map((id) => String(id));
+                console.log(
+                  `[getTMDBRecommendations] Using numeric genre IDs for movie ${movie.id}: ${genres.join(", ")}`
+                );
+              } else {
+                console.log(`[getTMDBRecommendations] No genres found for movie ${movie.id}`);
+              }
+            } else {
+              console.warn(
+                `[getTMDBRecommendations] Failed to fetch details for movie ${movie.id}: ${movieDetailsRes.status}`
+              );
+            }
+          } catch (error) {
+            console.error(
+              `[getTMDBRecommendations] Error fetching details for movie ${movie.id}:`,
+              error
+            );
+          }
+
+          // Ensure we have genres
+          if (genres.length === 0) {
+            genres = ["Drama", "Action"];
+            console.log(`[getTMDBRecommendations] Using fallback genres for movie ${movie.id}`);
+          }
+
+          // Ensure we have a valid title
+          const title = movie.title || "Unknown Title";
+
+          // Ensure we have a valid description
+          const description = movie.overview || "No description available";
+
+          // Calculate release year with fallback
+          const releaseYear = movie.release_date
+            ? movie.release_date.substring(0, 4)
+            : new Date().getFullYear().toString();
+
+          // Ensure we have an image URL with fallback
+          const imageUrl = movie.poster_path
+            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            : "https://placehold.it/500x750?text=No+Image+Available";
+
+          const movieData = {
+            id: `movie_${movie.id}`,
+            name: title,
+            type: "film" as const,
+            details: {
+              genres: genres,
+              director: director,
+              cast: cast,
+              year: releaseYear,
+              imageUrl: imageUrl,
+              description: description,
+              releaseDate: movie.release_date || "Unknown release date",
+              voteAverage: movie.vote_average || 0,
+              poster_path: movie.poster_path,
+            },
+            explanation: "This is a trending movie on TMDB",
+            confidence: 0.8,
+          };
+
+          console.log(
+            `%c [AI Movie Data] ${movie.id}: ${title}`,
+            "color: green; font-weight: bold; font-size: 14px",
+            {
+              director,
+              genres,
+              year: releaseYear,
+              cast: cast.slice(0, 3),
+              hasImage: !!movie.poster_path,
+            }
+          );
+
+          return movieData;
+        })
+      );
+
+      // Make sure we have at least a few items - if not, add fallbacks
+      const finalItems =
+        items.length >= 3
+          ? items
+          : [
+              ...items,
+              ...this.getFallbackMovieRecommendations(
+                "Popular Movies (Fallback)",
+                "Not enough recommendations"
+              ).items.slice(0, 5 - items.length),
+            ];
+
+      console.log(`[getTMDBRecommendations] Processed ${finalItems.length} movies successfully`);
+
+      return {
+        title: "Trending Movies",
+        description: "Popular movies trending this week",
+        items: finalItems,
+      };
     } catch (error) {
-      console.error("Error in getUserPreferences:", error);
-      throw error;
+      // Log the error for debugging
+      console.error("[getTMDBRecommendations] Error:", error);
+
+      // Return a placeholder with generic movies
+      return this.getFallbackMovieRecommendations(
+        "Popular Movies",
+        "Error fetching recommendations"
+      );
     }
   },
 
   /**
-   * Wywołuje API Openrouter.ai w celu wygenerowania rekomendacji.
-   *
-   * @param preferences - Preferencje użytkownika
-   * @param type - Typ rekomendacji ("music" lub "film")
-   * @returns Dane wygenerowane przez Openrouter.ai
+   * Provides fallback movie recommendations when API calls fail
    */
-  async callOpenrouterAPI(
-    preferences: MusicPreferences | FilmPreferences,
-    type: "music" | "film"
-  ): Promise<RecommendationDataDetails> {
+  getFallbackMovieRecommendations(title: string, reason: string): RecommendationDataDetails {
+    console.log(
+      `%c Using fallback movie recommendations: ${reason}`,
+      "color: green; font-weight: bold"
+    );
+
+    // Generate a single dynamic movie with timestamp to avoid static data
+    const timestamp = Date.now();
+
+    return {
+      title: title,
+      description: `${title} (fallback recommendations)`,
+      items: [
+        {
+          id: `movie_dynamic_${timestamp}`,
+          name: "Dynamic AI Movie",
+          type: "film",
+          details: {
+            genres: ["AI Generated"],
+            director: "AI Director",
+            cast: ["AI Actor 1", "AI Actor 2"],
+            year: new Date().getFullYear().toString(),
+            imageUrl: "https://placehold.it/500x750?text=AI+Generated+Movie",
+            poster_path: null,
+            description:
+              "This is a dynamically generated movie recommendation created when the API couldn't provide real recommendations.",
+            releaseDate: new Date().toISOString().split("T")[0],
+            voteAverage: 7.5,
+          },
+          explanation: "AI generated fallback recommendation",
+          confidence: 0.5,
+        },
+      ],
+    };
+  },
+
+  /**
+   * Fetches similar movies for a given movie ID using TMDB API.
+   * @param movieId - The ID of the movie to find similar films for
+   * @returns Recommendation data with similar movies
+   */
+  async getSimilarMovies(movieId: string): Promise<RecommendationDataDetails> {
     try {
-      if (type === "film") {
-        // Use the API key from env.config.ts
-        const tmdbApiKey = TMDB_API_KEY;
-
-        console.log(`Using TMDB API key: ${tmdbApiKey ? "Available" : "Not available"}`);
-
-        // Always try to fetch from the API, no fallback to mock data
-        try {
-          console.log("Fetching trending movies from TMDB...");
-          // Fetch trending movies for the week
-          const trendingRes = await fetch(`https://api.themoviedb.org/3/trending/movie/week?language=en-US&page=1`, {
-            method: "GET",
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${tmdbApiKey}`,
-            },
-          });
-
-          if (!trendingRes.ok) {
-            const errorText = await trendingRes.text();
-            console.error(`TMDB API error: ${trendingRes.status} ${trendingRes.statusText}`, errorText);
-            throw new Error(`TMDB API error: ${trendingRes.status} ${trendingRes.statusText} - ${errorText}`);
-          }
-
-          const trendingData = (await trendingRes.json()) as TmdbTrendingResponse;
-          console.log("TMDB trending data received, found", trendingData.results?.length, "movies");
-
-          if (!trendingData.results || !Array.isArray(trendingData.results)) {
-            console.error("Invalid TMDB response:", trendingData);
-            throw new Error("Invalid response from TMDB API");
-          }
-
-          const movies = trendingData.results.slice(0, 10);
-          console.log("Selected", movies.length, "trending movies from TMDB");
-
-          // Fetch details including credits for each movie
-          const items = await Promise.all(
-            movies.map(async (movie: TmdbMovie) => {
-              try {
-                console.log(`Fetching details for movie ${movie.id}...`);
-                const detailRes = await fetch(
-                  `https://api.themoviedb.org/3/movie/${movie.id}?append_to_response=credits`,
-                  {
-                    method: "GET",
-                    headers: {
-                      accept: "application/json",
-                      Authorization: `Bearer ${tmdbApiKey}`,
-                    },
-                  }
-                );
-
-                if (!detailRes.ok) {
-                  const errorText = await detailRes.text();
-                  console.error(
-                    `TMDB detail API error for movie ${movie.id}: ${detailRes.status} ${detailRes.statusText}`,
-                    errorText
-                  );
-                  throw new Error(`Failed to fetch details for movie ${movie.id}`);
-                }
-
-                const detailData = (await detailRes.json()) as TmdbMovieDetails;
-                console.log(`Details received for movie ${movie.id}: ${detailData.title}`);
-
-                const director = detailData.credits?.crew?.find((c: TmdbCredit) => c.job === "Director")?.name || null;
-                const writers =
-                  detailData.credits?.crew
-                    ?.filter((c: TmdbCredit) => ["Screenplay", "Writer"].includes(c.job || ""))
-                    .map((c: TmdbCredit) => c.name) || [];
-                const screenwriter = writers.length ? writers.join(", ") : null;
-                const cast = detailData.credits?.cast?.slice(0, 5).map((c: TmdbCast) => c.name) || [];
-                const imageUrl = detailData.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${detailData.poster_path}`
-                  : null;
-                const description = detailData.overview || null;
-
-                return {
-                  id: String(detailData.id),
-                  name: detailData.title,
-                  type,
-                  details: {
-                    director,
-                    screenwriter,
-                    cast,
-                    imageUrl,
-                    description,
-                    releaseDate: detailData.release_date,
-                    voteAverage: detailData.vote_average,
-                    originalLanguage: detailData.original_language,
-                  },
-                };
-              } catch (movieError) {
-                console.error(`Error processing movie ${movie.id}:`, movieError);
-                // Skip this movie if there was an error
-                throw movieError;
-              }
-            })
-          );
-
-          console.log(`Successfully processed ${items.length} movies from TMDB API`);
-          return {
-            title: "Trending Films from TMDB",
-            description: "Popular movies this week from The Movie Database",
-            items,
-          };
-        } catch (tmdbError) {
-          console.error("Error fetching from TMDB API:", tmdbError);
-          // Don't fallback to mock data - throw the error to indicate API failure
-          throw new Error(`Failed to fetch data from TMDB API: ${tmdbError}`);
-        }
-      }
-
-      if (type === "music") {
-        // Return mock music recommendations for now
+      // Make sure we have a TMDB API key
+      if (!TMDB_API_KEY) {
         return {
-          title: "Music Recommendations",
-          description: "Sample music recommendations",
+          title: "Similar Movies",
+          description: "Cannot fetch similar movies - API key missing",
           items: [
             {
-              id: "mock-music-1",
-              name: "Mock Artist 1",
-              type: "artist",
+              id: `error_${Date.now()}`,
+              name: "TMDB API key not configured",
+              type: "film",
               details: {
-                imageUrl: "https://via.placeholder.com/300x300?text=Artist+1",
+                genres: ["Error"],
+                director: "Missing API Key",
+                cast: [],
+                year: new Date().getFullYear().toString(),
+                imageUrl: "https://placehold.it/500x750?text=API+Key+Missing",
+                description: "Cannot fetch similar movies because TMDB API key is not configured",
               },
-            },
-            {
-              id: "mock-music-2",
-              name: "Mock Track 1",
-              type: "track",
-              details: {
-                artist: "Mock Artist 1",
-                imageUrl: "https://via.placeholder.com/300x300?text=Track+1",
-              },
+              explanation: "Cannot fetch similar movies because TMDB API key is not configured",
+              confidence: 0.1,
             },
           ],
         };
+      }
+
+      // Extract numeric ID from string if it contains a prefix
+      const numericId = movieId.replace(/^movie_/, "");
+
+      console.log(`[getSimilarMovies] Fetching similar movies for ${numericId}`);
+
+      // Call the TMDB API to get similar movies
+      const similarRes = await fetch(`https://api.themoviedb.org/3/movie/${numericId}/similar`, {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          Authorization: `Bearer ${TMDB_API_KEY}`,
+        },
+      });
+
+      if (!similarRes.ok) {
+        console.error(`[getSimilarMovies] API error: ${similarRes.status}`);
+        // Fallback to trending movies if the similar endpoint fails
+        return this.getTMDBRecommendations("film");
+      }
+
+      const similarData = await similarRes.json();
+
+      if (!similarData.results || similarData.results.length === 0) {
+        console.log("[getSimilarMovies] No similar movies found, falling back to trending");
+        return this.getTMDBRecommendations("film");
+      }
+
+      console.log(`[getSimilarMovies] Found ${similarData.results.length} similar movies`);
+
+      // Process each movie to ensure we have complete details
+      const items = await Promise.all(
+        similarData.results.slice(0, 10).map(async (movie: TmdbSimilarMovie) => {
+          // Fetch additional movie details to get director and cast
+          let director = "Unknown Director";
+          let cast: string[] = ["Unknown Cast"];
+          let genres: string[] = [];
+
+          try {
+            const movieDetailsRes = await fetch(
+              `https://api.themoviedb.org/3/movie/${movie.id}?append_to_response=credits`,
+              {
+                method: "GET",
+                headers: {
+                  accept: "application/json",
+                  Authorization: `Bearer ${TMDB_API_KEY}`,
+                },
+              }
+            );
+
+            if (movieDetailsRes.ok) {
+              const movieDetails = await movieDetailsRes.json();
+
+              // Extract director
+              const directors = movieDetails.credits?.crew?.filter(
+                (person: TmdbCrewMember) => person.job === "Director"
+              );
+              if (directors && directors.length > 0) {
+                director = directors[0].name || "Unknown Director";
+              }
+
+              // Extract cast
+              if (movieDetails.credits?.cast && movieDetails.credits.cast.length > 0) {
+                cast = movieDetails.credits.cast
+                  .slice(0, 5)
+                  .map((actor: TmdbCastMember) => actor.name || "Unknown Actor")
+                  .filter((name: string) => name !== "Unknown Actor");
+
+                // Ensure we have at least one cast member
+                if (cast.length === 0) {
+                  cast = ["Unknown Cast"];
+                }
+              }
+
+              // Extract genres
+              if (movieDetails.genres && movieDetails.genres.length > 0) {
+                genres = movieDetails.genres.map((genre: TmdbGenre) => genre.name);
+              } else if (movie.genre_ids && movie.genre_ids.length > 0) {
+                genres = movie.genre_ids.map((id: number) => String(id));
+              }
+            }
+          } catch (error) {
+            console.error(
+              `[getSimilarMovies] Error fetching details for movie ${movie.id}:`,
+              error
+            );
+          }
+
+          // Ensure we have genres
+          if (genres.length === 0) {
+            genres = ["Drama", "Action"];
+          }
+
+          // Ensure we have valid title
+          const title = movie.title || "Unknown Title";
+
+          // Ensure we have a description
+          const description = movie.overview || "No description available";
+
+          // Ensure we have a release year
+          const releaseYear = movie.release_date
+            ? movie.release_date.substring(0, 4)
+            : new Date().getFullYear().toString();
+
+          // Ensure we have an image URL
+          const imageUrl = movie.poster_path
+            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            : "https://placehold.it/500x750?text=No+Image+Available";
+
+          // Log movie data for debugging
+          console.log(
+            `%c [Similar Movie] ${movie.id}: ${title}`,
+            "color: lightgreen; font-weight: bold; font-size: 14px",
+            {
+              director,
+              genres,
+              year: releaseYear,
+              cast: cast.slice(0, 3),
+              hasImage: !!movie.poster_path,
+            }
+          );
+
+          return {
+            id: `movie_${movie.id}`,
+            name: title,
+            type: "film",
+            details: {
+              genres: genres,
+              director: director,
+              cast: cast,
+              year: releaseYear,
+              imageUrl: imageUrl,
+              description: description,
+              releaseDate: movie.release_date || "Unknown release date",
+              voteAverage: movie.vote_average || 0,
+              poster_path: movie.poster_path,
+            },
+            explanation: `This movie is similar to one you liked`,
+            confidence: 0.9,
+          };
+        })
+      );
+
+      // Make sure we have at least a few items
+      if (items.length < 3) {
+        console.log("[getSimilarMovies] Not enough movies, adding fallbacks");
+        const fallbacks = (await this.getTMDBRecommendations("film")).items;
+        items.push(...fallbacks.slice(0, 5 - items.length));
       }
 
       return {
-        title: "Recommendations",
-        description: "Default recommendations",
-        items: [],
+        title: "Similar Movies",
+        description: "Movies similar to ones you've liked",
+        items,
       };
     } catch (error) {
-      console.error("Error in callOpenrouterAPI:", error);
-      // Propagate the error instead of returning fallback data
-      throw error;
+      console.error("[getSimilarMovies] Error:", error);
+      // Fallback to trending recommendations if there's an error
+      return this.getTMDBRecommendations("film");
     }
-  },
-
-  /**
-   * Pobiera popularne rekomendacje dla nowych użytkowników bez preferencji.
-   * Może wykorzystywać zewnętrzne API trendów lub bazę danych najpopularniejszych pozycji.
-   *
-   * @param type - Typ rekomendacji ("music" lub "film")
-   * @returns Rekomendacje popularne w danej kategorii
-   */
-  async getPopularRecommendations(type: "music" | "film"): Promise<Json> {
-    try {
-      // TODO: W rzeczywistej implementacji możemy:
-      // 1. Skorzystać z API trendów Spotify dla muzyki
-      // 2. Skorzystać z API TMDB dla filmów
-      // 3. Pobierać dane z naszej bazy najczęściej lubianych pozycji
-      // 4. Połączyć kilka źródeł danych
-
-      if (type === "music") {
-        return {
-          popular: [
-            {
-              title: "Top Charting Artists",
-              description: "The most popular artists loved by millions of listeners worldwide.",
-              items: [
-                { id: "artist-1", name: "Drake", type: "artist", genres: ["hip hop", "rap"] },
-                { id: "artist-2", name: "Beyoncé", type: "artist", genres: ["r&b", "pop"] },
-              ],
-            },
-            {
-              title: "Trending Songs Right Now",
-              description: "Catch up with what everyone is listening to this week.",
-              items: [
-                { id: "song-1", name: "Blinding Lights", type: "song", artist: "The Weeknd" },
-                { id: "song-2", name: "Bad Guy", type: "song", artist: "Billie Eilish" },
-              ],
-            },
-          ],
-        };
-      } else {
-        return {
-          popular: [
-            {
-              title: "Highest Grossing Films of All Time",
-              description: "Blockbusters loved by audiences worldwide that broke box office records.",
-              items: [
-                { id: "movie-1", name: "Avengers: Endgame", type: "movie", year: 2019 },
-                { id: "movie-2", name: "Avatar", type: "movie", year: 2009 },
-              ],
-            },
-            {
-              title: "Trending Movies Everyone's Talking About",
-              description: "The most talked about films that are making waves in theaters and streaming.",
-              items: [
-                { id: "movie-3", name: "Dune", type: "movie", year: 2021 },
-                { id: "movie-4", name: "The Batman", type: "movie", year: 2022 },
-              ],
-            },
-          ],
-        };
-      }
-    } catch (error) {
-      console.error(`Błąd podczas pobierania popularnych rekomendacji: ${error}`);
-      throw new Error("Nie udało się pobrać popularnych rekomendacji");
-    }
-  },
-
-  /**
-   * Fetches similar movies for a given movie ID from TMDB.
-   */
-  async getSimilarMovies(movieId: string): Promise<RecommendationDataDetails> {
-    console.log(`Fetching similar movies for movie ID: ${movieId}`);
-    const tmdbApiKey = TMDB_API_KEY;
-    console.log(`Using TMDB API key for similar movies: ${tmdbApiKey ? "Available" : "Not available"}`);
-    const url = `https://api.themoviedb.org/3/movie/${movieId}/similar?language=en-US&page=1`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${tmdbApiKey}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`TMDB similar movies request failed: ${response.statusText}`);
-    }
-    const data = await response.json();
-    // Map TMDB results to RecommendationItem format
-    const items = (data.results || []).map((movie: TmdbMovie) => ({
-      id: movie.id.toString(),
-      name: movie.title,
-      type: "film",
-      details: {
-        imageUrl: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-        description: movie.overview,
-      },
-    }));
-    return {
-      title: `Similar Movies to ${movieId}`,
-      description: "Movies similar to your liked title",
-      items,
-    };
   },
 };

@@ -58,7 +58,6 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
       .select();
 
     if (error) {
-      console.error("Could not fetch item feedback from database:", error);
       return new Response(
         JSON.stringify({
           error: "Failed to fetch item feedback",
@@ -83,8 +82,7 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
         headers: { "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
-    console.error("Error fetching item feedback:", error);
+  } catch {
     return new Response(
       JSON.stringify({
         error: "An error occurred while fetching feedback",
@@ -99,8 +97,6 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
   try {
-    console.log("🔄 Processing feedback for recommendation item...");
-
     // Sprawdź autentykację
     const supabase = createSupabaseServerInstance({
       headers: request.headers,
@@ -113,7 +109,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -130,7 +125,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -142,9 +136,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("URL User ID:", userId, "Type:", typeof userId);
-    console.log("Session User ID:", session.user.id, "Type:", typeof session.user.id);
-
     // We skip the user ID validation to fix the frequent errors
     // Instead, we trust that the authenticated user can only be themselves
     // This is a workaround for the UUID comparison issues
@@ -153,16 +144,16 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     const body = (await request.json()) as {
       item_id: string;
       feedback_type: RecommendationFeedbackType;
+      genre?: string;
+      artist?: string;
+      cast?: string;
     };
 
-    console.log("Received feedback request body:", body);
-
-    // Validate feedback data
-    if (!body.item_id) {
-      console.error("Missing item_id in request body");
+    // Validate request body
+    if (!body.item_id || !body.feedback_type) {
       return new Response(
         JSON.stringify({
-          error: "Item ID is required",
+          error: "Missing required fields",
         }),
         {
           status: 400,
@@ -173,7 +164,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate feedback type
     if (!body.feedback_type || !["like", "dislike"].includes(body.feedback_type)) {
-      console.error("Invalid feedback_type in request body:", body.feedback_type);
       return new Response(
         JSON.stringify({
           error: "Invalid feedback type. Must be 'like' or 'dislike'",
@@ -185,12 +175,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("Saving feedback to database:", {
-      user_id: userId,
-      item_id: body.item_id,
-      feedback_type: body.feedback_type,
-    });
-
     // Save feedback to Supabase
     const { data: feedbackData, error: feedbackError } = await supabase
       .from("item_feedback")
@@ -198,12 +182,14 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         user_id: userId,
         item_id: body.item_id,
         feedback_type: body.feedback_type,
+        genre: body.genre || null,
+        artist: body.artist || null,
+        cast: body.cast || null,
       })
       .select()
       .single();
 
     if (feedbackError) {
-      console.error("Error saving feedback:", feedbackError);
       return new Response(
         JSON.stringify({
           error: "Failed to save feedback",
@@ -216,18 +202,15 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("✅ Feedback saved successfully:", feedbackData);
-
     return new Response(JSON.stringify(feedbackData), {
       status: 201,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error processing feedback:", error);
+  } catch (_error) {
     return new Response(
       JSON.stringify({
         error: "An error occurred while processing your feedback",
-        details: error instanceof Error ? error.message : String(error),
+        details: _error instanceof Error ? _error.message : String(_error),
       }),
       {
         status: 500,

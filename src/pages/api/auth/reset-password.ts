@@ -40,8 +40,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }),
       { status: 200 }
     );
-  } catch (error) {
-    console.error("Błąd resetowania hasła:", error);
+  } catch {
     return new Response(
       JSON.stringify({
         success: false,

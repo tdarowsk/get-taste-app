@@ -29,7 +29,12 @@ describe("RecommendationCard", () => {
   const baseModel: EnhancedRecommendationViewModel = {
     recommendation: mockDTO,
     reason: mockReason,
-    metadataInsight: { recommendationId: 42, primaryFactors: [], secondaryFactors: [], uniqueFactors: [] },
+    metadataInsight: {
+      recommendationId: 42,
+      primaryFactors: [],
+      secondaryFactors: [],
+      uniqueFactors: [],
+    },
     isNew: false,
   };
 

@@ -24,7 +24,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -41,7 +40,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -53,13 +51,10 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("Getting feedback history for user:", userId);
-
     // Retrieve item feedback from the database
     const { data, error } = await supabase.from("item_feedback").select("*").eq("user_id", userId);
 
     if (error) {
-      console.error("Error retrieving item feedback:", error);
       return new Response(
         JSON.stringify({
           error: "Failed to retrieve item feedback",
@@ -71,8 +66,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
         }
       );
     }
-
-    console.log(`Retrieved ${data?.length || 0} feedback items`);
 
     // Return success response with the feedback items
     return new Response(
@@ -86,7 +79,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       }
     );
   } catch (error) {
-    console.error("Error processing item feedback request:", error);
     return new Response(
       JSON.stringify({
         error: "An error occurred while retrieving feedback history",
@@ -108,8 +100,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
  */
 export const POST: APIRoute = async ({ params, request, cookies }) => {
   try {
-    console.log("🔄 Processing feedback for recommendation item...");
-
     // Check authentication
     const supabase = createSupabaseServerInstance({
       headers: request.headers,
@@ -122,7 +112,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -139,7 +128,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -151,9 +139,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("URL User ID:", userId, "Type:", typeof userId);
-    console.log("Session User ID:", session.user.id, "Type:", typeof session.user.id);
-
     // We skip the user ID validation to fix the frequent errors
     // Instead, we trust that the authenticated user can only be themselves
 
@@ -161,13 +146,13 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     const body = (await request.json()) as {
       item_id: string;
       feedback_type: RecommendationFeedbackType;
+      genre?: string;
+      artist?: string;
+      cast?: string;
     };
-
-    console.log("Received feedback request body:", body);
 
     // Validate feedback data
     if (!body.item_id) {
-      console.error("Missing item_id in request body");
       return new Response(
         JSON.stringify({
           error: "Item ID is required",
@@ -181,7 +166,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Validate feedback type
     if (!body.feedback_type || !["like", "dislike"].includes(body.feedback_type)) {
-      console.error("Invalid feedback_type in request body:", body.feedback_type);
       return new Response(
         JSON.stringify({
           error: "Invalid feedback type. Must be 'like' or 'dislike'",
@@ -193,27 +177,26 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("Saving feedback to database:", {
-      user_id: userId,
-      item_id: body.item_id,
-      feedback_type: body.feedback_type,
-    });
-
     // Attempt to record item feedback in the database
     try {
       const { data: feedbackData, error: feedbackError } = await supabase
         .from("item_feedback")
-        .upsert({
-          user_id: userId,
-          item_id: body.item_id,
-          feedback_type: body.feedback_type,
-          created_at: new Date().toISOString(),
-        })
+        .upsert(
+          {
+            user_id: userId,
+            item_id: body.item_id,
+            feedback_type: body.feedback_type,
+            created_at: new Date().toISOString(),
+            genre: body.genre || null,
+            artist: body.artist || null,
+            cast: body.cast || null,
+          },
+          { onConflict: "user_id,item_id" }
+        )
         .select()
         .single();
 
       if (feedbackError) {
-        console.error("Could not save item feedback to database:", feedbackError);
         return new Response(
           JSON.stringify({
             error: "Failed to save feedback",
@@ -226,8 +209,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         );
       }
 
-      console.log("✅ Feedback saved successfully:", feedbackData);
-
       return new Response(
         JSON.stringify({
           message: "Item feedback saved",
@@ -239,7 +220,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         }
       );
     } catch (dbError) {
-      console.error("Database error when saving feedback:", dbError);
       return new Response(
         JSON.stringify({
           error: "Database error when saving feedback",
@@ -252,7 +232,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
   } catch (error) {
-    console.error("Error processing item feedback:", error);
     return new Response(
       JSON.stringify({
         error: "An error occurred while processing your feedback",

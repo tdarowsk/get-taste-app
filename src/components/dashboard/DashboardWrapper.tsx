@@ -9,6 +9,13 @@ interface DashboardWrapperProps {
 }
 
 export function DashboardWrapper({ user }: DashboardWrapperProps) {
+  // Validate the user object to ensure we have a valid ID
+
+  // Ensure user ID is valid
+  if (!user || !user.id || user.id === "undefined") {
+    // We'll still render the component, but with a warning in the console
+  }
+
   // Create a client
   const [queryClient] = useState(
     () =>

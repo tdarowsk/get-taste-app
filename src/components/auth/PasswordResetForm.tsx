@@ -23,7 +23,11 @@ interface PasswordResetFormProps {
  * - request: formularz żądania linku do resetu hasła (wymagane pole email)
  * - reset: formularz ustawienia nowego hasła (wymagane pola password i confirm-password)
  */
-export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ mode, token, onResetSuccess }) => {
+export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({
+  mode,
+  token,
+  onResetSuccess,
+}) => {
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const { passwordError, validatePassword } = usePasswordValidation();
@@ -101,9 +105,12 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ mode, toke
         <div className="bg-white/5 backdrop-blur-md rounded-lg shadow-lg p-8 w-full max-w-md border border-white/10">
           <h1 className="text-3xl font-bold mb-8 text-center">Email wysłany</h1>
           <p className="text-center mb-6">
-            Jeśli podany adres email istnieje w naszej bazie, wysłaliśmy na niego link do resetowania hasła.
+            Jeśli podany adres email istnieje w naszej bazie, wysłaliśmy na niego link do
+            resetowania hasła.
           </p>
-          <p className="text-center text-sm text-white/60">Sprawdź swoją skrzynkę odbiorczą oraz folder spam.</p>
+          <p className="text-center text-sm text-white/60">
+            Sprawdź swoją skrzynkę odbiorczą oraz folder spam.
+          </p>
           <div className="mt-8 text-center">
             <a href="/auth/login" className="text-purple-400 hover:text-purple-300 underline">
               Powrót do strony logowania
@@ -125,10 +132,18 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ mode, toke
         }
       >
         <p className="text-white/80 mb-4">
-          Podaj adres email powiązany z Twoim kontem. Wyślemy Ci link umożliwiający zresetowanie hasła.
+          Podaj adres email powiązany z Twoim kontem. Wyślemy Ci link umożliwiający zresetowanie
+          hasła.
         </p>
 
-        <AuthInput label="Email" type="email" id="email" name="email" required autoComplete="email" />
+        <AuthInput
+          label="Email"
+          type="email"
+          id="email"
+          name="email"
+          required
+          autoComplete="email"
+        />
 
         {error && <div className="text-red-500 py-2 text-sm">{error}</div>}
       </AuthForm>

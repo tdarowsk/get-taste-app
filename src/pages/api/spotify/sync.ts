@@ -33,7 +33,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     try {
       schema.parse(requestBody);
     } catch (validationError: unknown) {
-      const errorDetails = validationError instanceof z.ZodError ? validationError.errors : "Invalid input data";
+      const errorDetails =
+        validationError instanceof z.ZodError ? validationError.errors : "Invalid input data";
 
       return new Response(
         JSON.stringify({
@@ -55,8 +56,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
-    console.error("Error processing Spotify sync request:", error);
-
     return new Response(
       JSON.stringify({
         error: "An error occurred while processing the request",

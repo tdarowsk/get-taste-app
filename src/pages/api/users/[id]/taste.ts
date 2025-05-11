@@ -48,7 +48,11 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     }
 
     // 3. Sprawdzenie czy użytkownik istnieje
-    const { data: userData, error: userError } = await supabase.from("users").select("id").eq("id", userId).single();
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", userId)
+      .single();
 
     if (userError || !userData) {
       return new Response(JSON.stringify({ error: "Użytkownik nie istnieje" }), {
@@ -66,8 +70,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Błąd podczas analizy gustu użytkownika:", error);
-
     return new Response(
       JSON.stringify({
         error: "Wystąpił błąd podczas analizy gustu użytkownika",

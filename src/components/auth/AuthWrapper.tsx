@@ -41,7 +41,6 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({
           setIsLoggedIn(false);
         }
       } catch (error) {
-        console.error("Błąd sprawdzania statusu autoryzacji:", error);
         setIsLoggedIn(false);
       }
     };

@@ -58,7 +58,13 @@ export const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
     return (
       <Component
         ref={ref}
-        className={cn("text-gray-900", sizeStyles[level], variantStyles[variant], clampStyles, className)}
+        className={cn(
+          "text-gray-900",
+          sizeStyles[level],
+          variantStyles[variant],
+          clampStyles,
+          className
+        )}
         {...props}
       >
         {children}
@@ -113,7 +119,13 @@ export const Text = React.forwardRef<HTMLParagraphElement, TextProps>(
     return (
       <Component
         ref={ref as any}
-        className={cn("text-gray-700", variantStyles[variant], weight && weightStyles[weight], clampStyles, className)}
+        className={cn(
+          "text-gray-700",
+          variantStyles[variant],
+          weight && weightStyles[weight],
+          clampStyles,
+          className
+        )}
         {...props}
       >
         {children}

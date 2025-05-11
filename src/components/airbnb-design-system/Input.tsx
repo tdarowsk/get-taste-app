@@ -34,7 +34,21 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, helperText, startIcon, endIcon, id: providedId, disabled, required, ...props }, ref) => {
+  (
+    {
+      className,
+      label,
+      error,
+      helperText,
+      startIcon,
+      endIcon,
+      id: providedId,
+      disabled,
+      required,
+      ...props
+    },
+    ref
+  ) => {
     // Generujemy unikalne ID dla pola, jeśli nie zostało podane
     const id = providedId || `input-${React.useId()}`;
 
@@ -43,7 +57,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={id}
-            className={cn("block text-sm font-medium mb-1.5", error ? "text-red-500" : "text-gray-700")}
+            className={cn(
+              "block text-sm font-medium mb-1.5",
+              error ? "text-red-500" : "text-gray-700"
+            )}
           >
             {label}
             {required && <span className="text-rose-500 ml-1">*</span>}

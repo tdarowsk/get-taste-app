@@ -56,7 +56,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary: "bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white shadow-sm",
-      secondary: "bg-white border border-gray-300 hover:border-gray-400 active:bg-gray-50 text-gray-700 shadow-sm",
+      secondary:
+        "bg-white border border-gray-300 hover:border-gray-400 active:bg-gray-50 text-gray-700 shadow-sm",
       tertiary: "bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700",
       text: "bg-transparent hover:bg-gray-100 text-gray-700 shadow-none",
       icon: "bg-transparent hover:bg-gray-100 text-gray-700 shadow-none p-2 rounded-full",

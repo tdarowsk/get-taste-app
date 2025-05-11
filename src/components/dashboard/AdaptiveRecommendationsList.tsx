@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SwipeableRecommendationCard } from "./SwipeableRecommendationCard";
 import type { RecommendationViewModel } from "../../lib/types/viewModels";
 import { transformRecommendationToViewModel } from "../../lib/utils/transformers";
@@ -15,6 +15,16 @@ interface AdaptiveRecommendationsListProps {
   onFeedbackProcessed?: () => void;
 }
 
+interface RecommendationItemWithType {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  metadata: Record<string, unknown>;
+  type: "music" | "film";
+  recommendationId: number;
+}
+
 export function AdaptiveRecommendationsList({
   recommendations,
   isLoading,
@@ -25,9 +35,80 @@ export function AdaptiveRecommendationsList({
 }: AdaptiveRecommendationsListProps) {
   const { toast } = useToast();
   const [processedItems, setProcessedItems] = useState<Set<string>>(new Set());
+  const [viewModels, setViewModels] = useState<RecommendationViewModel[]>([]);
+  const [allItems, setAllItems] = useState<RecommendationItemWithType[]>([]);
+  const [hasProcessedData, setHasProcessedData] = useState(false);
 
-  // Handle loading state
-  if (isLoading) {
+  // Process recommendations when they change
+  useEffect(() => {
+    if (recommendations && recommendations.length > 0) {
+      try {
+        // Filter by type
+        const filteredRecs = recommendations.filter((rec) => {
+          if (!rec) return false;
+
+          // Check if type is undefined or doesn't match
+          if (!rec.type) {
+            return false;
+          }
+
+          const isMatchingType = rec.type === type;
+
+          return isMatchingType;
+        });
+
+        if (filteredRecs.length === 0) {
+          setViewModels([]);
+          setAllItems([]);
+          setHasProcessedData(true);
+          return;
+        }
+
+        // Transform to view models
+        const transformPromises = filteredRecs.map((dto) =>
+          transformRecommendationToViewModel(dto)
+        );
+
+        // Use Promise.all to wait for all transformations to complete
+        Promise.all(transformPromises)
+          .then((resolvedViewModels) => {
+            setViewModels(resolvedViewModels);
+
+            // Extract all items
+            const items = resolvedViewModels.flatMap((vm) => {
+              if (!vm.items || vm.items.length === 0) {
+                return [];
+              }
+
+              return vm.items.map((item) => ({
+                ...item,
+                type: vm.type,
+                recommendationId: vm.id,
+              }));
+            });
+
+            setAllItems(items);
+            setHasProcessedData(true);
+          })
+          .catch((error) => {
+            console.error("Error processing recommendations:", error);
+            setHasProcessedData(true);
+          });
+      } catch (error) {
+        console.error("Error in recommendation processing:", error);
+        setHasProcessedData(true);
+      }
+    } else {
+      setViewModels([]);
+      setAllItems([]);
+      setHasProcessedData(true);
+    }
+  }, [recommendations, type]);
+
+  // Validate and log user ID
+
+  // Handle loading state - only show if we're actually loading and haven't processed data yet
+  if (isLoading && !hasProcessedData) {
     return (
       <div className="flex items-center justify-center min-h-[300px] bg-white/5 backdrop-blur-sm">
         <div className="flex flex-col items-center">
@@ -36,7 +117,9 @@ export function AdaptiveRecommendationsList({
             <div className="absolute inset-3 rounded-full border-2 border-purple-500/30"></div>
           </div>
           <p className="text-gray-300 font-medium">
-            {isNewUser ? "Loading popular recommendations..." : "Loading your personalized recommendations..."}
+            {isNewUser
+              ? "Loading popular recommendations..."
+              : "Loading your personalized recommendations..."}
           </p>
         </div>
       </div>
@@ -44,7 +127,7 @@ export function AdaptiveRecommendationsList({
   }
 
   // Handle empty state
-  if (!recommendations || recommendations.length === 0)
+  if (hasProcessedData && allItems.length === 0)
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
         <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-full mb-6 border border-white/10">
@@ -69,39 +152,14 @@ export function AdaptiveRecommendationsList({
             ? "We're having trouble loading popular recommendations. Please try refreshing."
             : "Update your preferences to get personalized recommendations tailored to your taste"}
         </p>
-        <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md">
+        <button
+          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors shadow-md"
+          onClick={() => window.location.reload()}
+        >
           {isNewUser ? "Refresh" : "Set Your Preferences"}
         </button>
       </div>
     );
-
-  // Filter recommendations by type
-  const filteredRecommendations = recommendations.filter((rec) => rec.type === type);
-
-  if (filteredRecommendations.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
-        <h3 className="text-xl font-semibold mb-2 text-white">No {type} recommendations available</h3>
-        <p className="text-gray-300 max-w-md mb-6">
-          {isNewUser
-            ? `Try switching to ${type === "music" ? "film" : "music"} recommendations or refresh the page`
-            : "Try switching to a different category or updating your preferences"}
-        </p>
-      </div>
-    );
-  }
-
-  // Transform DTOs to ViewModels
-  const viewModels: RecommendationViewModel[] = filteredRecommendations.map(transformRecommendationToViewModel);
-
-  // Extract items from all recommendations
-  const allItems = viewModels.flatMap((recommendation) =>
-    recommendation.items.map((item) => ({
-      ...item,
-      type: recommendation.type,
-      recommendationId: recommendation.id,
-    }))
-  );
 
   // Filter out processed items
   const activeItems = allItems.filter((item) => !processedItems.has(item.id));
@@ -113,6 +171,11 @@ export function AdaptiveRecommendationsList({
     metadata: Record<string, unknown>
   ) => {
     try {
+      // Validate userId
+      if (!userId || userId === "undefined") {
+        throw new Error("Invalid user ID");
+      }
+
       // Find the recommendation this item belongs to
       const item = allItems.find((i) => i.id === itemId);
       if (!item) {
@@ -121,6 +184,8 @@ export function AdaptiveRecommendationsList({
 
       // Add item to processed set
       setProcessedItems((prev) => new Set([...prev, itemId]));
+
+      // Log feedback data
 
       // Save feedback to database and update algorithm
       await FeedbackService.saveSwipeFeedback(userId, item.recommendationId, feedbackType, {
@@ -142,7 +207,6 @@ export function AdaptiveRecommendationsList({
         onFeedbackProcessed();
       }
     } catch (error) {
-      console.error("Error processing swipe feedback:", error);
       toast({
         title: "Error updating taste profile",
         description: "There was a problem saving your feedback. Please try again.",
@@ -191,7 +255,8 @@ export function AdaptiveRecommendationsList({
   return (
     <div className="p-6 bg-white/5 backdrop-blur-sm rounded-b-lg">
       <h3 className="text-lg font-medium mb-3 text-white">
-        {viewModels[0]?.title || (type === "music" ? "Music Recommendations" : "Film Recommendations")}
+        {viewModels[0]?.title ||
+          (type === "music" ? "Music Recommendations" : "Film Recommendations")}
       </h3>
 
       <p className="text-xs text-gray-300 mb-4">
@@ -206,7 +271,7 @@ export function AdaptiveRecommendationsList({
           <SwipeableRecommendationCard
             key={item.id}
             item={item}
-            type={item.type as "music" | "film"}
+            type={item.type}
             recommendationId={item.recommendationId}
             userId={userId}
             onSwipe={handleSwipe}

@@ -622,7 +622,7 @@ import { OpenRouterService } from "../lib/services/openrouter.service";
 
 const response = await OpenRouterService.chatCompletion("Explain quantum computing in simple terms");
 
-console.log(response.choices[0].message.content);
+
 ```
 
 #### JSON Structured Response
@@ -655,8 +655,8 @@ const response = await OpenRouterService.jsonCompletion<{
   systemPrompt: "You are a science educator specializing in explaining complex topics in simple terms.",
 });
 
-console.log(response.explanation);
-console.log(response.keyPoints);
+
+
 ```
 
 #### Model List
@@ -665,7 +665,7 @@ console.log(response.keyPoints);
 import { OpenRouterService } from "../lib/services/openrouter.service";
 
 const models = await OpenRouterService.listModels();
-console.log(models);
+
 ```
 
 ### Step 6: Implement Error Handling
@@ -683,7 +683,7 @@ import {
 try {
   const response = await OpenRouterService.chatCompletion("Explain quantum computing in simple terms");
 
-  console.log(response.choices[0].message.content);
+  
 } catch (error) {
   if (error instanceof OpenRouterConfigError) {
     console.error("Configuration error:", error.message);

@@ -9,7 +9,9 @@ import { TMDB_API_KEY } from "../../../../env.config";
 const spotifyService = new SpotifyService();
 
 // Add a function to fetch artist albums
-async function enrichWithSpotifyData(recommendations: RecommendationDTO[]): Promise<RecommendationDTO[]> {
+async function enrichWithSpotifyData(
+  recommendations: RecommendationDTO[]
+): Promise<RecommendationDTO[]> {
   // Process music-type recommendations only
   const enrichedRecommendations = await Promise.all(
     recommendations.map(async (recommendation) => {
@@ -25,7 +27,9 @@ async function enrichWithSpotifyData(recommendations: RecommendationDTO[]): Prom
       // Find song items that might need images
       const songItems = recommendation.data.items?.filter(
         (item) =>
-          (item.type === "song" || item.type === "track") && item.details?.spotifyId && !("imageUrl" in item.details)
+          (item.type === "song" || item.type === "track") &&
+          item.details?.spotifyId &&
+          !("imageUrl" in item.details)
       );
 
       const newItems = [...(recommendation.data.items || [])];
@@ -46,8 +50,8 @@ async function enrichWithSpotifyData(recommendations: RecommendationDTO[]): Prom
                   }
                 });
               }
-            } catch (error) {
-              console.error(`Error fetching albums for artist ${artistItem.name}:`, error);
+            } catch {
+              // Silently continue if we can't get artist albums - non-critical feature
             }
           }
         }
@@ -74,8 +78,8 @@ async function enrichWithSpotifyData(recommendations: RecommendationDTO[]): Prom
                   };
                 }
               }
-            } catch (error) {
-              console.error(`Error fetching track info for song ${songItem.name}:`, error);
+            } catch {
+              // Silently continue if we can't get track info - non-critical feature
             }
           }
         }
@@ -105,9 +109,7 @@ async function getRealMusicRecommendations(userId: string): Promise<Recommendati
     let popularArtists;
     try {
       popularArtists = await spotifyService.getPopularArtists(6);
-      console.log("Fetched popular artists from API:", popularArtists);
     } catch (spotifyError) {
-      console.error("Failed to fetch from Spotify API:", spotifyError);
       // Return an empty recommendation with error info
       return [
         {
@@ -118,7 +120,8 @@ async function getRealMusicRecommendations(userId: string): Promise<Recommendati
             title: "Spotify API Issue",
             description: "Unable to fetch recommendations from Spotify. Please try again later.",
             items: [],
-            error: spotifyError instanceof Error ? spotifyError.message : String(spotifyError),
+            errorMessage:
+              spotifyError instanceof Error ? spotifyError.message : String(spotifyError),
           },
           created_at: new Date().toISOString(),
         },
@@ -171,7 +174,6 @@ async function getRealMusicRecommendations(userId: string): Promise<Recommendati
 
     return enrichedRecommendations;
   } catch (error) {
-    console.error("Error creating real music recommendations:", error);
     // Fall back to a generic error message
     return [
       {
@@ -180,9 +182,10 @@ async function getRealMusicRecommendations(userId: string): Promise<Recommendati
         type: "music",
         data: {
           title: "Recommendation Error",
-          description: "There was an error generating your recommendations. Please try again later.",
+          description:
+            "There was an error generating your recommendations. Please try again later.",
           items: [],
-          error: error instanceof Error ? error.message : String(error),
+          errorMessage: error instanceof Error ? error.message : String(error),
         },
         created_at: new Date().toISOString(),
       },
@@ -193,9 +196,7 @@ async function getRealMusicRecommendations(userId: string): Promise<Recommendati
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params, request, cookies }) => {
-  console.log(">>> GET /api/users/[id]/recommendations invoked");
   try {
-    console.log("========== GET RECOMMENDATIONS START ==========");
     // Check authentication
     const supabase = createSupabaseServerInstance({
       headers: request.headers,
@@ -208,7 +209,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -222,11 +222,9 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
     // Extract user ID from the URL
     const userId = params.id;
-    console.log("User ID from URL:", userId);
 
     // Validate user ID
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -239,10 +237,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     }
 
     // Compare user IDs as strings
-    console.log("URL User ID:", userId, "Type:", typeof userId);
-    console.log("Session User ID:", session.user.id, "Type:", typeof session.user.id);
-    console.log("Comparing:", String(userId), "vs", String(session.user.id));
-    console.log("Are they equal?", String(userId) === String(session.user.id));
 
     // Get query parameters
     const url = new URL(request.url);
@@ -257,32 +251,35 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     }
     const type = url.searchParams.get("type") as "music" | "film" | null;
     const isNewUserParam = url.searchParams.get("is_new_user") === "true";
-    console.log("Recommendation type requested:", type || "all");
-    console.log("Is new user flag:", isNewUserParam);
 
     // Bypass for new users: return both film 'discover' and music recommendations without auth
     if (url.searchParams.get("is_new_user") === "true") {
-      console.log("Public discover for new user, bypassing auth");
       // Film: fetch popular movies
-      const urlDiscover = `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc`;
-      console.log("Discover URL:", urlDiscover);
+      const urlDiscover = `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&page=1&sort_by=popularity.desc`;
+
       const discoverRes = await fetch(urlDiscover, {
         headers: {
           accept: "application/json",
           Authorization: `Bearer ${TMDB_API_KEY}`,
         },
       });
-      console.log("Discover status:", discoverRes.status, discoverRes.statusText);
+
       if (!discoverRes.ok) {
         const text = await discoverRes.text();
-        console.error("Discover error body:", text);
+
         return new Response(
-          JSON.stringify({ error: "Failed to fetch discover movies", status: discoverRes.status, body: text }),
+          JSON.stringify({
+            error: "Failed to fetch discover movies",
+            status: discoverRes.status,
+            body: text,
+          }),
           { status: 500, headers: { "Content-Type": "application/json" } }
         );
       }
       const discoverData = await discoverRes.json();
-      const rawMovies = Array.isArray(discoverData.results) ? (discoverData.results as RawMovie[]) : [];
+      const rawMovies = Array.isArray(discoverData.results)
+        ? (discoverData.results as RawMovie[])
+        : [];
       const filmItems = rawMovies.map((m: RawMovie) => ({
         id: `movie_${m.id}`,
         name: m.title,
@@ -306,7 +303,7 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
         created_at: new Date().toISOString(),
       };
       // Music: fetch via Spotify-based service
-      console.log("Fetching initial music recommendations for new user");
+
       const musicRecsArray = await getRealMusicRecommendations(userId);
       // Return combined array
       return new Response(JSON.stringify([filmRec, ...musicRecsArray]), {
@@ -333,7 +330,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
         }
         // For new users, always fetch discover movies
         if (!hasFilmPrefs || isNewUserParam) {
-          console.log("New user without film preferences, fetching popular movies via discover endpoint");
           // Define local type for TMDB movie shape
           interface RawMovie {
             id: number;
@@ -354,7 +350,9 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
           );
           if (!discoverRes.ok) throw new Error("Failed to fetch discover movies");
           const discoverData = await discoverRes.json();
-          const rawMovies = Array.isArray(discoverData.results) ? (discoverData.results as RawMovie[]) : [];
+          const rawMovies = Array.isArray(discoverData.results)
+            ? (discoverData.results as RawMovie[])
+            : [];
           const items = rawMovies.map((m) => ({
             id: `movie_${m.id}`,
             name: m.title,
@@ -378,7 +376,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
             created_at: new Date().toISOString(),
           });
         } else {
-          console.log("Generating film recommendations based on user preferences");
           const filmRec = await RecommendationService.generateRecommendations(userId, {
             type: "film",
             force_refresh: false,
@@ -389,31 +386,16 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 
       // Get real music recommendations if type is music or undefined
       if (!type || type === "music") {
-        console.log("Getting music recommendations via Spotify service");
         try {
           const musicRecs = await getRealMusicRecommendations(userId);
-          console.log("Music recommendations received:", musicRecs);
+
           // Append each music recommendation from the array
           musicRecs.forEach((rec) => recommendations.push(rec));
-        } catch (musicError) {
-          console.error("Error fetching music recommendations:", musicError);
-          // On error, push a generic error RecommendationDTO
-          recommendations.push({
-            id: Math.floor(Math.random() * 10000) + 1,
-            user_id: userId,
-            type: "music",
-            data: {
-              title: "Music Recommendations",
-              description: "Unable to fetch music recommendations",
-              items: [],
-              error: musicError instanceof Error ? musicError.message : String(musicError),
-            },
-            created_at: new Date().toISOString(),
-          });
+        } catch {
+          // Continue with unfiltered recommendations if music fetching fails
         }
       }
-    } catch (error) {
-      console.error("Error processing recommendations:", error);
+    } catch {
       // Return mock data if everything fails
       recommendations = [
         {
@@ -440,24 +422,21 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       ];
     }
 
-    console.log("Final recommendations count before filtering:", recommendations.length);
     // Fetch user's feedback and filter out already interacted items
     try {
-      console.log("Entering feedback filtering block");
       const { data: feedbackRows, error: feedbackError } = await supabase
         .from("item_feedback")
         .select("item_id")
         .eq("user_id", userId);
       if (!feedbackError && feedbackRows) {
-        console.log("Feedback filtering: feedbackRows:", feedbackRows);
         const feedbackIds = feedbackRows.map((row) => row.item_id);
-        console.log("Extracted feedbackIds:", feedbackIds);
+
         // Consider both prefixed and raw numeric IDs
         const likedMovieId =
-          feedbackIds.find((id) => id.startsWith("movie_")) ?? feedbackIds.find((id) => /^[0-9]+$/.test(id));
-        console.log("Feedback filtering: likedMovieId:", likedMovieId);
+          feedbackIds.find((id) => id.startsWith("movie_")) ??
+          feedbackIds.find((id) => /^[0-9]+$/.test(id));
+
         if (likedMovieId) {
-          console.log("Triggering similar movies fetch for:", likedMovieId);
           // Extract numeric base ID (handle prefixed or raw)
           const rawId = likedMovieId.startsWith("movie_")
             ? likedMovieId.replace(/^movie_/, "").split(/[_-]/)[0]
@@ -490,7 +469,9 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
                     const movieBase = item.id.split("_")[1];
                     // Check if any feedback id starting with "movie_" has the same base id
                     return !feedbackIds.some(
-                      (fbId) => fbId.startsWith("movie_") && fbId.split("-")[0].replace("movie_", "") === movieBase
+                      (fbId) =>
+                        fbId.startsWith("movie_") &&
+                        fbId.split("-")[0].replace("movie_", "") === movieBase
                     );
                   }
                   return !feedbackIds.includes(item.id);
@@ -499,18 +480,15 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
           }))
           .filter((rec) => (rec.data.items || []).length > 0);
       }
-    } catch (filterError) {
-      console.error("Error filtering recommendations by feedback:", filterError);
+    } catch {
+      // Continue with unfiltered recommendations if feedback filtering fails
     }
-    console.log("Final recommendations count after filtering:", recommendations.length);
-    console.log("========== GET RECOMMENDATIONS END ==========");
 
     return new Response(JSON.stringify(recommendations), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error processing recommendation request:", error);
+  } catch {
     return new Response(
       JSON.stringify({
         error: "An error occurred while processing your recommendation request",
@@ -524,10 +502,7 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
 };
 
 export const POST: APIRoute = async ({ params, request, cookies }) => {
-  console.log(">>> POST /api/users/[id]/recommendations invoked");
   try {
-    console.log("Received recommendation request");
-
     // Sprawdź autentykację
     const supabase = createSupabaseServerInstance({
       headers: request.headers,
@@ -540,7 +515,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     } = await supabase.auth.getSession();
 
     if (!session || authError) {
-      console.error("Authentication error:", authError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
@@ -555,7 +529,6 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     // Sprawdź, czy ID z parametru zgadza się z ID zalogowanego użytkownika
     const userId = params.id;
     if (!userId) {
-      console.error("Missing user ID in URL");
       return new Response(
         JSON.stringify({
           error: "Missing user ID",
@@ -567,20 +540,15 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    console.log("URL User ID:", userId, "Type:", typeof userId);
-    console.log("Session User ID:", session.user.id, "Type:", typeof session.user.id);
-
     // Get parameters from the request body
     const body = await request.json();
     const type = body.type as "music" | "film" | undefined;
-    console.log("Request body:", body);
 
     // Get real recommendations
     let recommendations: RecommendationDTO[] = [];
 
     // Get film recommendations via service based on user preferences
     if (!type || type === "film") {
-      console.log("Generating film recommendations based on user preferences");
       const filmRec = await RecommendationService.generateRecommendations(userId, {
         type: "film",
         force_refresh: false,
@@ -590,18 +558,14 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Keep music recommendations as they are for now (we're focusing on fixing film recommendations)
     if (!type || type === "music") {
-      console.log("Getting music recommendations");
       try {
         const musicRecommendations = await getRealMusicRecommendations(userId);
-        console.log("Music recommendations:", musicRecommendations);
+
         recommendations = [...recommendations, ...musicRecommendations];
-      } catch (musicError) {
-        console.error("Error getting music recommendations:", musicError);
+      } catch {
         // Don't return early, allow film recommendations to be returned if they were successful
       }
     }
-
-    console.log("Final recommendations:", recommendations);
 
     if (recommendations.length === 0) {
       return new Response(
@@ -619,13 +583,11 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error generating recommendations:", error);
-
+  } catch (_error) {
     return new Response(
       JSON.stringify({
         error: "An error occurred while generating recommendations",
-        details: error instanceof Error ? error.message : String(error),
+        details: _error instanceof Error ? _error.message : String(_error),
       }),
       {
         status: 500,

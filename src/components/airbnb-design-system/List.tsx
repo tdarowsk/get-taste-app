@@ -28,7 +28,10 @@ interface ListProps extends React.HTMLAttributes<HTMLUListElement> {
 }
 
 export const List = React.forwardRef<HTMLUListElement, ListProps>(
-  ({ className, children, variant = "default", withSeparators = false, vertical = true, ...props }, ref) => {
+  (
+    { className, children, variant = "default", withSeparators = false, vertical = true, ...props },
+    ref
+  ) => {
     // Różne style dla różnych wariantów list
     const variantStyles = {
       default: "space-y-1",
@@ -38,7 +41,9 @@ export const List = React.forwardRef<HTMLUListElement, ListProps>(
     };
 
     // Zastosuj odpowiednie style dla układu wertykalnego/horyzontalnego
-    const layoutStyles = vertical ? variantStyles[variant] : "flex flex-wrap items-center gap-x-3 gap-y-2";
+    const layoutStyles = vertical
+      ? variantStyles[variant]
+      : "flex flex-wrap items-center gap-x-3 gap-y-2";
 
     // Jeśli używamy separatorów, zastosuj odpowiednie style podziału
     const separatorStyles = withSeparators && vertical ? "divide-y divide-gray-100" : "";
@@ -91,7 +96,16 @@ interface ListItemProps extends React.LiHTMLAttributes<HTMLLIElement> {
 
 export const ListItem = React.forwardRef<HTMLLIElement, ListItemProps>(
   (
-    { className, children, startIcon, endIcon, interactive = false, active = false, highlighted = false, ...props },
+    {
+      className,
+      children,
+      startIcon,
+      endIcon,
+      interactive = false,
+      active = false,
+      highlighted = false,
+      ...props
+    },
     ref
   ) => {
     return (
@@ -99,7 +113,8 @@ export const ListItem = React.forwardRef<HTMLLIElement, ListItemProps>(
         ref={ref}
         className={cn(
           "relative",
-          interactive && "cursor-pointer transition-colors hover:bg-gray-50 focus:outline-none focus:bg-gray-50",
+          interactive &&
+            "cursor-pointer transition-colors hover:bg-gray-50 focus:outline-none focus:bg-gray-50",
           active && "text-rose-500 font-medium",
           highlighted && "bg-gray-50",
           className
@@ -155,7 +170,10 @@ interface ListCardProps extends React.LiHTMLAttributes<HTMLLIElement> {
 }
 
 export const ListCard = React.forwardRef<HTMLLIElement, ListCardProps>(
-  ({ className, children, image, title, description, actions, interactive = false, ...props }, ref) => {
+  (
+    { className, children, image, title, description, actions, interactive = false, ...props },
+    ref
+  ) => {
     return (
       <li
         ref={ref}
@@ -172,7 +190,9 @@ export const ListCard = React.forwardRef<HTMLLIElement, ListCardProps>(
           <div className="p-4 flex-1 min-w-0">
             <h3 className="font-medium text-gray-900 mb-1 truncate">{title}</h3>
 
-            {description && <p className="text-sm text-gray-500 mb-3 line-clamp-2">{description}</p>}
+            {description && (
+              <p className="text-sm text-gray-500 mb-3 line-clamp-2">{description}</p>
+            )}
 
             <div className="mt-auto">{children}</div>
 
@@ -229,7 +249,11 @@ export const ListMenuItem = React.forwardRef<HTMLLIElement, ListMenuItemProps>(
           onClick={onClick}
           disabled={disabled}
         >
-          {icon && <span className={cn("flex-shrink-0", active ? "text-rose-500" : "text-gray-400")}>{icon}</span>}
+          {icon && (
+            <span className={cn("flex-shrink-0", active ? "text-rose-500" : "text-gray-400")}>
+              {icon}
+            </span>
+          )}
           <span>{children}</span>
         </button>
       </li>
@@ -262,7 +286,10 @@ export const ListEmpty = React.forwardRef<HTMLDivElement, ListEmptyProps>(
     return (
       <div
         ref={ref}
-        className={cn("py-8 px-4 text-center rounded-lg border border-dashed border-gray-300 bg-gray-50", className)}
+        className={cn(
+          "py-8 px-4 text-center rounded-lg border border-dashed border-gray-300 bg-gray-50",
+          className
+        )}
         {...props}
       >
         {icon && <div className="mx-auto h-12 w-12 text-gray-400 mb-3">{icon}</div>}

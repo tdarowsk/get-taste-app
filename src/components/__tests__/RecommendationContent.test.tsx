@@ -42,7 +42,10 @@ describe("RecommendationContent", () => {
     render(<RecommendationContent data={data} items={items} />);
     expect(screen.getByText("Item1")).toBeInTheDocument();
     expect(screen.getByText("Type1")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Item1" })).toHaveAttribute("src", "http://example.com/img.png");
+    expect(screen.getByRole("img", { name: "Item1" })).toHaveAttribute(
+      "src",
+      "http://example.com/img.png"
+    );
     expect(screen.getByText("color:")).toBeInTheDocument();
     expect(screen.getByText("red")).toBeInTheDocument();
   });

@@ -1,50 +1,129 @@
-import React, { useState, memo } from "react";
+import { useState } from "react";
+import { useFormContext } from "react-hook-form";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "./ui/card";
+import { Button } from "./ui/button";
+import type { RecommendationFormValues } from "../types/forms";
 import type { EnhancedRecommendationViewModel } from "../types/recommendations";
-import type { RecommendationFeedbackType } from "../types";
-import { RecommendationContent } from "./RecommendationContent";
-import { RecommendationReason } from "./RecommendationReason";
-import { SwipeControls } from "./SwipeControls";
-import { useSwipeGesture } from "../hooks/useSwipeGesture";
 
 interface RecommendationCardProps {
   recommendation: EnhancedRecommendationViewModel;
-  onFeedback: (recommendationId: number, feedbackType: RecommendationFeedbackType) => void;
+  onFeedback?: (id: number, type: "like" | "dislike") => void;
+  showActions?: boolean;
+  isActive?: boolean;
 }
 
-export const RecommendationCard = memo(function RecommendationCard({
+export const RecommendationCard = ({
   recommendation,
   onFeedback,
-}: RecommendationCardProps) {
-  const [isReasonExpanded, setIsReasonExpanded] = useState(false);
+  showActions = true,
+  isActive = true,
+}: RecommendationCardProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const formContext = useFormContext<RecommendationFormValues>();
 
-  const handleLike = () => {
-    onFeedback(recommendation.recommendation.id, "like");
+  const recommendationId = recommendation.recommendation.id;
+
+  const handleLike = async () => {
+    if (!isActive) return;
+
+    setIsLoading(true);
+    try {
+      if (formContext?.setValue) {
+        formContext.setValue(
+          "feedback",
+          { itemId: recommendationId.toString(), type: "like" },
+          { shouldDirty: true }
+        );
+      } else if (onFeedback) {
+        onFeedback(recommendationId, "like");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDislike = () => {
-    onFeedback(recommendation.recommendation.id, "dislike");
+  const handleDislike = async () => {
+    if (!isActive) return;
+
+    setIsLoading(true);
+    try {
+      if (formContext?.setValue) {
+        formContext.setValue(
+          "feedback",
+          { itemId: recommendationId.toString(), type: "dislike" },
+          { shouldDirty: true }
+        );
+      } else if (onFeedback) {
+        onFeedback(recommendationId, "dislike");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const { handlers } = useSwipeGesture(handleDislike, handleLike);
+  // Handle mouse swipe gestures
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isActive) return;
+    const startX = e.clientX;
+
+    const handleMouseUp = (e: MouseEvent) => {
+      const endX = e.clientX;
+      const diff = endX - startX;
+
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+          handleLike();
+        } else {
+          handleDislike();
+        }
+      }
+
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mouseup", handleMouseUp);
+  };
 
   return (
-    <div className="bg-card rounded-lg shadow-md overflow-hidden max-w-md w-full mx-auto" {...handlers}>
-      <div className="p-5">
-        <RecommendationContent
-          data={recommendation.recommendation.data}
-          items={recommendation.recommendation.data.items}
-        />
-
-        <RecommendationReason
-          reason={recommendation.reason}
-          expanded={isReasonExpanded}
-          onToggle={() => setIsReasonExpanded(!isReasonExpanded)}
-        />
-      </div>
-
-      <div className="border-t border-border p-4">
-        <SwipeControls onLike={handleLike} onDislike={handleDislike} />
-      </div>
-    </div>
+    <Card
+      className={`w-full shadow-md transition-all duration-200 ${isActive ? "opacity-100" : "opacity-70"}`}
+      onMouseDown={handleMouseDown}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{recommendation.recommendation.data.title}</CardTitle>
+            <CardDescription>{recommendation.recommendation.type}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <p>{recommendation.reason.primaryReason}</p>
+        </div>
+      </CardContent>
+      {showActions && (
+        <CardFooter className="flex justify-between pt-2">
+          <Button
+            variant="outline"
+            onClick={handleDislike}
+            disabled={isLoading || !isActive}
+            className="w-full mr-2"
+            aria-label="Nie lubię"
+          >
+            👎 Nie lubię
+          </Button>
+          <Button
+            variant="default"
+            onClick={handleLike}
+            disabled={isLoading || !isActive}
+            className="w-full"
+            aria-label="Lubię"
+          >
+            👍 Lubię
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
   );
-});
+};

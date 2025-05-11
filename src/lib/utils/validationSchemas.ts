@@ -36,7 +36,10 @@ export const updateUserSchema = z.object({
     .string()
     .min(2, "Nick musi mieć co najmniej 2 znaki")
     .max(20, "Nick może mieć maksymalnie 20 znaków")
-    .regex(/^[A-Za-z0-9_!]+$/, "Nick może zawierać tylko litery, cyfry, znak podkreślenia i wykrzyknik")
+    .regex(
+      /^[A-Za-z0-9_!]+$/,
+      "Nick może zawierać tylko litery, cyfry, znak podkreślenia i wykrzyknik"
+    )
     .optional(),
 });
 

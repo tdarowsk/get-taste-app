@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import type { RecommendationHistoryDTO, RecommendationWithFeedbackDTO, RecommendationFeedbackType } from "../../types";
+import type {
+  RecommendationHistoryDTO,
+  RecommendationWithFeedbackDTO,
+  RecommendationFeedbackType,
+} from "../../types";
 
 interface RecommendationHistoryProps {
   userId: string;
@@ -39,7 +43,9 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
       queryParams.append("limit", pagination.limit.toString());
       queryParams.append("offset", pagination.offset.toString());
 
-      const response = await fetch(`/api/users/${userId}/recommendation-history?${queryParams.toString()}`);
+      const response = await fetch(
+        `/api/users/${userId}/recommendation-history?${queryParams.toString()}`
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch recommendation history: ${response.statusText}`);
@@ -50,7 +56,6 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
       setPagination((prev) => ({ ...prev, count: data.count }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
-      console.error("Error fetching recommendation history:", err);
     } finally {
       setLoading(false);
     }
@@ -123,7 +128,10 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
 
         <div className="flex flex-wrap gap-4 mb-4">
           <div className="w-full sm:w-auto">
-            <label htmlFor="content-type-filter" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="content-type-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Content Type
             </label>
             <select
@@ -139,7 +147,10 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
           </div>
 
           <div className="w-full sm:w-auto">
-            <label htmlFor="feedback-type-filter" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="feedback-type-filter"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Feedback
             </label>
             <select
@@ -163,7 +174,10 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
       ) : error ? (
         <div className="bg-red-50 border border-red-200 rounded-md p-4 text-red-700">
           <p>Error: {error}</p>
-          <button className="mt-2 px-4 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200" onClick={fetchHistory}>
+          <button
+            className="mt-2 px-4 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200"
+            onClick={fetchHistory}
+          >
             Try Again
           </button>
         </div>
@@ -187,7 +201,9 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
                         {item.recommendation.data.title ||
                           `${item.recommendation.type.charAt(0).toUpperCase() + item.recommendation.type.slice(1)} Recommendation`}
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">{formatDate(item.recommendation.created_at)}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {formatDate(item.recommendation.created_at)}
+                      </p>
                     </div>
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded border ${getFeedbackColorClasses(item.feedback.feedback_type)}`}
@@ -216,7 +232,9 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
                 )}
 
                 <div className="p-3 bg-gray-100 text-right">
-                  <span className="text-xs text-gray-500">Feedback given {formatDate(item.feedback.created_at)}</span>
+                  <span className="text-xs text-gray-500">
+                    Feedback given {formatDate(item.feedback.created_at)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -225,8 +243,9 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
           {/* Pagination */}
           <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
             <div className="text-sm text-gray-500">
-              Showing {pagination.offset + 1} to {Math.min(pagination.offset + history.length, pagination.count)} of{" "}
-              {pagination.count} results
+              Showing {pagination.offset + 1} to{" "}
+              {Math.min(pagination.offset + history.length, pagination.count)} of {pagination.count}{" "}
+              results
             </div>
             <div className="flex space-x-2">
               <button

@@ -22,6 +22,7 @@ export interface RecommendationItemViewModel {
   description?: string;
   imageUrl?: string;
   metadata: Record<string, unknown>;
+  type: "music" | "film";
 }
 
 /**

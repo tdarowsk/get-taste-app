@@ -35,7 +35,8 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const { message, schema, model, systemPrompt, temperature, maxTokens, schemaName, strict } = validatedData.data;
+    const { message, schema, model, systemPrompt, temperature, maxTokens, schemaName, strict } =
+      validatedData.data;
 
     // Call OpenRouter service
     const response = await OpenRouterService.jsonCompletion(message, schema, {
@@ -53,8 +54,6 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error in AI JSON completion endpoint:", error);
-
     // Return appropriate error response
     return new Response(
       JSON.stringify({

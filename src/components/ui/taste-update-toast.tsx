@@ -19,7 +19,12 @@ export function TasteUpdateToast({ type, action, onClose }: TasteUpdateToastProp
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.5 12.75l6 6 9-13.5" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M4.5 12.75l6 6 9-13.5"
+        />
       </svg>
     ) : (
       <svg
@@ -29,7 +34,12 @@ export function TasteUpdateToast({ type, action, onClose }: TasteUpdateToastProp
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M6 18L18 6M6 6l12 12"
+        />
       </svg>
     );
 
@@ -42,21 +52,34 @@ export function TasteUpdateToast({ type, action, onClose }: TasteUpdateToastProp
       <div className={`absolute top-0 left-0 h-1 ${accentColor} animate-pulse w-full`}></div>
 
       <div className="flex items-start">
-        <div className={`${action === "like" ? "bg-green-500" : "bg-red-500"} rounded-full p-2 mr-3 flex-shrink-0`}>
+        <div
+          className={`${action === "like" ? "bg-green-500" : "bg-red-500"} rounded-full p-2 mr-3 flex-shrink-0`}
+        >
           {icon}
         </div>
 
         <div className="flex-1">
-          <h3 className="font-medium text-white">{action === "like" ? "Added to your likes" : "Noted your dislike"}</h3>
+          <h3 className="font-medium text-white">
+            {action === "like" ? "Added to your likes" : "Noted your dislike"}
+          </h3>
           <p className="text-sm text-white/80 mt-1">
             Your {type} taste profile is being updated based on this feedback
           </p>
         </div>
 
         {onClose && (
-          <button onClick={onClose} className="text-white/60 hover:text-white ml-4" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="text-white/60 hover:text-white ml-4"
+            aria-label="Close"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         )}

@@ -174,6 +174,29 @@ Kryteria akceptacji:
 - System dynamicznie aktualizuje wagi poszczególnych cech metadanych w zależności od częstotliwości ich występowania w polubionych treściach.
 - Użytkownik może zobaczyć uzasadnienie, dlaczego dana rekomendacja została mu przedstawiona (np. "polecane, ponieważ lubisz reżysera X").
 
+US-015  
+Tytuł: Inteligentne rekomendacje z wykorzystaniem OpenRouter.ai  
+Opis: Jako użytkownik, chcę otrzymywać inteligentne rekomendacje generowane przez zaawansowane modele AI dostępne poprzez OpenRouter.ai na podstawie historii moich polubień, aby odkrywać nowe treści, które mogłyby mi się spodobać, ale które sam bym nie znalazł.  
+Kryteria akceptacji:
+
+- System wykorzystuje API OpenRouter.ai do generowania rekomendacji w oparciu o historię polubionych treści użytkownika.
+- Modele AI analizują nie tylko metadane, ale również kontekst kulturowy i trendy, proponując treści wykraczające poza oczywiste wybory.
+- Rekomendacje uwzględniają szerszy kontekst kulturowy i związki między różnymi dziełami (np. inspiracje, podobne motywy).
+- System wybiera optymalny model AI z dostępnych przez OpenRouter.ai w zależności od typu rekomendacji i ilości dostępnych danych.
+- Koszty zapytań API są monitorowane i optymalizowane, aby zapewnić efektywność ekonomiczną.
+- Użytkownik otrzymuje zaskakujące, ale trafne rekomendacje, które poszerzają jego horyzonty muzyczne i filmowe.
+- System podaje uzasadnienie rekomendacji w formie krótkiego opisu wyjaśniającego, dlaczego dana pozycja może się spodobać użytkownikowi.
+
+US-016  
+Tytuł: Czasowe zablokowanie wyboru muzyki w sliderach  
+Opis: Jako właściciel produktu, chcę mieć możliwość czasowego zablokowania wyboru muzyki w sliderach (przełącznikach typu Music/Films/Film/Music), aby użytkownicy mogli korzystać wyłącznie z rekomendacji filmowych. Wartość ta ma być kontrolowana przez zmienną środowiskową `isMusicEnabled`. Jeśli `isMusicEnabled` jest ustawione na `false`, oba slidery mają być na sztywno ustawione na "film" i nie pozwalać na zmianę przez użytkownika.  
+Kryteria akceptacji:
+- Wartość przełączników (sliderów) Music/Films oraz Film/Music jest pobierana z enva `isMusicEnabled`.
+- Jeśli `isMusicEnabled` jest `false`, oba slidery są zablokowane i ustawione na "film".
+- Jeśli `isMusicEnabled` jest `true`, użytkownik może swobodnie przełączać między muzyką a filmami.
+- Zmiana wartości enva nie wymaga restartu aplikacji przez użytkownika (może być wymagany restart serwera).
+- Zablokowane slidery są wizualnie wyszarzone lub nieaktywne.
+
 ## 6. Metryki sukcesu
 
 1. Co najmniej 90% użytkowników posiada w pełni uzupełnione profile z poprawnymi danymi dotyczącymi preferencji.

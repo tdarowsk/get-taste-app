@@ -19,32 +19,34 @@ const PUBLIC_PATHS = [
   "/api/test-taste",
 ];
 
-export const onRequest = defineMiddleware(async ({ locals, cookies, url, request, redirect }, next) => {
-  // Pomijamy sprawdzanie autentykacji dla ścieżek publicznych
-  if (PUBLIC_PATHS.includes(url.pathname)) {
+export const onRequest = defineMiddleware(
+  async ({ locals, cookies, url, request, redirect }, next) => {
+    // Pomijamy sprawdzanie autentykacji dla ścieżek publicznych
+    if (PUBLIC_PATHS.includes(url.pathname)) {
+      return next();
+    }
+
+    const supabase = createSupabaseServerInstance({
+      cookies,
+      headers: request.headers,
+    });
+
+    // WAŻNE: Zawsze najpierw pobieramy sesję użytkownika przed innymi operacjami
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      locals.user = {
+        email: user.email || null,
+        id: user.id,
+      };
+      locals.supabase = supabase;
+    } else if (!PUBLIC_PATHS.includes(url.pathname)) {
+      // Przekierowanie do logowania dla chronionych ścieżek
+      return redirect("/auth/login");
+    }
+
     return next();
   }
-
-  const supabase = createSupabaseServerInstance({
-    cookies,
-    headers: request.headers,
-  });
-
-  // WAŻNE: Zawsze najpierw pobieramy sesję użytkownika przed innymi operacjami
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    locals.user = {
-      email: user.email || null,
-      id: user.id,
-    };
-    locals.supabase = supabase;
-  } else if (!PUBLIC_PATHS.includes(url.pathname)) {
-    // Przekierowanie do logowania dla chronionych ścieżek
-    return redirect("/auth/login");
-  }
-
-  return next();
-});
+);
