@@ -181,15 +181,18 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
     try {
       const { data: feedbackData, error: feedbackError } = await supabase
         .from("item_feedback")
-        .upsert({
-          user_id: userId,
-          item_id: body.item_id,
-          feedback_type: body.feedback_type,
-          created_at: new Date().toISOString(),
-          genre: body.genre || null,
-          artist: body.artist || null,
-          cast: body.cast || null,
-        })
+        .upsert(
+          {
+            user_id: userId,
+            item_id: body.item_id,
+            feedback_type: body.feedback_type,
+            created_at: new Date().toISOString(),
+            genre: body.genre || null,
+            artist: body.artist || null,
+            cast: body.cast || null,
+          },
+          { onConflict: "user_id,item_id" }
+        )
         .select()
         .single();
 

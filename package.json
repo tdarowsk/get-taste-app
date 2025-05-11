@@ -21,7 +21,10 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest",
     "test:unit": "vitest",
-    "test:unit:watch": "vitest watch"
+    "test:unit:watch": "vitest watch",
+    "typecheck": "tsc --noEmit",
+    "migrate": "ts-node scripts/run-migrations.ts",
+    "migrate:content-columns": "node scripts/run-content-columns-migration.js"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -29,6 +32,9 @@
     "@astrojs/react": "4.2.2",
     "@astrojs/sitemap": "3.3.0",
     "@radix-ui/react-avatar": "^1.1.7",
+    "@radix-ui/react-checkbox": "^1.3.1",
+    "@radix-ui/react-label": "^2.1.6",
+    "@radix-ui/react-scroll-area": "^1.2.8",
     "@radix-ui/react-slot": "^1.2.0",
     "@radix-ui/react-tabs": "^1.1.9",
     "@supabase/ssr": "^0.6.1",
@@ -43,6 +49,7 @@
     "framer-motion": "^12.9.2",
     "lucide-react": "^0.487.0",
     "node-fetch": "^2.7.0",
+    "pg": "^8.15.6",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "^7.56.2",

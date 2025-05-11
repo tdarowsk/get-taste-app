@@ -31,71 +31,71 @@ export const FeedbackService = {
     feedbackType: RecommendationFeedbackType,
     itemMetadata?: Record<string, unknown>
   ): Promise<RecommendationFeedback> {
-    try {
-      // Ensure userId is a valid string
-      if (typeof userId !== "string") {
-        throw new Error(`Nieprawidłowe ID użytkownika: ${userId}`);
-      }
+    // Ensure userId is a valid string
+    if (typeof userId !== "string") {
+      throw new Error(`Nieprawidłowe ID użytkownika: ${userId}`);
+    }
 
-      // Convert to string to ensure consistent handling
-      const userIdStr = String(userId);
+    // Convert to string to ensure consistent handling
+    const userIdStr = String(userId);
 
-      // Pobierz szczegóły rekomendacji dla kontekstu algorytmu
-      const { data: recommendation, error: recError } = await supabaseClient
-        .from("recommendations")
-        .select("*")
-        .eq("id", recommendationId)
-        .single();
+    // Pobierz szczegóły rekomendacji dla kontekstu algorytmu
+    const { data: recommendation, error: recError } = await supabaseClient
+      .from("recommendations")
+      .select("*")
+      .eq("id", recommendationId)
+      .single();
 
-      if (recError) {
-        throw new Error(`Nie udało się pobrać rekomendacji: ${recError.message}`);
-      }
+    if (recError) {
+      throw new Error(`Nie udało się pobrać rekomendacji: ${recError.message}`);
+    }
 
-      // Zapisz feedback w bazie danych
-      const { data, error } = await supabaseClient
-        .from("recommendation_feedback")
-        .insert({
+    // Create metadata as JSON to ensure proper typing
+    const metadataJson = itemMetadata ? JSON.stringify(itemMetadata) : "{}";
+
+    // Use upsert instead of insert to handle duplicates
+    const { data, error } = await supabaseClient
+      .from("recommendation_feedback")
+      .upsert(
+        {
           user_id: userIdStr,
           recommendation_id: recommendationId,
           feedback_type: feedbackType,
-          metadata: itemMetadata || {},
-        })
-        .select()
-        .single();
+          metadata: JSON.parse(metadataJson),
+          content_id: (itemMetadata?.id as string) || null,
+          content_type: recommendation.type || null,
+        },
+        { onConflict: "user_id,recommendation_id" }
+      )
+      .select()
+      .single();
 
-      if (error) {
-        throw new Error(`Nie udało się zapisać feedbacku: ${error.message}`);
-      }
-
-      // Przygotuj metadane feedbacku dla algorytmu uczącego
-      const feedbackMetadata: FeedbackMetadata = {
-        recommendation_id: recommendationId,
-        recommendation_type: recommendation.type,
-        item_name: (itemMetadata?.name as string) || "",
-        item_metadata: itemMetadata || {},
-        feedback_type: feedbackType,
-      };
-
-      // Zaktualizuj algorytm asynchronicznie (nie czekaj na zakończenie)
-      void this.updateAlgorithmWithFeedback(userIdStr, feedbackMetadata);
-
-      // Zaktualizuj rekord "seen_recommendations" jeśli istnieje
-      void this.updateSeenRecommendationFeedback(
-        userIdStr,
-        itemMetadata?.id as string,
-        feedbackType
-      );
-
-      return {
-        id: data.id,
-        recommendation_id: data.recommendation_id,
-        user_id: Number(data.user_id),
-        feedback_type: data.feedback_type,
-        created_at: data.created_at,
-      };
-    } catch (error) {
-      throw error;
+    if (error) {
+      throw new Error(`Nie udało się zapisać feedbacku: ${error.message}`);
     }
+
+    // Przygotuj metadane feedbacku dla algorytmu uczącego
+    const feedbackMetadata: FeedbackMetadata = {
+      recommendation_id: recommendationId,
+      recommendation_type: recommendation.type as "music" | "film", // Add type assertion
+      item_name: (itemMetadata?.name as string) || "",
+      item_metadata: itemMetadata || {},
+      feedback_type: feedbackType,
+    };
+
+    // Zaktualizuj algorytm asynchronicznie (nie czekaj na zakończenie)
+    void this.updateAlgorithmWithFeedback(userIdStr, feedbackMetadata);
+
+    // Zaktualizuj rekord "seen_recommendations" jeśli istnieje
+    void this.updateSeenRecommendationFeedback(userIdStr, itemMetadata?.id as string, feedbackType);
+
+    return {
+      id: data.id,
+      recommendation_id: data.recommendation_id,
+      user_id: Number(data.user_id),
+      feedback_type: data.feedback_type as RecommendationFeedbackType, // Add type assertion
+      created_at: data.created_at,
+    };
   },
 
   /**
@@ -122,8 +122,13 @@ export const FeedbackService = {
         .eq("item_id", itemId);
 
       if (error) {
+        console.error(`Error updating seen recommendation feedback: ${error.message}`);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error(
+        `Exception in updateSeenRecommendationFeedback: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   },
 
   /**
@@ -214,6 +219,11 @@ export const FeedbackService = {
           model: "anthropic/claude-3-haiku-20240307",
         }
       );
+
+      console.log(
+        "````````````````````````````````````````````````````HEREREHREHREH`````````````````````"
+      );
+      console.log(response);
 
       // Wykorzystaj analizę do aktualizacji preferencji użytkownika, jeśli są istotne zmiany
       if (response.updatedPreferences && Object.keys(response.updatedPreferences).length > 0) {

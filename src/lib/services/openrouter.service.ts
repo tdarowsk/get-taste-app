@@ -11,6 +11,7 @@ import type {
   ModelInfo,
   ResponseFormat,
 } from "../../types";
+import { getTmdbPosterUrl, getFallbackPosterUrl } from "../utils/poster-utils";
 
 // Define an interface for the API error response structure
 interface OpenRouterErrorResponse {
@@ -27,7 +28,7 @@ interface OpenRouterErrorResponse {
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class OpenRouterService {
   private static apiKey: string;
-  private static defaultModel = OPENROUTER_DEFAULT_MODEL || "qwen/qwen3-235b-a22b:free";
+  private static defaultModel = OPENROUTER_DEFAULT_MODEL || "qwen/qwen3-4b:free";
   private static defaultSystemPrompt: string | undefined;
   private static readonly baseUrl = OPENROUTER_API_URL || "https://openrouter.ai/api/v1";
 
@@ -70,7 +71,7 @@ export class OpenRouterService {
    */
   public static configure(
     apiKey: string = OPENROUTER_API_KEY,
-    defaultModel = OPENROUTER_DEFAULT_MODEL || "qwen/qwen3-235b-a22b:free",
+    defaultModel = OPENROUTER_DEFAULT_MODEL || "qwen/qwen3-4b:free",
     defaultSystemPrompt?: string
   ): void {
     // Clean up the API key by removing any whitespace
@@ -81,7 +82,7 @@ export class OpenRouterService {
     }
 
     this.apiKey = cleanedApiKey;
-    this.defaultModel = defaultModel || "qwen/qwen3-235b-a22b:free";
+    this.defaultModel = defaultModel || "qwen/qwen3-4b:free";
     this.defaultSystemPrompt = defaultSystemPrompt;
   }
 
@@ -145,31 +146,47 @@ export class OpenRouterService {
   ): Promise<T> {
     // Combine the options with defaults
     const model = options?.model || this.defaultModel;
-    const systemPrompt = options?.systemPrompt || this.defaultSystemPrompt;
+    const baseSystemPrompt = options?.systemPrompt || this.defaultSystemPrompt || "";
     const temperature = options?.temperature ?? 0.7;
     const maxTokens = options?.maxTokens || 2000;
+
+    // Add explicit instruction to respond in English and only with valid JSON
+    const enhancedSystemPrompt =
+      baseSystemPrompt +
+      "\n\nCRITICAL INSTRUCTIONS:\n1. Respond ONLY with valid JSON.\n2. Do not include any explanatory text before or after the JSON.\n3. Your entire response must be parseable as JSON.\n4. Always write in English only.\n5. Start your response with { and end with }.";
 
     try {
       // Construct the request
       const messages: ChatMessage[] = [];
 
       // Add system prompt if provided
-      if (systemPrompt) {
+      if (enhancedSystemPrompt) {
         messages.push({
           role: "system",
-          content: systemPrompt,
+          content: enhancedSystemPrompt,
         });
       }
 
-      // Add user prompt
+      // Add user prompt with clear instruction for JSON response
       messages.push({
         role: "user",
-        content: userMessage,
+        content:
+          userMessage +
+          "\n\nIMPORTANT: Your response must contain ONLY valid JSON. Do not include any text explanations. Start your response with { and end with }.",
       });
 
       // Set up response format for better JSON handling
-      const responseFormat: ResponseFormat = options?.responseFormat || {
+      const responseFormat: ResponseFormat = {
         type: "json_object",
+        schema: jsonSchema || {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            items: { type: "array" },
+          },
+          required: ["title", "description", "items"],
+        },
       };
 
       // Prepare the request body
@@ -179,7 +196,9 @@ export class OpenRouterService {
         temperature,
         max_tokens: maxTokens,
         response_format: responseFormat,
-      }; // Make the API request// Log headers and body for debugging
+      };
+
+      // Make the API request
       const headers = {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -194,8 +213,10 @@ export class OpenRouterService {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new OpenRouterApiError(`Błąd API: ${response.status} - ${errorText}`);
-      } // Process the response
+        throw new OpenRouterApiError(`API Error: ${response.status} - ${errorText}`);
+      }
+
+      // Process the response
       try {
         // Parse the response
         const responseData: ChatCompletionResponse = await response.json();
@@ -209,7 +230,7 @@ export class OpenRouterService {
           throw new OpenRouterApiError("Pusta odpowiedź od API");
         }
 
-        // Print debug info// Handle various JSON formats that might be returned
+        // Print debug info
         let cleanedContent = content;
 
         // Remove Markdown code blocks if present
@@ -225,46 +246,74 @@ export class OpenRouterService {
         const jsonMatch = cleanedContent.match(/(\{[\s\S]*\})/);
         if (jsonMatch && jsonMatch[1]) {
           cleanedContent = jsonMatch[1];
-        } // Try parsing with more safeguards
+        }
+
+        // Try parsing with more safeguards
         let parsedResult;
         try {
           // First direct attempt
           parsedResult = JSON.parse(cleanedContent) as T;
         } catch (_primaryParseError) {
-          // Try with our advanced JSON sanitizing function
-          try {
-            const sanitizedContent = this.sanitizeJsonResponse(cleanedContent);
-            // Try to parse the sanitized content
+          console.warn(
+            "[OpenRouter] Primary JSON parse failed, attempting to extract JSON from text"
+          );
+
+          // Check if the content starts with text explanations followed by JSON
+          const jsonStartIndex = cleanedContent.indexOf("{");
+          const jsonEndIndex = cleanedContent.lastIndexOf("}");
+
+          if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+            // Extract the JSON part
+            const extractedJson = cleanedContent.substring(jsonStartIndex, jsonEndIndex + 1);
+            console.info("[OpenRouter] Extracted potential JSON from text response");
+
             try {
-              parsedResult = JSON.parse(sanitizedContent) as T;
-            } catch (_sanitizedParseError) {
-              // Fallback to original regex approach
-              const jsonRegex = /(\{[\s\S]*\})/g;
-              const matches = cleanedContent.match(jsonRegex);
-              if (matches && matches.length > 0) {
-                // Try each match until one works
-                for (const match of matches) {
-                  try {
-                    // Try to sanitize each potential JSON match
-                    const sanitizedMatch = this.sanitizeJsonResponse(match);
-                    const potentialResult = JSON.parse(sanitizedMatch);
-                    if (potentialResult && typeof potentialResult === "object") {
-                      parsedResult = potentialResult as T;
-                      break;
+              parsedResult = JSON.parse(extractedJson) as T;
+              console.info("[OpenRouter] Successfully parsed extracted JSON");
+            } catch (_extractedJsonError) {
+              // Continue to sanitization if direct extraction failed
+              console.warn(
+                "[OpenRouter] Extracted JSON parsing failed, continuing to sanitization"
+              );
+            }
+          }
+
+          // If direct extraction failed, try with our advanced JSON sanitizing function
+          if (!parsedResult) {
+            try {
+              const sanitizedContent = this.sanitizeJsonResponse(cleanedContent);
+              // Try to parse the sanitized content
+              try {
+                parsedResult = JSON.parse(sanitizedContent) as T;
+              } catch (_sanitizedParseError) {
+                // Fallback to original regex approach
+                const jsonRegex = /(\{[\s\S]*\})/g;
+                const matches = cleanedContent.match(jsonRegex);
+                if (matches && matches.length > 0) {
+                  // Try each match until one works
+                  for (const match of matches) {
+                    try {
+                      // Try to sanitize each potential JSON match
+                      const sanitizedMatch = this.sanitizeJsonResponse(match);
+                      const potentialResult = JSON.parse(sanitizedMatch);
+                      if (potentialResult && typeof potentialResult === "object") {
+                        parsedResult = potentialResult as T;
+                        break;
+                      }
+                    } catch {
+                      // Continue to next match - empty catch block is intentional
                     }
-                  } catch {
-                    // Continue to next match - empty catch block is intentional
                   }
                 }
               }
-            }
 
-            // If we still don't have a result, use default fallback
-            if (!parsedResult) {
+              // If we still don't have a result, use default fallback
+              if (!parsedResult) {
+                return this.getDefaultRecommendations("film") as unknown as T;
+              }
+            } catch (_secondaryParseError) {
               return this.getDefaultRecommendations("film") as unknown as T;
             }
-          } catch (_secondaryParseError) {
-            return this.getDefaultRecommendations("film") as unknown as T;
           }
         }
 
@@ -323,6 +372,27 @@ export class OpenRouterService {
                 confidence: typeof rec.confidence === "number" ? rec.confidence : 0.8,
               })),
             };
+
+            // Utwórz odpowiedzi w oczekiwanym formacie
+            console.log(
+              `\x1b[32m[OpenRouter] Successfully received ${localRecommendationType} recommendations\x1b[0m`
+            );
+
+            // Log the raw result from AI before transformation
+            console.log(`\x1b[32m[OpenRouter] Raw AI response before processing:\x1b[0m`);
+            console.log(`\x1b[32m${JSON.stringify(fixedResult, null, 2)}\x1b[0m`);
+
+            // Fix the shape of the recommendations if needed
+            const recommendations = Array.isArray(fixedResult.items) ? fixedResult.items : [];
+
+            // Log number of recommendations and first item
+            console.log(
+              `\x1b[32m[OpenRouter] Found ${recommendations.length} ${localRecommendationType} recommendations\x1b[0m`
+            );
+            if (recommendations.length > 0) {
+              console.log(`\x1b[32m[OpenRouter] First item example:\x1b[0m`);
+              console.log(`\x1b[32m${JSON.stringify(recommendations[0], null, 2)}\x1b[0m`);
+            }
 
             return fixedResult as unknown as T;
           }
@@ -430,7 +500,7 @@ export class OpenRouterService {
     const modelsToTry = [
       "mistralai/mistral-7b-instruct",
       "meta-llama/llama-3-8b-instruct",
-      "qwen/qwen3-235b-a22b:free",
+      "qwen/qwen3-4b:free",
     ];
 
     // Maksymalna liczba prób z różnymi modelami
@@ -668,6 +738,44 @@ export class OpenRouterService {
             `[OpenRouter] Successfully generated and cached ${recommendationType} recommendations with ${result.items.length} items`
           );
 
+          // If this is for films, enhance the poster URLs
+          if (recommendationType === "film" && Array.isArray(result.items)) {
+            // Process each item to ensure it has a valid poster URL
+            result.items = result.items.map((item: Record<string, unknown>) => {
+              if (item.details && typeof item.details === "object") {
+                const details = item.details as Record<string, unknown>;
+
+                // Check if there's an img field that might be a TMDB poster path
+                if (typeof details.img === "string") {
+                  const imgValue = details.img as string;
+
+                  // If it's just a path without a full URL, convert it to a TMDB URL
+                  if (
+                    imgValue.startsWith("/") ||
+                    (!imgValue.startsWith("http") && !imgValue.startsWith("https"))
+                  ) {
+                    details.img =
+                      getTmdbPosterUrl(imgValue) || getFallbackPosterUrl(item.name as string);
+                  } else if (imgValue === "N/A" || imgValue === "") {
+                    // Replace empty or N/A placeholders with a real fallback
+                    details.img = getFallbackPosterUrl(item.name as string);
+                  }
+
+                  // Also set imageUrl for compatibility
+                  details.imageUrl = details.img;
+                } else {
+                  // No img field, set a fallback
+                  details.img = getFallbackPosterUrl(item.name as string);
+                  details.imageUrl = details.img;
+                }
+
+                item.details = details;
+              }
+
+              return item;
+            });
+          }
+
           return parsedResult;
         } catch (error) {
           console.error(
@@ -758,7 +866,7 @@ export class OpenRouterService {
   }
 
   /**
-   * Upraszcza prompt dla API dla lepszej wydajności.
+   * Simplifies the prompt for API for better efficiency.
    */
   private static createCompactPrompt(
     userPreferences: Record<string, unknown>,
@@ -766,14 +874,47 @@ export class OpenRouterService {
     recommendationType: "music" | "film"
   ): string {
     return `
-      Wygeneruj rekomendacje ${recommendationType === "music" ? "muzyki" : "filmów"} dla użytkownika.
+      Generate ${recommendationType === "music" ? "music" : "movie"} recommendations for the user.
       
-      Preferencje: ${JSON.stringify(userPreferences)}
+      Preferences: ${JSON.stringify(userPreferences)}
       
       Feedback: ${JSON.stringify(userFeedbackHistory)}
       
-      Zwróć 5 rekomendacji zawierających: id, name, type, director (dla filmów), imageUrl, oraz obiekt details z: director, genres, year, cast.
-      Każdy film musi mieć imageUrl z linkiem do plakatu (format https://m.media-amazon.com/images/M/...).
+      Return 5 recommendations containing: id, name, type, details with: director, genres, year, cast, ${recommendationType === "film" ? "poster URL, " : ""}imageUrl.
+      Each ${recommendationType === "music" ? "track" : "movie"} should have a unique identifier and appropriate metadata.
+      ${recommendationType === "film" ? "IMPORTANT: For each movie recommendation, include a valid poster URL in the img field." : ""}
+      
+      FORMAT REQUIREMENTS:
+      1. Start response with { and end with }
+      2. Return ONLY valid JSON - no explanatory text or comments
+      3. Never prefix your response with phrases like 'Based on your preferences...'
+      4. Always respond in English
+      5. Follow this exact structure:
+      
+      {
+        "title": "Recommendations",
+        "description": "Personalized recommendations",
+        "items": [
+          {
+            "id": "unique-id",
+            "name": "Name",
+            "type": "${recommendationType === "music" ? "track" : "film"}",
+            "details": {
+              ${
+                recommendationType === "film"
+                  ? `"director": "Director name",
+              "genres": ["Genre1", "Genre2"],
+              "year": "Year",
+              "cast": ["Actor1", "Actor2"],
+              "img": "https://image.url/poster.jpg"`
+                  : `"artist": "Artist name",
+              "genres": ["Genre1"],
+              "year": "Year"`
+              }
+            }
+          }
+        ]
+      }
     `;
   }
 
@@ -781,176 +922,57 @@ export class OpenRouterService {
    * Zwraca zoptymalizowany prompt systemowy.
    */
   private static getOptimizedSystemPrompt(recommendationType: "music" | "film"): string {
-    return `Jesteś systemem rekomendacji ${recommendationType === "music" ? "muzyki" : "filmów"}. 
-      Format odpowiedzi JSON:
+    return `You are a ${recommendationType === "music" ? "music" : "movie"} recommendation system. 
+      CRITICAL INSTRUCTIONS:
+      1. ONLY output valid JSON. No explanations, no preamble, no additional text.
+      2. Start your response with { and end with }.
+      3. Format must match EXACTLY this structure:
+      
       {
-        "title": "Rekomendacje",
-        "description": "Spersonalizowane rekomendacje",
+        "title": "Recommendations",
+        "description": "Personalized recommendations",
         "items": [
           {
-            "id": "unikalny-id",
-            "name": "Nazwa",
+            "id": "unique-id",
+            "name": "Name",
             "type": "${recommendationType === "music" ? "track" : "film"}",
-            "director": "Reżyser (dla filmów)",
-            "imageUrl": "https://link-do-obrazka.jpg",
             "details": {
-              "director": "Reżyser (dla filmów)",
-              "genres": ["Gatunek1"],
-              "year": "Rok",
-              "cast": ["Aktor1"]
+              ${
+                recommendationType === "film"
+                  ? `"director": "Director (if applicable)",
+              "genres": ["Genre1"],
+              "year": "Year",
+              "cast": ["Actor1"],
+              "img": "https://valid-image-hosting.com/movie-poster.jpg"`
+                  : `"artist": "Artist name",
+              "genres": ["Genre1"],
+              "year": "Year"`
+              }
             }
           }
         ]
-      }`;
-  }
-
-  /**
-   * Upraszcza, szybsza wersja sanityzacji JSON.
-   */
-  private static quickJsonSanitize(content: string): string {
-    // Szybko sprawdź czy zawartość jest za krótka
-    if (content.trim().length < 10) {
-      return JSON.stringify({
-        title: "Recommendations",
-        description: "Simplified recommendations",
-        items: [],
-      });
-    }
-
-    let cleanedContent = content;
-
-    // Markdown code block removal - more comprehensive handling
-    if (cleanedContent.includes("```")) {
-      // Handle ```json blocks first (most common case)
-      cleanedContent = cleanedContent.replace(/```json\s*\n([\s\S]*?)\n```/g, "$1");
-
-      // Handle generic ``` blocks if still present
-      cleanedContent = cleanedContent.replace(/```\s*\n([\s\S]*?)\n```/g, "$1");
-
-      // Handle inline code blocks without newlines
-      cleanedContent = cleanedContent.replace(/```json\s*([\s\S]*?)```/g, "$1");
-      cleanedContent = cleanedContent.replace(/```\s*([\s\S]*?)```/g, "$1");
-
-      // Cleanup any remaining markdown markers
-      cleanedContent = cleanedContent
-        .replace(/^```json\s*/, "")
-        .replace(/^```\s*/, "")
-        .replace(/\s*```$/, "");
-    }
-
-    // Convert single-quoted property names to double-quoted property names
-    // This fixes "Expected double-quoted property name in JSON" errors
-    cleanedContent = cleanedContent.replace(/'([^']+)'\s*:/g, '"$1":');
-
-    // Napraw podstawowe problemy składni JSON
-    cleanedContent = cleanedContent
-      .replace(/,\s*}/g, "}") // Usuń przecinki przed zamykającymi nawiasami
-      .replace(/,\s*\]/g, "]") // Usuń przecinki przed zamykającymi nawiasami kwadratowymi
-      .replace(/}\s*{/g, "},{") // Dodaj przecinki między obiektami
-      .replace(/]\s*\[/g, "],["); // Dodaj przecinki między tablicami
-
-    // Fix missing commas in arrays - common issue at position 1737
-    cleanedContent = cleanedContent.replace(
-      /("(?:\\.|[^"\\])*"|[^,{[\]}])\s*\n?\s*("(?:\\.|[^"\\])*"|\{)/g,
-      "$1,$2"
-    );
-    cleanedContent = cleanedContent.replace(/}\s*\n?\s*{/g, "},{");
-    cleanedContent = cleanedContent.replace(/]\s*\n?\s*\[/g, "],[");
-    cleanedContent = cleanedContent.replace(/([^,{[\]:\s])\s*\n?\s*{/g, "$1,{");
-    cleanedContent = cleanedContent.replace(/([^,{[\]:\s])\s*\n?\s*\[/g, "$1,[");
-
-    // Wyekstrahuj właściwy JSON jeśli jest zagnieżdżony w tekście
-    const jsonMatch = cleanedContent.match(/(\{[\s\S]*\})/);
-    if (jsonMatch && jsonMatch[1]) {
-      cleanedContent = jsonMatch[1];
-    }
-
-    // Obsłuż niezamknięte stringi
-    const quoteCount = (cleanedContent.match(/"/g) || []).length;
-    if (quoteCount % 2 !== 0) {
-      cleanedContent = cleanedContent + '"';
-    }
-
-    // Usuń znaki po ostatnim nawiasie
-    const lastBraceIndex = cleanedContent.lastIndexOf("}");
-    if (lastBraceIndex !== -1) {
-      cleanedContent = cleanedContent.substring(0, lastBraceIndex + 1);
-    }
-
-    // Final validation attempt - check for any remaining array issues
-    try {
-      JSON.parse(cleanedContent);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("Expected ',' or ']' after array element")
-      ) {
-        // Try to extract the position number
-        const posMatch = error.message.match(/position (\d+)/);
-        if (posMatch && posMatch[1]) {
-          const pos = parseInt(posMatch[1], 10);
-          // Insert a comma at the problem position
-          cleanedContent = cleanedContent.substring(0, pos) + "," + cleanedContent.substring(pos);
-        }
       }
-    }
-
-    return cleanedContent;
+      
+      REQUIREMENTS: 
+      1. Use the user's actual preferences to generate accurate recommendations.
+      2. ONLY respond with valid JSON, no additional text.
+      3. Always respond in English regardless of input language.
+      4. Never use placeholder data.
+      ${recommendationType === "film" ? "5. ALWAYS include a valid poster URL in the img field for each movie." : ""}
+      ${recommendationType === "film" ? "6. If you cannot find a real poster URL, use URLs from image.tmdb.org or similar movie poster sites." : ""}
+      7. If you cannot generate recommendations, return empty items array but maintain valid JSON structure.
+      8. Never prefix your response with words like 'Based on...' or 'Here is...'`;
   }
 
   /**
-   * Provides default recommendations when AI generation fails
-   */
-  private static getDefaultRecommendations(type: "music" | "film"): Record<string, unknown> {
-    if (type === "film") {
-      return {
-        title: "Film Recommendations Error",
-        description: "Nie można pobrać rekomendacji filmowych. Spróbuj ponownie później.",
-        items: [
-          {
-            id: "error-1",
-            name: "Error Loading Recommendations",
-            type: "film",
-            details: {
-              director: "Please try again later",
-              year: new Date().getFullYear().toString(),
-              genres: ["Error"],
-              imageUrl: "https://via.placeholder.com/300x450?text=Error+Loading+Recommendations",
-            },
-          },
-        ],
-      };
-    } else {
-      // Music recommendations
-      return {
-        title: "Music Recommendations Error",
-        description: "Nie można pobrać rekomendacji muzycznych. Spróbuj ponownie później.",
-        items: [
-          {
-            id: "error-1",
-            name: "Error Loading Recommendations",
-            type: "music",
-            details: {
-              artist: "Please try again later",
-              year: new Date().getFullYear().toString(),
-              genres: ["Error"],
-              imageUrl: "https://via.placeholder.com/300x300?text=Error+Loading+Music",
-            },
-          },
-        ],
-      };
-    }
-  }
-
-  /**
-   * Wybiera optymalny model na podstawie typu zadania i budżetu.
+   * Selects the optimal model based on task type and budget.
    */
   private static selectOptimalModel(): string {
     // List of current free models to try in order of preference - ONLY INCLUDE VERIFIED WORKING MODELS
     const freeModels = [
-      "mistralai/mistral-7b-instruct", // Zmiana - bardziej niezawodny model jako pierwszy wybór
-      "meta-llama/llama-3-8b-instruct", // Dodatkowy model zapasowy
-      "qwen/qwen3-235b-a22b:free", // Przeniesiony na ostatnie miejsce
+      "mistralai/mistral-7b-instruct", // Primary model - fixed Polish response issue by ensuring English prompts
+      "meta-llama/llama-3-8b-instruct", // Backup model
+      "qwen/qwen3-4b:free", // Additional backup model
     ];
 
     // Default to the first free model
@@ -1198,10 +1220,6 @@ export class OpenRouterService {
           const errorMatch = error.message.match(/position (\d+)/);
           if (errorMatch) {
             const pos = parseInt(errorMatch[1], 10);
-            const _errorContext = cleanedContent.substring(
-              Math.max(0, pos - 10),
-              Math.min(cleanedContent.length, pos + 10)
-            );
             // Add missing commas or fix other common syntax issues
             if (error.message.includes("Expected ',' or '}' after property value")) {
               cleanedContent =
@@ -1225,7 +1243,7 @@ export class OpenRouterService {
           const firstProp = propertyMatch[1];
           // Create a minimal valid structure
           cleanedContent = JSON.stringify({
-            [firstProp]: "Fixed content",
+            [firstProp]: "",
             title: "Repaired JSON",
             description: "JSON was malformed and had to be repaired",
             items: [],
@@ -1233,30 +1251,238 @@ export class OpenRouterService {
         } else {
           // Last resort - completely new structure
           cleanedContent = JSON.stringify({
-            title: "Film Recommendations",
-            description: "Generated recommendations when JSON parsing failed",
-            items: [
-              {
-                id: "fallback-1",
-                name: "Interstellar",
-                type: "film",
-                director: "Christopher Nolan",
-                imageUrl:
-                  "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
-                details: {
-                  director: "Christopher Nolan",
-                  genres: ["Sci-Fi", "Drama", "Adventure"],
-                  year: "2014",
-                  cast: ["Matthew McConaughey", "Anne Hathaway", "Jessica Chastain"],
-                },
-              },
-            ],
+            title: "Error",
+            description: "Error parsing recommendation data",
+            items: [],
           });
         }
       }
 
       return cleanedContent;
     }
+  }
+
+  /**
+   * Simplified, faster version of JSON sanitization
+   */
+  private static quickJsonSanitize(content: string): string {
+    // Quick check if content is too short
+    if (content.trim().length < 10) {
+      return JSON.stringify({
+        title: "Recommendations",
+        description: "Simplified recommendations",
+        items: [],
+      });
+    }
+
+    let cleanedContent = content;
+
+    // Markdown code block removal - more comprehensive handling
+    if (cleanedContent.includes("```")) {
+      // Handle ```json blocks first (most common case)
+      cleanedContent = cleanedContent.replace(/```json\s*\n([\s\S]*?)\n```/g, "$1");
+
+      // Handle generic ``` blocks if still present
+      cleanedContent = cleanedContent.replace(/```\s*\n([\s\S]*?)\n```/g, "$1");
+
+      // Handle inline code blocks without newlines
+      cleanedContent = cleanedContent.replace(/```json\s*([\s\S]*?)```/g, "$1");
+      cleanedContent = cleanedContent.replace(/```\s*([\s\S]*?)```/g, "$1");
+
+      // Cleanup any remaining markdown markers
+      cleanedContent = cleanedContent
+        .replace(/^```json\s*/, "")
+        .replace(/^```\s*/, "")
+        .replace(/\s*```$/, "");
+    }
+
+    // Convert single-quoted property names to double-quoted property names
+    // This fixes "Expected double-quoted property name in JSON" errors
+    cleanedContent = cleanedContent.replace(/'([^']+)'\s*:/g, '"$1":');
+
+    // Fix basic JSON syntax problems
+    cleanedContent = cleanedContent
+      .replace(/,\s*}/g, "}") // Remove commas before closing braces
+      .replace(/,\s*\]/g, "]") // Remove commas before closing brackets
+      .replace(/}\s*{/g, "},{") // Add commas between objects
+      .replace(/]\s*\[/g, "],["); // Add commas between arrays
+
+    // Fix missing commas in arrays - common issue at position 1737
+    cleanedContent = cleanedContent.replace(
+      /("(?:\\.|[^"\\])*"|[^,{[\]}])\s*\n?\s*("(?:\\.|[^"\\])*"|\{)/g,
+      "$1,$2"
+    );
+    cleanedContent = cleanedContent.replace(/}\s*\n?\s*{/g, "},{");
+    cleanedContent = cleanedContent.replace(/]\s*\n?\s*\[/g, "],[");
+    cleanedContent = cleanedContent.replace(/([^,{[\]:\s])\s*\n?\s*{/g, "$1,{");
+    cleanedContent = cleanedContent.replace(/([^,{[\]:\s])\s*\n?\s*\[/g, "$1,[");
+
+    // Extract proper JSON if it's nested in text
+    const jsonMatch = cleanedContent.match(/(\{[\s\S]*\})/);
+    if (jsonMatch && jsonMatch[1]) {
+      cleanedContent = jsonMatch[1];
+    }
+
+    // Handle unclosed strings
+    const quoteCount = (cleanedContent.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0) {
+      cleanedContent = cleanedContent + '"';
+    }
+
+    // Remove characters after the last bracket
+    const lastBraceIndex = cleanedContent.lastIndexOf("}");
+    if (lastBraceIndex !== -1) {
+      cleanedContent = cleanedContent.substring(0, lastBraceIndex + 1);
+    }
+
+    // Final validation attempt - check for any remaining array issues
+    try {
+      JSON.parse(cleanedContent);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Expected ',' or ']' after array element")
+      ) {
+        // Try to extract the position number
+        const posMatch = error.message.match(/position (\d+)/);
+        if (posMatch && posMatch[1]) {
+          const pos = parseInt(posMatch[1], 10);
+          // Insert a comma at the problem position
+          cleanedContent = cleanedContent.substring(0, pos) + "," + cleanedContent.substring(pos);
+        }
+      }
+    }
+
+    return cleanedContent;
+  }
+
+  /**
+   * Provides default recommendations when AI generation fails
+   */
+  private static getDefaultRecommendations(type: "music" | "film"): Record<string, unknown> {
+    if (type === "film") {
+      return {
+        title: "Film Recommendations",
+        description: "Film recommendations based on your preferences",
+        items: [],
+      };
+    } else {
+      // Music recommendations
+      return {
+        title: "Music Recommendations",
+        description: "Music recommendations based on your preferences",
+        items: [],
+      };
+    }
+  }
+
+  /**
+   * Analyzes patterns in user data to improve future recommendations.
+   *
+   * @param userId - User ID
+   * @param feedbackData - User feedback data to analyze
+   * @param contentType - Content type (music or film)
+   * @returns Object containing analysis results
+   */
+  public static async analyzeUserPatterns(
+    userId: string,
+    feedbackData: Record<string, unknown>[],
+    contentType: "music" | "film"
+  ): Promise<Record<string, unknown>> {
+    if (!this.apiKey) {
+      throw new OpenRouterConfigError("OpenRouter service not configured. Call configure() first.");
+    }
+
+    try {
+      // Pobierz prompt do analizy wzorców
+      const prompt = this.getAnalysisPrompt(feedbackData, contentType);
+
+      // Użyj istniejącej metody jsonCompletion
+      const result = await this.jsonCompletion<Record<string, unknown>>(
+        prompt,
+        {
+          type: "object",
+          properties: {
+            preferredGenres: { type: "array" },
+            preferredFeatures: { type: "array" },
+            avoidedFeatures: { type: "array" },
+            trends: { type: "array" },
+            recommendations: { type: "array" },
+          },
+          required: ["preferredGenres", "preferredFeatures", "avoidedFeatures"],
+        },
+        {
+          model: this.selectOptimalModel(),
+          temperature: 0.3, // Niższa temperatura dla bardziej deterministycznych wyników
+          maxTokens: 1000,
+          systemPrompt: `You are a helpful assistant specializing in analyzing patterns in user preferences.
+          Analyze the feedback data and identify preference patterns for ${contentType} content type.
+          
+          CRITICAL: Always respond with ONLY valid JSON. Do not include any text outside the JSON.
+          Start your response with { and end with }.
+          Never begin your response with phrases like "Based on..." or "Here is...".`,
+        }
+      );
+
+      return result;
+    } catch (error) {
+      console.error(
+        `[OpenRouter] Error analyzing user patterns: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      // Zwróć podstawową odpowiedź w przypadku błędu
+      return {
+        status: "error",
+        reason: error instanceof Error ? error.message : String(error),
+        analyzed: false,
+        userId,
+      };
+    }
+  }
+
+  /**
+   * Creates a prompt for pattern analysis based on feedback data.
+   */
+  private static getAnalysisPrompt(
+    feedbackData: Record<string, unknown>[],
+    contentType: "music" | "film"
+  ): string {
+    return `
+      Analyze the user's feedback history regarding ${contentType === "music" ? "music" : "movies"} 
+      and identify patterns in their preferences.
+      
+      Feedback history:
+      ${JSON.stringify(feedbackData, null, 2)}
+      
+      Task:
+      Identify and explain patterns in user preferences, paying special attention to:
+      
+      1. Most liked genres
+      2. Common features of liked ${contentType === "music" ? "artists/tracks" : "movies"}
+      3. Features the user consistently avoids
+      4. Changes in preferences over time (if visible)
+      
+      Your response MUST be in this exact JSON format:
+      
+      {
+        "preferredGenres": ["Genre1", "Genre2"],
+        "preferredFeatures": [
+          {"feature": "Feature1", "value": "Value1", "confidence": 0.9}
+        ],
+        "avoidedFeatures": [
+          {"feature": "Feature2", "value": "Value2", "confidence": 0.8}
+        ],
+        "trends": ["Trend1", "Trend2"],
+        "recommendations": ["Recommendation1", "Recommendation2"]
+      }
+      
+      CRITICAL INSTRUCTIONS:
+      1. Return ONLY the JSON. No text before or after.
+      2. Start with { and end with }.
+      3. Always write in English.
+      4. Never start with phrases like "Based on the feedback..." or "Here is...".
+      5. All response text must be valid JSON that can be parsed.
+    `;
   }
 }
 

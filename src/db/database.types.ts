@@ -64,6 +64,7 @@ export interface Database {
           created_at: string;
           genre: string | null;
           artist: string | null;
+          cast: string | null;
         };
         Insert: {
           id?: number;
@@ -73,6 +74,7 @@ export interface Database {
           created_at?: string;
           genre?: string | null;
           artist?: string | null;
+          cast?: string | null;
         };
         Update: {
           id?: number;
@@ -82,6 +84,7 @@ export interface Database {
           created_at?: string;
           genre?: string | null;
           artist?: string | null;
+          cast?: string | null;
         };
         Relationships: [
           {
@@ -339,6 +342,8 @@ export interface Database {
           feedback_type: string;
           metadata: Json;
           created_at: string;
+          content_id: string | null;
+          content_type: string | null;
         };
         Insert: {
           id?: number;
@@ -347,6 +352,8 @@ export interface Database {
           feedback_type: string;
           metadata?: Json;
           created_at?: string;
+          content_id?: string | null;
+          content_type?: string | null;
         };
         Update: {
           id?: number;
@@ -355,6 +362,8 @@ export interface Database {
           feedback_type?: string;
           metadata?: Json;
           created_at?: string;
+          content_id?: string | null;
+          content_type?: string | null;
         };
         Relationships: [
           {
@@ -372,6 +381,36 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      movies_mapping: {
+        Row: {
+          movie_id: string;
+          title: string;
+          original_title: string | null;
+          release_year: string | null;
+          tmdb_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          movie_id: string;
+          title: string;
+          original_title?: string | null;
+          release_year?: string | null;
+          tmdb_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          movie_id?: string;
+          title?: string;
+          original_title?: string | null;
+          release_year?: string | null;
+          tmdb_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<never, never>;

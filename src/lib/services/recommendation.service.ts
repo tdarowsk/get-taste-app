@@ -66,16 +66,6 @@ interface TmdbGenre {
   name: string;
 }
 
-interface TmdbMovieDetails {
-  id: number;
-  title: string;
-  genres?: TmdbGenre[];
-  credits?: {
-    crew?: TmdbCrewMember[];
-    cast?: TmdbCastMember[];
-  };
-}
-
 type MusicPreferences = Database["public"]["Tables"]["music_preferences"]["Row"];
 type FilmPreferences = Database["public"]["Tables"]["film_preferences"]["Row"];
 type Json = Database["public"]["Tables"]["recommendations"]["Row"]["data"];
@@ -587,21 +577,22 @@ export const RecommendationService = {
               description: description,
               releaseDate: movie.release_date || "Unknown release date",
               voteAverage: movie.vote_average || 0,
+              poster_path: movie.poster_path,
             },
             explanation: "This is a trending movie on TMDB",
             confidence: 0.8,
           };
 
           console.log(
-            `[getTMDBRecommendations] Finished processing movie ${movie.id} with data:`,
-            JSON.stringify({
-              id: movieData.id,
-              name: movieData.name,
-              director: movieData.details.director,
-              cast: movieData.details.cast.length > 0 ? movieData.details.cast[0] + "..." : "none",
-              genres: movieData.details.genres.join(", "),
+            `%c [AI Movie Data] ${movie.id}: ${title}`,
+            "color: green; font-weight: bold; font-size: 14px",
+            {
+              director,
+              genres,
+              year: releaseYear,
+              cast: cast.slice(0, 3),
               hasImage: !!movie.poster_path,
-            })
+            }
           );
 
           return movieData;
@@ -643,65 +634,36 @@ export const RecommendationService = {
    * Provides fallback movie recommendations when API calls fail
    */
   getFallbackMovieRecommendations(title: string, reason: string): RecommendationDataDetails {
-    console.log(`Using fallback movie recommendations: ${reason}`);
+    console.log(
+      `%c Using fallback movie recommendations: ${reason}`,
+      "color: green; font-weight: bold"
+    );
+
+    // Generate a single dynamic movie with timestamp to avoid static data
+    const timestamp = Date.now();
 
     return {
       title: title,
       description: `${title} (fallback recommendations)`,
       items: [
         {
-          id: `movie_popular_1`,
-          name: "The Shawshank Redemption",
+          id: `movie_dynamic_${timestamp}`,
+          name: "Dynamic AI Movie",
           type: "film",
           details: {
-            genres: ["Drama"],
-            director: "Frank Darabont",
-            cast: ["Tim Robbins", "Morgan Freeman"],
-            year: "1994",
-            imageUrl: "https://placehold.it/500x750?text=Shawshank+Redemption",
+            genres: ["AI Generated"],
+            director: "AI Director",
+            cast: ["AI Actor 1", "AI Actor 2"],
+            year: new Date().getFullYear().toString(),
+            imageUrl: "https://placehold.it/500x750?text=AI+Generated+Movie",
+            poster_path: null,
             description:
-              "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
-            releaseDate: "1994-09-23",
-            voteAverage: 8.7,
+              "This is a dynamically generated movie recommendation created when the API couldn't provide real recommendations.",
+            releaseDate: new Date().toISOString().split("T")[0],
+            voteAverage: 7.5,
           },
-          explanation: "Classic highly-rated drama",
-          confidence: 0.9,
-        },
-        {
-          id: `movie_popular_2`,
-          name: "The Godfather",
-          type: "film",
-          details: {
-            genres: ["Crime", "Drama"],
-            director: "Francis Ford Coppola",
-            cast: ["Marlon Brando", "Al Pacino"],
-            year: "1972",
-            imageUrl: "https://placehold.it/500x750?text=The+Godfather",
-            description:
-              "The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.",
-            releaseDate: "1972-03-24",
-            voteAverage: 8.7,
-          },
-          explanation: "Classic crime drama",
-          confidence: 0.9,
-        },
-        {
-          id: `movie_popular_3`,
-          name: "The Dark Knight",
-          type: "film",
-          details: {
-            genres: ["Action", "Crime", "Drama"],
-            director: "Christopher Nolan",
-            cast: ["Christian Bale", "Heath Ledger"],
-            year: "2008",
-            imageUrl: "https://placehold.it/500x750?text=Dark+Knight",
-            description:
-              "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.",
-            releaseDate: "2008-07-18",
-            voteAverage: 9.0,
-          },
-          explanation: "Popular superhero movie",
-          confidence: 0.9,
+          explanation: "AI generated fallback recommendation",
+          confidence: 0.5,
         },
       ],
     };
@@ -847,6 +809,19 @@ export const RecommendationService = {
             ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
             : "https://placehold.it/500x750?text=No+Image+Available";
 
+          // Log movie data for debugging
+          console.log(
+            `%c [Similar Movie] ${movie.id}: ${title}`,
+            "color: lightgreen; font-weight: bold; font-size: 14px",
+            {
+              director,
+              genres,
+              year: releaseYear,
+              cast: cast.slice(0, 3),
+              hasImage: !!movie.poster_path,
+            }
+          );
+
           return {
             id: `movie_${movie.id}`,
             name: title,
@@ -860,6 +835,7 @@ export const RecommendationService = {
               description: description,
               releaseDate: movie.release_date || "Unknown release date",
               voteAverage: movie.vote_average || 0,
+              poster_path: movie.poster_path,
             },
             explanation: `This movie is similar to one you liked`,
             confidence: 0.9,

@@ -3,6 +3,9 @@ import { Card, useToast } from "../ui";
 import type { RecommendationItemViewModel } from "../../lib/types/viewModels";
 import { RecommendationDetail } from "./RecommendationDetail";
 import type { RecommendationFeedbackType } from "../../types";
+import { MovieMappingService } from "../../lib/services/movie-mapping.service";
+import { extractPosterUrl, isValidImageUrl } from "../../lib/utils/poster-utils";
+import { MoviePoster } from "../MoviePoster";
 
 interface SwipeableRecommendationCardProps {
   item: RecommendationItemViewModel;
@@ -30,6 +33,8 @@ export function SwipeableRecommendationCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const startPosRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
+  const [movieTitle, setMovieTitle] = useState<string | null>(null);
+  const [isLoadingTitle, setIsLoadingTitle] = useState(false);
 
   // Define placeholder image based on type
   const placeholderImage =
@@ -37,10 +42,14 @@ export function SwipeableRecommendationCard({
       ? "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop"
       : "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2069&auto=format&fit=crop";
 
-  // Use actual image or placeholder
-  const imageUrl =
+  // Get image URL with enhanced poster handling
+  const rawImageUrl =
+    extractPosterUrl(item.metadata || {}, type) ||
     item.imageUrl ||
     (item.metadata && "imageUrl" in item.metadata ? String(item.metadata.imageUrl) : null) ||
+    (item.metadata && "poster_path" in item.metadata
+      ? `https://image.tmdb.org/t/p/w500${item.metadata.poster_path}`
+      : null) ||
     (item.metadata && "poster" in item.metadata ? String(item.metadata.poster) : null) ||
     (item.metadata &&
     item.metadata.details &&
@@ -51,10 +60,25 @@ export function SwipeableRecommendationCard({
     (item.metadata &&
     item.metadata.details &&
     typeof item.metadata.details === "object" &&
+    "img" in (item.metadata.details as Record<string, unknown>)
+      ? String((item.metadata.details as Record<string, unknown>).img)
+      : null) ||
+    (item.metadata &&
+    item.metadata.details &&
+    typeof item.metadata.details === "object" &&
     "poster" in (item.metadata.details as Record<string, unknown>)
       ? String((item.metadata.details as Record<string, unknown>).poster)
       : null) ||
+    (item.metadata &&
+    item.metadata.details &&
+    typeof item.metadata.details === "object" &&
+    "poster_path" in (item.metadata.details as Record<string, unknown>)
+      ? `https://image.tmdb.org/t/p/w500${(item.metadata.details as Record<string, unknown>).poster_path}`
+      : null) ||
     placeholderImage;
+
+  // Validate the image URL before using it
+  const imageUrl = isValidImageUrl(rawImageUrl as string) ? rawImageUrl : placeholderImage;
 
   // Extract genre safely
   const genre = (item.metadata.genre as string) || (type === "music" ? "Music" : "Film");
@@ -62,10 +86,6 @@ export function SwipeableRecommendationCard({
   // Function to safely get property from metadata
   const getMetadataValue = (key: string): string | null => {
     if (!item.metadata) return null;
-
-    // Dodaj debug dla ważnych przypadków
-    if (key === "director") {
-    }
 
     // Sprawdź bezpośrednio w metadanych - dane z AI będą najczęściej tutaj
     if (key in item.metadata) {
@@ -80,6 +100,74 @@ export function SwipeableRecommendationCard({
         const value = details[key];
         if (value) return String(value);
       }
+    }
+
+    // Check for arrays with the key name (like 'genres', 'cast', etc.)
+    const pluralKey = key + "s"; // e.g., 'genre' -> 'genres'
+    if (Array.isArray(item.metadata[pluralKey]) && item.metadata[pluralKey].length > 0) {
+      // Join array elements if there are multiple values
+      return Array.isArray(item.metadata[pluralKey])
+        ? item.metadata[pluralKey].join(", ")
+        : String(item.metadata[pluralKey][0]);
+    }
+
+    // Check for arrays with the key name in details
+    if (item.metadata.details && typeof item.metadata.details === "object") {
+      const details = item.metadata.details as Record<string, unknown>;
+      if (Array.isArray(details[pluralKey]) && details[pluralKey].length > 0) {
+        return Array.isArray(details[pluralKey])
+          ? details[pluralKey].join(", ")
+          : String(details[pluralKey][0]);
+      }
+    }
+
+    // Specjalny przypadek dla klucza 'title' w danych z TMDB
+    if (key === "title") {
+      // Sprawdź bezpośrednio pole 'title' jeśli istnieje
+      if (typeof item.metadata.title === "string") {
+        return item.metadata.title;
+      }
+
+      // Sprawdź pole original_title
+      if (typeof item.metadata.original_title === "string") {
+        return item.metadata.original_title;
+      }
+
+      // Check name as a fallback
+      if (typeof item.name === "string" && item.name !== "Unknown Movie") {
+        return item.name;
+      }
+    }
+
+    // Specjalny przypadek dla klucza 'year' z release_date z TMDB
+    if (key === "year") {
+      // Try direct year field
+      if (item.metadata.year) {
+        return String(item.metadata.year);
+      }
+
+      // Try release_date
+      if ("release_date" in item.metadata) {
+        const releaseDate = item.metadata.release_date as string;
+        if (releaseDate && releaseDate.length >= 4) {
+          return releaseDate.substring(0, 4);
+        }
+      }
+
+      // Try details.releaseDate
+      if (item.metadata.details && typeof item.metadata.details === "object") {
+        const details = item.metadata.details as Record<string, unknown>;
+        if (
+          details.releaseDate &&
+          typeof details.releaseDate === "string" &&
+          details.releaseDate.length >= 4
+        ) {
+          return details.releaseDate.substring(0, 4);
+        }
+      }
+
+      // Return current year as last resort
+      return new Date().getFullYear().toString();
     }
 
     // Specjalne sprawdzenie dla tablicy 'directors' jeśli szukamy 'director'
@@ -97,31 +185,167 @@ export function SwipeableRecommendationCard({
         }
       }
 
-      // Hardcoded fallback dla znanych filmów
-      if (
-        item.name === "Inception" ||
-        item.name === "Interstellar" ||
-        item.name === "The Dark Knight"
-      ) {
-        return "Christopher Nolan";
+      // Return "Unknown Director" as last resort for director
+      return "Unknown Director";
+    }
+
+    // Special case for genre/genres
+    if (key === "genre") {
+      // Check genres array
+      if (Array.isArray(item.metadata.genres) && item.metadata.genres.length > 0) {
+        return item.metadata.genres.join(", ");
       }
-      if (item.name === "Blade Runner 2049" || item.name === "Arrival") {
-        return "Denis Villeneuve";
+
+      // Check details.genres array
+      if (item.metadata.details && typeof item.metadata.details === "object") {
+        const details = item.metadata.details as Record<string, unknown>;
+        if (Array.isArray(details.genres) && details.genres.length > 0) {
+          return details.genres.join(", ");
+        }
       }
-      if (item.name === "Parasite" || item.name === "Snowpiercer") {
-        return "Bong Joon-ho";
+
+      // Return default genre
+      return type === "music" ? "Music" : "Drama";
+    }
+
+    // Special case for cast
+    if (key === "cast") {
+      // Check cast array
+      if (Array.isArray(item.metadata.cast) && item.metadata.cast.length > 0) {
+        return item.metadata.cast.slice(0, 3).join(", ");
       }
+
+      // Check details.cast array
+      if (item.metadata.details && typeof item.metadata.details === "object") {
+        const details = item.metadata.details as Record<string, unknown>;
+        if (Array.isArray(details.cast) && details.cast.length > 0) {
+          return details.cast.slice(0, 3).join(", ");
+        }
+      }
+
+      return type === "film" ? "Unknown Cast" : null;
     }
 
     return null;
+  };
+
+  // Sprawdź bezpośrednio wartości dla debugowania
+  useEffect(() => {
+    if (type === "film") {
+      // Log all available metadata for debugging in color
+      console.log(
+        "%c 🎬 AI RECOMMENDATION DATA",
+        "color: #00ff00; font-weight: bold; font-size: 16px; background-color: #333;"
+      );
+      console.log("%c Movie Details:", "color: #00ff00; font-weight: bold", {
+        id: item.id,
+        name: item.name || "No name",
+        title: item.metadata?.title || "No title",
+        metadata_title: getMetadataValue("title"),
+        director: getMetadataValue("director") || "No director",
+        year: getMetadataValue("year") || "No year",
+        cast: getMetadataValue("cast") || "No cast",
+        genre: getMetadataValue("genre") || "No genre",
+        imageUrl: rawImageUrl || "No image",
+        poster_path: item.metadata?.poster_path || "No poster path",
+        description: item.metadata?.description || item.description || "No description",
+      });
+
+      // Log complete raw metadata structure
+      console.log("%c Full Raw Metadata:", "color: #00ff00; font-weight: bold", item.metadata);
+
+      // Log detailed nested item structure
+      console.log("%c Complete Item Structure:", "color: #00ff00; font-weight: bold", {
+        ...item,
+        _imageFound: !!rawImageUrl && rawImageUrl !== placeholderImage,
+        _metadataKeys: item.metadata ? Object.keys(item.metadata) : [],
+        _hasDetailsObject: !!(item.metadata && item.metadata.details),
+        _detailsKeys:
+          item.metadata && item.metadata.details ? Object.keys(item.metadata.details) : [],
+      });
+    }
+  }, [item.id, type, item.name]);
+
+  // Effect to fetch movie title when needed
+  useEffect(() => {
+    // If this is a film, check for title in metadata or fetch it
+    if (type === "film") {
+      // Sprawdź bezpośrednio pole title w metadanych
+      if (typeof item.metadata?.title === "string") {
+        setMovieTitle(item.metadata.title);
+        return;
+      }
+
+      // Try to get title using getMetadataValue helper
+      const metadataTitle = getMetadataValue("title");
+      if (metadataTitle) {
+        setMovieTitle(metadataTitle);
+        return;
+      }
+
+      // If no name or an "Unknown" name, try to fetch from TMDB
+      if (!item.name || item.name === "Unknown Movie") {
+        fetchMovieTitleFromTmdb();
+      }
+    }
+  }, [item.id, type, item.name]);
+
+  // Extract TMDB ID from item ID if available
+  const extractTmdbId = (): string | null => {
+    if (!item.id) return null;
+    return MovieMappingService.extractTmdbId(item.id);
+  };
+
+  // Function to fetch movie title from TMDB API when missing
+  const fetchMovieTitleFromTmdb = async () => {
+    const tmdbId = extractTmdbId();
+    if (!tmdbId) return;
+
+    try {
+      setIsLoadingTitle(true);
+
+      // Try to fetch the movie details first
+      const detailsResponse = await fetch(`/api/tmdb/movie/${tmdbId}`);
+
+      if (detailsResponse.ok) {
+        const movieData = await detailsResponse.json();
+        if (movieData.title) {
+          setMovieTitle(movieData.title);
+          return;
+        }
+      }
+
+      // If details don't have title, try to find similar movies
+      const similarResponse = await fetch(`/api/tmdb/movie/similar?id=${tmdbId}&page=1`);
+
+      if (similarResponse.ok) {
+        const data = await similarResponse.json();
+        if (data.results && data.results.length > 0) {
+          // Use the first similar movie's title if available
+          setMovieTitle(data.results[0].title);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching movie title:", error);
+    } finally {
+      setIsLoadingTitle(false);
+    }
   };
 
   // Get artist and director safely
   const artist = getMetadataValue("artist");
   const director = getMetadataValue("director");
 
-  // Determine display name with fallback
-  const displayName = item.name || (type === "music" ? "Unknown Track" : "Unknown Movie");
+  // Determine display name with fallback - pokazuj tytuł z każdego możliwego źródła
+  const displayName =
+    movieTitle ||
+    (typeof item.metadata?.title === "string" ? item.metadata.title : null) ||
+    getMetadataValue("title") ||
+    item.name ||
+    (type === "music" ? "Unknown Track" : "Unknown Movie");
+
+  // Log type and displayName before render
+  console.log("[SwipeableRecommendationCard] type:", type, "displayName:", displayName);
 
   // Apply different accent colors based on type
   const accentColor =
@@ -232,6 +456,7 @@ export function SwipeableRecommendationCard({
       // Pass feedback to parent component
       await onSwipe(item.id, feedbackType, item.metadata);
     } catch (error) {
+      console.error("Failed to save feedback:", error);
       // Reset on error
       setPosition({ x: 0, y: 0 });
       setSwipeState("none");
@@ -311,7 +536,11 @@ export function SwipeableRecommendationCard({
         <div className="flex p-3">
           {/* Thumbnail image */}
           <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-md mr-3 border border-white/10">
-            <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" />
+            {type === "film" ? (
+              <MoviePoster title={displayName} size="sm" />
+            ) : (
+              <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" />
+            )}
           </div>
 
           {/* Title and metadata */}
@@ -337,9 +566,48 @@ export function SwipeableRecommendationCard({
           </div>
         )}
 
+        {/* Movie Details Section */}
+        {type === "film" && (
+          <div className="px-3 py-2 border-t border-white/10">
+            <h3 className="text-lg font-bold text-white mb-2">
+              {isLoadingTitle ? (
+                <span className="text-sm text-white opacity-70 italic">Loading movie info...</span>
+              ) : typeof item.metadata?.title === "string" ? (
+                item.metadata.title
+              ) : (
+                displayName
+              )}
+            </h3>
+
+            <p className="text-[10px] text-gray-300">
+              <span className="font-semibold">Director:</span>{" "}
+              {director || getMetadataValue("director") || "Unknown"}
+            </p>
+            <p className="text-[10px] text-gray-300">
+              <span className="font-semibold">Genre:</span>{" "}
+              {getMetadataValue("genre") || genre || "Drama"}
+            </p>
+            <p className="text-[10px] text-gray-300">
+              <span className="font-semibold">Year:</span>{" "}
+              {getMetadataValue("year") ||
+                getMetadataValue("release_date") ||
+                new Date().getFullYear()}
+            </p>
+            <p className="text-[10px] text-gray-300">
+              <span className="font-semibold">Cast:</span>{" "}
+              {getMetadataValue("cast") || "Unknown cast"}
+            </p>
+            {getMetadataValue("runtime") && (
+              <p className="text-[10px] text-gray-300">
+                <span className="font-semibold">Runtime:</span> {getMetadataValue("runtime")} min
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="mt-auto px-3 pb-3 pt-2 border-t border-white/10 flex justify-between items-center">
           <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">
-            Swipe to rate
+            Swipe right to like, left to dislike
           </span>
           <div className="flex gap-2">
             <button

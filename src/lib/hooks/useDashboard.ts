@@ -93,7 +93,7 @@ export function useDashboard(userId: string) {
 
   // Fetch the latest recommendations directly
   const latestRecommendationsQuery = useQuery<RecommendationDTO | RecommendationDTO[]>({
-    queryKey: ["latestRecommendations", validUserId],
+    queryKey: ["latestRecommendations", validUserId, activeType],
     queryFn: async () => {
       try {
         // Make sure we have a valid userId
@@ -104,7 +104,8 @@ export function useDashboard(userId: string) {
         // Use our dedicated latest recommendations endpoint
         const url = new URL(`/api/recommendations/latest`, window.location.origin);
         url.searchParams.append("userId", validUserId);
-        // Don't specify type to get all recommendations
+        // Add type parameter to avoid 400 error
+        url.searchParams.append("type", activeType);
 
         const response = await fetch(url.toString());
 
@@ -116,7 +117,7 @@ export function useDashboard(userId: string) {
 
         if (!response.ok) {
           const errorText = await response.text();
-
+          console.error(`Failed to fetch latest recommendations: ${errorText}`);
           throw new Error(`Failed to fetch latest recommendations: ${response.statusText}`);
         }
 
@@ -130,10 +131,11 @@ export function useDashboard(userId: string) {
         return data;
       } catch (error) {
         // If we fail to get recommendations, try to generate new ones
-
         try {
           await generateNewRecommendations();
-        } catch (genError) {}
+        } catch (genError) {
+          console.error("Error generating new recommendations:", genError);
+        }
 
         throw error;
       }
@@ -187,16 +189,11 @@ export function useDashboard(userId: string) {
       }
 
       // If it's a single recommendation, wrap it in an array
-
       return [latestRecommendationsQuery.data];
     }
 
     // Fall back to recommendationsQuery data
-    if (recommendationsQuery.data) {
-    } else {
-    }
-
-    return recommendationsQuery.data;
+    return recommendationsQuery.data || [];
   }, [latestRecommendationsQuery.data, recommendationsQuery.data]);
 
   const isRecommendationsLoading =

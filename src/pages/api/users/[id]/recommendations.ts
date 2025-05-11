@@ -255,7 +255,7 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
     // Bypass for new users: return both film 'discover' and music recommendations without auth
     if (url.searchParams.get("is_new_user") === "true") {
       // Film: fetch popular movies
-      const urlDiscover = `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc`;
+      const urlDiscover = `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&page=1&sort_by=popularity.desc`;
 
       const discoverRes = await fetch(urlDiscover, {
         headers: {

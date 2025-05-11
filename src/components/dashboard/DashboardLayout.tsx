@@ -4,6 +4,7 @@ import { RecommendationsPanel } from "./RecommendationsPanel";
 import { useDashboard } from "../../lib/hooks/useDashboard";
 import type { UserProfileDTO } from "../../types";
 import RecommendationSidebar from "../ui/RecommendationSidebar";
+import { PreferencesPanel } from "./PreferencesPanel";
 
 interface DashboardLayoutProps {
   user: UserProfileDTO;
@@ -13,10 +14,6 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   const {
     activeType,
     setActiveType,
-    // These variables will be used when implementing the preferences panel
-    // preferences,
-    // isPreferencesLoading,
-    // handlePreferencesUpdate,
     recommendations,
     isRecommendationsLoading,
     refreshRecommendations,
@@ -48,6 +45,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
       const validRecommendations = recommendations.filter((rec) => rec && rec.type);
 
       if (validRecommendations.length < recommendations.length) {
+        console.log("Filtered out invalid recommendations");
       }
 
       // Check if we have recommendations of the active type
@@ -56,6 +54,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
       if (!hasActiveTypeRecs) {
         refreshRecommendations();
       } else {
+        console.log(`Using existing ${activeType} recommendations`);
       }
     }
   }, [activeType, recommendations, refreshRecommendations, validUserId]);
@@ -84,13 +83,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   // Add debugging for rendering state
 
   // Check if we have any valid recommendations after filtering
-  const hasValidRecommendations =
-    recommendations &&
-    recommendations.length > 0 &&
-    recommendations.some(
-      (rec) =>
-        rec && rec.type && rec.data && Array.isArray(rec.data.items) && rec.data.items.length > 0
-    );
+  // Removed unused variable
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -127,6 +120,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
             <button
               className="text-xs font-medium px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-md transition-colors shadow-md"
               onClick={() => refreshRecommendations()}
+              aria-label="Refresh recommendations"
             >
               Refresh
             </button>
@@ -152,29 +146,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
             {/* Preferences sidebar */}
             <div className="w-full lg:w-64 xl:w-72 hidden lg:block shrink-0">
-              <div className="sticky top-24 rounded-lg p-5 shadow-lg bg-white/5 backdrop-blur-sm border border-white/10">
-                <h3 className="text-base font-semibold mb-3 text-white">Your Preferences</h3>
-                <p className="text-gray-300 text-xs">
-                  Set your preferences to get better recommendations
-                </p>
-                <div className="mt-4 pt-3 border-t border-white/10">
-                  <div className="space-y-3">
-                    <div className="bg-gradient-to-r from-blue-900/30 to-blue-800/30 p-3 rounded-md border border-blue-700/30">
-                      <h4 className="font-medium text-blue-300 text-sm mb-1">Music Preferences</h4>
-                      <p className="text-xs text-blue-400">Rock, Pop, Jazz, Classical</p>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-purple-900/30 to-purple-800/30 p-3 rounded-md border border-purple-700/30">
-                      <h4 className="font-medium text-purple-300 text-sm mb-1">Film Preferences</h4>
-                      <p className="text-xs text-purple-400">Drama, Action, Sci-Fi, Comedy</p>
-                    </div>
-                  </div>
-
-                  <button className="mt-5 w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-md hover:from-purple-700 hover:to-indigo-700 transition-colors text-sm font-medium shadow-md">
-                    Edit Preferences
-                  </button>
-                </div>
-              </div>
+              <PreferencesPanel userId={user.id} onPreferencesUpdated={refreshRecommendations} />
             </div>
 
             {/* Swipe Recommendations sidebar */}

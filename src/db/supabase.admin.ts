@@ -42,9 +42,17 @@ function convertSymbolsToStrings(obj: unknown): unknown {
  */
 let adminClient = null;
 
+// Log admin client initialization attempt
+console.log("[Supabase Admin] Attempting to initialize admin client");
+console.log("[Supabase Admin] SUPABASE_URL available:", !!SUPABASE_URL);
+console.log("[Supabase Admin] SUPABASE_KEY available:", !!SUPABASE_KEY);
+console.log("[Supabase Admin] Running on server:", typeof window === "undefined");
+
 // Only create the client on the server
 if (typeof window === "undefined") {
   try {
+    console.log("[Supabase Admin] Creating admin client with service role key");
+
     // For service_role key to work correctly, we need to include auth.autoRefreshToken: false
     adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
       auth: {
@@ -78,7 +86,9 @@ if (typeof window === "undefined") {
               modifiedOptions.body = JSON.stringify(convertedBodyObj);
 
               // Log the processed request body
-            } catch (e) {}
+            } catch (e) {
+              console.error("[Supabase Admin] Error processing request body:", e);
+            }
           }
 
           // Handle Symbol values in headers
@@ -120,7 +130,9 @@ if (typeof window === "undefined") {
             } else if (url instanceof URL) {
               processedUrl = url.toString();
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error("[Supabase Admin] Error processing URL:", e);
+          }
 
           // Handle URL correctly based on its type
           let finalUrl = url;
@@ -134,7 +146,33 @@ if (typeof window === "undefined") {
         },
       },
     });
-  } catch (error) {}
+
+    console.log("[Supabase Admin] Admin client created successfully:", !!adminClient);
+
+    // Test the client with a simple query
+    adminClient
+      .from("film_preferences")
+      .select("count(*)")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[Supabase Admin] Test query failed:", error);
+        } else {
+          console.log("[Supabase Admin] Test query succeeded:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("[Supabase Admin] Exception during test query:", err);
+      });
+  } catch (error) {
+    console.error("[Supabase Admin] Failed to create admin client:", error);
+  }
+} else {
+  console.log("[Supabase Admin] Not creating admin client - running in browser");
+}
+
+// If admin client is null after all, create a fallback that logs errors
+if (!adminClient) {
+  console.warn("[Supabase Admin] WARNING: Using fallback admin client - RLS bypass will not work!");
 }
 
 export const supabaseAdmin = adminClient;

@@ -11,6 +11,7 @@ import type {
 } from "../../lib/types/viewModels";
 import { RecommendationCard } from "./RecommendationCard";
 import { transformRecommendationToViewModel } from "../../lib/utils/transformers";
+import { MoviePoster } from "@/components/MoviePoster";
 
 // Type alias for metadata objects to avoid 'any' type warnings
 type MetadataRecord = Record<string, unknown>;
@@ -61,11 +62,6 @@ export function RecommendationsPanel({
   // Process recommendations on change
   useEffect(() => {
     if (recommendations) {
-      // Debug log the original recommendations to see their structure
-
-      // Check each recommendation for items
-      recommendations.forEach((rec, index) => {});
-
       // Fix any "undefined" user_id issues before passing to components
       const fixed = recommendations.map((rec) => {
         if (!rec) return rec;
@@ -166,7 +162,8 @@ export function RecommendationsPanel({
             } else {
               fixedRec.data.items = [];
             }
-          } catch (e) {
+          } catch (error) {
+            console.error("Error converting recommendation items:", error);
             fixedRec.data.items = [];
           }
         }
@@ -177,9 +174,7 @@ export function RecommendationsPanel({
       // Filter out any null/undefined recommendations
       const validRecommendations = fixed.filter((r) => !!r);
 
-      // Log details of each processed recommendation
-      validRecommendations.forEach((rec, index) => {});
-
+      // Set processed recommendations
       setProcessedRecommendations(validRecommendations);
     } else {
       setProcessedRecommendations(undefined);
@@ -187,7 +182,7 @@ export function RecommendationsPanel({
   }, [recommendations, validUserId]);
 
   // Extra debugging to check if recommendations are being properly processed
-  useEffect(() => {}, [processedRecommendations, activeType, activeTab]);
+  // Remove empty useEffect
 
   // Handler for when feedback is processed in the adaptive system
   const handleFeedbackProcessed = () => {
@@ -214,6 +209,7 @@ export function RecommendationsPanel({
       // Call the parent's refresh function to reload the data
       onRefresh();
     } catch (error) {
+      console.error("Error generating AI recommendations:", error);
     } finally {
       setForceGenerating(false);
     }
@@ -234,10 +230,8 @@ export function RecommendationsPanel({
     setSelectedItem(null);
   };
 
-  // Debug logging
-
-  if (processedRecommendations && processedRecommendations.length > 0) {
-  }
+  // Debug logging - usunięcie pustego bloku
+  // Usunięcie pustego if
 
   // Combined loading state
   const combinedLoading = isLoading || forceGenerating || generateRecommendationsMutation.isPending;
@@ -366,35 +360,8 @@ export function RecommendationsPanel({
           <div className="flex flex-col md:flex-row gap-6">
             {/* Thumbnail */}
             <div className="w-full md:w-1/4 lg:w-1/5">
-              <div className="aspect-[2/3] rounded-lg overflow-hidden border border-white/20">
-                <img
-                  src={
-                    selectedItem.imageUrl ||
-                    (selectedItem.metadata && "imageUrl" in selectedItem.metadata
-                      ? String(selectedItem.metadata.imageUrl)
-                      : null) ||
-                    (selectedItem.metadata && "poster" in selectedItem.metadata
-                      ? String(selectedItem.metadata.poster)
-                      : null) ||
-                    (selectedItem.metadata &&
-                    selectedItem.metadata.details &&
-                    typeof selectedItem.metadata.details === "object" &&
-                    "imageUrl" in (selectedItem.metadata.details as Record<string, unknown>)
-                      ? String((selectedItem.metadata.details as Record<string, unknown>).imageUrl)
-                      : null) ||
-                    (selectedItem.metadata &&
-                    selectedItem.metadata.details &&
-                    typeof selectedItem.metadata.details === "object" &&
-                    "poster" in (selectedItem.metadata.details as Record<string, unknown>)
-                      ? String((selectedItem.metadata.details as Record<string, unknown>).poster)
-                      : null) ||
-                    (selectedItem.type === "music"
-                      ? "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop"
-                      : "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2069&auto=format&fit=crop")
-                  }
-                  alt={selectedItem.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="aspect-[2/3] rounded-lg overflow-hidden border border-white/20 flex items-center justify-center">
+                <MoviePoster title={selectedItem.name} size="lg" />
               </div>
             </div>
 
@@ -456,29 +423,6 @@ export function RecommendationsPanel({
                         const details = metadata.details as MetadataRecord;
                         if (Array.isArray(details.directors) && details.directors.length > 0) {
                           return String(details.directors[0]);
-                        }
-                      }
-
-                      // Hardcoded fallback dla znanych filmów
-                      if (selectedItem.name) {
-                        if (
-                          selectedItem.name === "Inception" ||
-                          selectedItem.name === "Interstellar" ||
-                          selectedItem.name === "The Dark Knight"
-                        ) {
-                          return "Christopher Nolan";
-                        }
-                        if (
-                          selectedItem.name === "Blade Runner 2049" ||
-                          selectedItem.name === "Arrival"
-                        ) {
-                          return "Denis Villeneuve";
-                        }
-                        if (
-                          selectedItem.name === "Parasite" ||
-                          selectedItem.name === "Snowpiercer"
-                        ) {
-                          return "Bong Joon-ho";
                         }
                       }
 
@@ -604,18 +548,6 @@ function CustomRecommendationsList({
             }
 
             return vm.items.map((item) => {
-              // Log do debugowania
-
-              // Since item already has enriched data from OMDB in transformers.ts,
-              // we can just use it directly or add minimal processing if needed
-              const metadata = item.metadata as MetadataRecord;
-
-              // Log found values for debugging
-              if (metadata.director) {
-              }
-              if (item.imageUrl) {
-              }
-
               return {
                 ...item,
                 type: vm.type,
@@ -623,15 +555,10 @@ function CustomRecommendationsList({
             });
           });
 
-          items.forEach((item, idx) => {
-            if (idx < 3) {
-              // Log tylko pierwsze 3, żeby nie zaśmiecać konsoli
-            }
-          });
-
           setAllItems(items);
           setHasProcessedData(true);
         } catch (error) {
+          console.error("Error processing recommendations:", error);
           setViewModels([]);
           setAllItems([]);
           setHasProcessedData(true);

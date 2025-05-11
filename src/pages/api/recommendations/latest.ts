@@ -1,46 +1,8 @@
 import type { APIRoute } from "astro";
 import { OpenRouterService } from "../../../lib/services/openrouter.service";
 import { OPENROUTER_API_KEY } from "../../../env.config";
-
-// Define recommendation data types to use locally
-interface RecommendationData {
-  title: string;
-  description: string;
-  items: RecommendationItem[];
-  [key: string]: unknown;
-}
-
-interface RecommendationItem {
-  id: string;
-  name: string;
-  type: string;
-  details: Record<string, unknown>;
-  explanation: string;
-  confidence: number;
-}
-
-// Format API key - resolves issues with malformed .env files
-function getFormattedApiKey(): string {
-  if (!OPENROUTER_API_KEY) {
-    return "";
-  }
-
-  // Clean the API key by removing any surrounding whitespace or quotes
-  let cleanKey = OPENROUTER_API_KEY.trim();
-
-  // Sometimes .env parsing can leave quotes
-  if (
-    (cleanKey.startsWith('"') && cleanKey.endsWith('"')) ||
-    (cleanKey.startsWith("'") && cleanKey.endsWith("'"))
-  ) {
-    cleanKey = cleanKey.slice(1, -1);
-  }
-
-  // Remove any line breaks or weird characters
-  cleanKey = cleanKey.replace(/[\r\n\t]/g, "");
-
-  return cleanKey;
-}
+import { RecommendationService } from "../../../lib/services/recommendation.service";
+import { MovieMappingService } from "../../../lib/services/movie-mapping.service";
 
 export const prerender = false;
 
@@ -49,7 +11,7 @@ export const prerender = false;
  *
  * GET /api/recommendations/latest?userId={userId}&type={type}
  */
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, cookies }) => {
   try {
     // Parse query parameters
     const url = new URL(request.url);
@@ -60,67 +22,109 @@ export const GET: APIRoute = async ({ request }) => {
     if (!userId) {
       return new Response(JSON.stringify({ error: "Missing userId parameter" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
       });
     }
 
-    // Set final type with default
-    const finalType = type || "film"; // Default to film if no type specified
-
-    try {
-      // Get a properly formatted API key
-      const formattedApiKey = getFormattedApiKey();
-
-      if (!formattedApiKey) {
-        throw new Error("Could not get a valid OpenRouter API key");
-      }
-
-      // Configure OpenRouter service with the formatted API key
-      OpenRouterService.configure(formattedApiKey);
-
-      // Create mock user preferences and history for demonstration
-      const userPreferences = {
-        favoriteGenres:
-          finalType === "music"
-            ? ["Electronic", "Indie", "Hip-Hop"]
-            : ["Drama", "Sci-Fi", "Thriller"],
-        likedArtists: finalType === "music" ? ["Radiohead", "Kendrick Lamar", "Beach House"] : [],
-        likedDirectors:
-          finalType === "music" ? [] : ["Denis Villeneuve", "Christopher Nolan", "Bong Joon-ho"],
-        mood: "exploratory",
-        engagementLevel: "high",
-      };
-
-      const userFeedbackHistory = [
+    if (!type || (type !== "music" && type !== "film")) {
+      return new Response(
+        JSON.stringify({ error: "Invalid type parameter (must be 'music' or 'film')" }),
         {
-          itemId: "item123",
-          name: finalType === "music" ? "Kid A" : "Parasite",
-          type: finalType,
-          rating: 5,
-          timestamp: new Date().toISOString(),
-        },
-        {
-          itemId: "item456",
-          name: finalType === "music" ? "To Pimp a Butterfly" : "Arrival",
-          type: finalType,
-          rating: 4,
-          timestamp: new Date().toISOString(),
-        },
-      ];
-
-      // Generate real AI recommendations using OpenRouter
-      const generatedData = await OpenRouterService.generateRecommendations<RecommendationData>(
-        userPreferences,
-        userFeedbackHistory,
-        finalType,
-        {
-          temperature: 0.7,
-          maxTokens: 2000,
-          systemPrompt: `Generate ${finalType} recommendations in JSON format with title, description, and array of items. Each item should have id, name, type, details, explanation, and confidence.`,
+          status: 400,
         }
       );
+    }
 
-      // Create the full response object with indicators of AI-generated content
+    // Convert to a music or film type
+    const finalType = type as "music" | "film";
+
+    try {
+      // Get real user preferences from database
+      const userPreferences = await RecommendationService.getUserPreferences(userId, finalType);
+
+      // Get user feedback history - wrap in try/catch for safety
+      let userFeedbackHistory = [];
+      try {
+        const feedbackUrl = `${request.url.split("/api/")[0]}/api/users/${userId}/item-feedback`;
+        console.log(`[API] Fetching user feedback from: ${feedbackUrl}`);
+
+        const feedbackResult = await fetch(feedbackUrl);
+
+        if (feedbackResult.ok) {
+          // Check content type to make sure we're getting JSON
+          const contentType = feedbackResult.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            console.warn(`[API] Unexpected content type from feedback API: ${contentType}`);
+            // Continue with empty feedback
+          } else {
+            // Try to parse the JSON safely
+            try {
+              const feedbackText = await feedbackResult.text();
+              // Simple validation to check if it looks like JSON before parsing
+              if (feedbackText.trim().startsWith("{") || feedbackText.trim().startsWith("[")) {
+                const feedbackData = JSON.parse(feedbackText);
+                if (feedbackData && feedbackData.items && Array.isArray(feedbackData.items)) {
+                  userFeedbackHistory =
+                    feedbackData.items
+                      .filter((item: { feedback_type: string }) => item.feedback_type === "like")
+                      .slice(0, 10) || []; // Use most recent 10 liked items
+                  console.log(
+                    `[API] Successfully fetched ${userFeedbackHistory.length} feedback items`
+                  );
+                }
+              } else {
+                console.warn(
+                  `[API] Feedback API returned non-JSON response: ${feedbackText.substring(0, 100)}...`
+                );
+              }
+            } catch (parseError) {
+              console.error("[API] Error parsing feedback JSON:", parseError);
+              // Continue with empty feedback
+            }
+          }
+        } else {
+          console.warn(`[API] Failed to fetch user feedback, status: ${feedbackResult.status}`);
+        }
+      } catch (feedbackError) {
+        console.error("[API] Error fetching user feedback:", feedbackError);
+        // Continue with empty feedback
+      }
+
+      // If this is a film recommendation, translate movie IDs to titles - wrapped in a try/catch
+      if (
+        finalType === "film" &&
+        "liked_movies" in userPreferences &&
+        userPreferences.liked_movies &&
+        Array.isArray(userPreferences.liked_movies) &&
+        userPreferences.liked_movies.length > 0
+      ) {
+        try {
+          // Convert movie IDs to actual movie titles for better context
+          const movieTitles = await MovieMappingService.translateMovieIdsToTitles(
+            userPreferences.liked_movies,
+            { headers: request.headers, cookies }
+          );
+
+          if (movieTitles && movieTitles.length > 0) {
+            console.log(`[API] Translated ${movieTitles.length} movie IDs to titles for context`);
+            userPreferences.liked_movies = movieTitles;
+          }
+        } catch (translateError) {
+          console.error("[API] Error translating movie IDs to titles:", translateError);
+          // Continue with IDs if translation fails - no need to modify preferences
+        }
+      }
+
+      // Configure OpenRouter service
+      OpenRouterService.configure(OPENROUTER_API_KEY || "");
+
+      // Generate recommendations
+      const generatedData = await OpenRouterService.generateRecommendations(
+        userPreferences,
+        userFeedbackHistory,
+        finalType
+      );
+
+      // Create response object
       const recommendationResponse = {
         id: Date.now(),
         user_id: userId,
@@ -128,8 +132,6 @@ export const GET: APIRoute = async ({ request }) => {
         created_at: new Date().toISOString(),
         data: generatedData,
         ai_generated: true,
-        ai_version: "Neural Recommendation System v4.7",
-        confidence_score: 0.95,
       };
 
       return new Response(JSON.stringify(recommendationResponse), {
@@ -137,6 +139,8 @@ export const GET: APIRoute = async ({ request }) => {
         headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
+      console.error("[API] Error generating recommendations:", error);
+
       // Return a fallback response with error information
       const fallbackResponse = {
         id: Date.now(),
@@ -144,11 +148,11 @@ export const GET: APIRoute = async ({ request }) => {
         type: finalType,
         created_at: new Date().toISOString(),
         data: {
-          title: `AI ${finalType === "music" ? "Music" : "Film"} Recommendations`,
-          description: "An error occurred while generating real AI recommendations",
-          error: error instanceof Error ? error.message : String(error),
+          title: `${finalType === "music" ? "Music" : "Film"} Recommendations`,
+          description: `${finalType === "music" ? "Music" : "Film"} recommendations based on your preferences`,
           items: [],
         },
+        error: error instanceof Error ? error.message : "Unknown error occurred",
       };
 
       return new Response(JSON.stringify(fallbackResponse), {
@@ -156,10 +160,17 @@ export const GET: APIRoute = async ({ request }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
-  } catch {
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    console.error("[API] Global error in recommendation generation:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to generate recommendations",
+        details: error instanceof Error ? error.message : "Unknown error occurred",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };

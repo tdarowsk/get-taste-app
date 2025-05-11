@@ -187,6 +187,16 @@ Kryteria akceptacji:
 - Użytkownik otrzymuje zaskakujące, ale trafne rekomendacje, które poszerzają jego horyzonty muzyczne i filmowe.
 - System podaje uzasadnienie rekomendacji w formie krótkiego opisu wyjaśniającego, dlaczego dana pozycja może się spodobać użytkownikowi.
 
+US-016  
+Tytuł: Czasowe zablokowanie wyboru muzyki w sliderach  
+Opis: Jako właściciel produktu, chcę mieć możliwość czasowego zablokowania wyboru muzyki w sliderach (przełącznikach typu Music/Films/Film/Music), aby użytkownicy mogli korzystać wyłącznie z rekomendacji filmowych. Wartość ta ma być kontrolowana przez zmienną środowiskową `isMusicEnabled`. Jeśli `isMusicEnabled` jest ustawione na `false`, oba slidery mają być na sztywno ustawione na "film" i nie pozwalać na zmianę przez użytkownika.  
+Kryteria akceptacji:
+- Wartość przełączników (sliderów) Music/Films oraz Film/Music jest pobierana z enva `isMusicEnabled`.
+- Jeśli `isMusicEnabled` jest `false`, oba slidery są zablokowane i ustawione na "film".
+- Jeśli `isMusicEnabled` jest `true`, użytkownik może swobodnie przełączać między muzyką a filmami.
+- Zmiana wartości enva nie wymaga restartu aplikacji przez użytkownika (może być wymagany restart serwera).
+- Zablokowane slidery są wizualnie wyszarzone lub nieaktywne.
+
 ## 6. Metryki sukcesu
 
 1. Co najmniej 90% użytkowników posiada w pełni uzupełnione profile z poprawnymi danymi dotyczącymi preferencji.

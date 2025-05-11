@@ -1,7 +1,10 @@
 import type { APIRoute } from "astro";
 import { OpenRouterService, OpenRouterApiError } from "../../../lib/services/openrouter.service";
-import { OPENROUTER_API_KEY } from "../../../env.config";
+import { OPENROUTER_API_KEY, TMDB_API_KEY } from "../../../env.config";
 import { getSystemPrompts } from "../../../lib/utils/ai-prompts";
+import { createSupabaseServerInstance } from "../../../db/supabase.client";
+import { RecommendationService } from "../../../lib/services/recommendation.service";
+import { MovieMappingService } from "../../../lib/services/movie-mapping.service";
 
 // Define recommendation data types to use locally
 interface RecommendationData {
@@ -44,55 +47,36 @@ function getFormattedApiKey(): string {
 }
 
 // Define default recommendations to use if API fails
-function getDefaultRecommendations(type: string): RecommendationData {
-  if (type === "music") {
-    return {
-      title: "Default Music Recommendations",
-      description: "Our top picks for you based on your music preferences",
-      items: [
-        {
-          id: "music-default-1",
-          name: "OK Computer",
-          type: "music",
-          details: { artist: "Radiohead", genre: "Alternative Rock", year: 1997 },
-          explanation: "A classic album with experimental electronic elements",
-          confidence: 0.95,
-        },
-        {
-          id: "music-default-2",
-          name: "To Pimp a Butterfly",
-          type: "music",
-          details: { artist: "Kendrick Lamar", genre: "Hip-Hop", year: 2015 },
-          explanation: "Critically acclaimed hip-hop masterpiece",
-          confidence: 0.92,
-        },
-      ],
-    };
-  } else {
-    // Film recommendations
-    return {
-      title: "Default Film Recommendations",
-      description: "Our top picks for you based on your film preferences",
-      items: [
-        {
-          id: "film-default-1",
-          name: "Inception",
-          type: "film",
-          details: { director: "Christopher Nolan", genre: "Sci-Fi", year: 2010 },
-          explanation: "Mind-bending sci-fi with stunning visuals",
-          confidence: 0.94,
-        },
-        {
-          id: "film-default-2",
-          name: "Parasite",
-          type: "film",
-          details: { director: "Bong Joon-ho", genre: "Drama/Thriller", year: 2019 },
-          explanation: "Award-winning thriller with social commentary",
-          confidence: 0.96,
-        },
-      ],
-    };
+async function getDefaultRecommendations(type: "music" | "film"): Promise<RecommendationData> {
+  if (type === "film" && TMDB_API_KEY) {
+    try {
+      // Use TMDB API to get trending movies
+      const tmdbRecommendations = await RecommendationService.getTMDBRecommendations(type);
+
+      // Ensure type compatibility by processing items
+      return {
+        title: tmdbRecommendations.title,
+        description: tmdbRecommendations.description,
+        items: tmdbRecommendations.items.map((item) => ({
+          id: item.id || `fallback-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          name: item.name || "Unknown",
+          type: item.type || "film",
+          details: item.details || {},
+          explanation: item.explanation || "Recommended from trending movies",
+          confidence: item.confidence || 0.7,
+        })),
+      };
+    } catch (error) {
+      console.error("[API] Error fetching TMDB recommendations:", error);
+    }
   }
+
+  // Fallback to empty recommendations if TMDB fails or for music
+  return {
+    title: `${type === "music" ? "Music" : "Film"} Recommendations`,
+    description: `Personalized ${type} recommendations based on your preferences`,
+    items: [],
+  };
 }
 
 export const prerender = false;
@@ -103,11 +87,13 @@ export const prerender = false;
  * POST /api/recommendations/generate
  * Body: { userId?: string, type: "music" | "film", force_refresh?: boolean, force_ai?: boolean }
  */
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     // Extract request body
     const data = await request.json();
     const { userId, type, force_refresh = false, force_ai = false, is_new_user = false } = data;
+
+    console.info(`[API] Generating ${type} recommendations for user ${userId}`);
 
     // Validate parameters
     if (!userId) {
@@ -127,35 +113,169 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Create user preferences and history based on user data
-    // In a real application, these would come from a database or user profile
+    // Initialize Supabase client
+    const supabase = createSupabaseServerInstance({
+      cookies,
+      headers: request.headers,
+    });
+
+    // Fetch real user preferences from the database
+    const table = type === "music" ? "music_preferences" : "film_preferences";
+    const { data: userPrefsData, error: prefsError } = await supabase
+      .from(table)
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (prefsError) {
+      console.error(`[API] Error fetching user preferences: ${prefsError.message}`);
+    }
+
+    // Fetch user feedback history
+    interface FeedbackItem {
+      recommendation_id?: string;
+      content_id?: string;
+      feedback_type?: string;
+      created_at?: string;
+      [key: string]: unknown;
+    }
+
+    let feedbackItems: FeedbackItem[] = [];
+    try {
+      // Try with content_id and content_type columns
+      const { data, error } = await supabase
+        .from("recommendation_feedback")
+        .select("recommendation_id, content_id, feedback_type, created_at")
+        .eq("user_id", userId)
+        .eq("content_type", type)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) {
+        // If there's an error, it might be because the columns don't exist
+        console.error(`[API] Error fetching user feedback: ${error.message}`);
+
+        // Try again without content_id and content_type
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("recommendation_feedback")
+          .select("recommendation_id, feedback_type, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (fallbackError) {
+          console.error(`[API] Error fetching user feedback (fallback): ${fallbackError.message}`);
+        } else if (Array.isArray(fallbackData)) {
+          feedbackItems = fallbackData as unknown as FeedbackItem[];
+        }
+      } else if (Array.isArray(data)) {
+        // Convert to unknown first to satisfy TypeScript's type checking
+        feedbackItems = data as unknown as FeedbackItem[];
+      }
+    } catch (error) {
+      console.error("[API] Exception in feedback query:", error);
+    }
+
+    // Format user preferences based on database data
     const userPreferences = {
-      favoriteGenres:
-        type === "music" ? ["Electronic", "Indie", "Hip-Hop"] : ["Drama", "Sci-Fi", "Thriller"],
-      likedArtists: type === "music" ? ["Radiohead", "Kendrick Lamar", "Beach House"] : [],
+      favoriteGenres: userPrefsData?.genres || [],
+      likedArtists:
+        type === "music"
+          ? userPrefsData && "artists" in userPrefsData
+            ? userPrefsData.artists || []
+            : []
+          : [],
       likedDirectors:
-        type === "music" ? [] : ["Denis Villeneuve", "Christopher Nolan", "Bong Joon-ho"],
+        type === "film"
+          ? userPrefsData && "director" in userPrefsData
+            ? userPrefsData.director
+              ? [userPrefsData.director]
+              : []
+            : []
+          : [],
+      likedActors:
+        type === "film"
+          ? userPrefsData && "cast" in userPrefsData
+            ? userPrefsData.cast || []
+            : []
+          : [],
+      likedScreenwriters:
+        type === "film"
+          ? userPrefsData && "screenwriter" in userPrefsData
+            ? userPrefsData.screenwriter
+              ? [userPrefsData.screenwriter]
+              : []
+            : []
+          : [],
+      likedMovies:
+        type === "film"
+          ? userPrefsData && "liked_movies" in userPrefsData
+            ? userPrefsData.liked_movies || []
+            : []
+          : [],
       mood: force_refresh ? "exploratory" : "focused",
       engagementLevel: is_new_user ? "low" : "high",
       forceAi: force_ai,
     };
 
-    const userFeedbackHistory = [
-      {
-        itemId: "item123",
-        name: type === "music" ? "Kid A" : "Parasite",
-        type: type,
-        rating: 5,
-        timestamp: new Date().toISOString(),
-      },
-      {
-        itemId: "item456",
-        name: type === "music" ? "To Pimp a Butterfly" : "Arrival",
-        type: type,
-        rating: 4,
-        timestamp: new Date().toISOString(),
-      },
-    ];
+    // Jeśli to są rekomendacje filmowe, pobierz dodatkowe dane o zalajkowanych filmach
+    if (type === "film") {
+      try {
+        // Pobierz dodatkowe dane o filmach, które użytkownik polubił z tabeli item_feedback
+        const { data: movieFeedback, error: feedbackError } = await supabase
+          .from("item_feedback")
+          .select("item_id")
+          .eq("user_id", userId)
+          .eq("feedback_type", "like");
+
+        if (!feedbackError && movieFeedback && movieFeedback.length > 0) {
+          // Dodaj identyfikatory filmów z feedbacku do tablicy likedMovies
+          const likedMovieIds = movieFeedback.map((item) => item.item_id).filter(Boolean);
+
+          // Połącz z istniejącymi wartościami usuwając duplikaty
+          if (likedMovieIds.length > 0) {
+            const existingLikedMovies = userPreferences.likedMovies || [];
+            userPreferences.likedMovies = [...new Set([...existingLikedMovies, ...likedMovieIds])];
+            console.log(`[API] Added ${likedMovieIds.length} liked movies from feedback history`);
+          }
+        }
+      } catch (err) {
+        console.error("[API] Error fetching additional liked movies:", err);
+      }
+    }
+
+    // If this is a film recommendation, translate movie IDs to actual titles
+    if (type === "film" && userPreferences.likedMovies.length > 0) {
+      try {
+        // Convert movie IDs to actual movie titles
+        const movieTitles = await MovieMappingService.translateMovieIdsToTitles(
+          userPreferences.likedMovies,
+          { headers: request.headers, cookies }
+        );
+
+        if (movieTitles.length > 0) {
+          console.log(
+            `[API] Translated ${movieTitles.length} movie IDs to titles for recommendation context`
+          );
+          userPreferences.likedMovies = movieTitles;
+        }
+      } catch (err) {
+        console.error("[API] Error translating movie IDs to titles:", err);
+        // Keep using the IDs if the translation fails
+      }
+    }
+
+    console.log(`[API] User preferences for ${type}: ${JSON.stringify(userPreferences)}`);
+
+    // Format user feedback history
+    const userFeedbackHistory =
+      feedbackItems.length > 0
+        ? feedbackItems.map((item) => ({
+            itemId: item.content_id || `item-${Math.random().toString(36).substring(2, 9)}`,
+            feedbackType: item.feedback_type || "like",
+            timestamp: item.created_at || new Date().toISOString(),
+          }))
+        : [];
 
     try {
       // Get a properly formatted API key
@@ -167,6 +287,8 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Configure OpenRouter service with the formatted API key
       OpenRouterService.configure(formattedApiKey);
+
+      console.log("[API] Sending request to OpenRouter for recommendations");
 
       // Generate real AI recommendations using OpenRouter
       let generatedData = await OpenRouterService.generateRecommendations<RecommendationData>(
@@ -182,10 +304,73 @@ export const POST: APIRoute = async ({ request }) => {
         }
       );
 
-      // If we received empty items array, use mock recommendations
+      // Enhanced AI recommendation logging
+      console.log(
+        `\x1b[32m[API] OpenRouter response received with ${generatedData?.items?.length || 0} items\x1b[0m`
+      );
+
+      // Log the first few items in the console
+      if (generatedData?.items?.length > 0) {
+        console.log(`\x1b[32m[API] AI Generated ${type.toUpperCase()} RECOMMENDATIONS:\x1b[0m`);
+        generatedData.items.slice(0, 3).forEach((item, index) => {
+          console.log(`\x1b[32m[AI Item ${index + 1}] ${item.name}\x1b[0m`);
+          console.log(`\x1b[32m  - ID: ${item.id}\x1b[0m`);
+          console.log(`\x1b[32m  - Type: ${item.type}\x1b[0m`);
+          console.log(
+            `\x1b[32m  - Details: ${JSON.stringify(item.details).substring(0, 200)}...\x1b[0m`
+          );
+          console.log(`\x1b[32m  - Explanation: ${item.explanation}\x1b[0m`);
+          console.log(`\x1b[32m  - Image URL: ${item.details.imageUrl || "None"}\x1b[0m`);
+        });
+
+        // Log debug info with full data structure of first item
+        console.log(`\x1b[32m[API] DEBUG - Full structure of the first AI-generated item:\x1b[0m`);
+        console.log(JSON.stringify(generatedData.items[0], null, 2));
+      }
+
+      // If we received empty items array, use TMDB recommendations
       if (!generatedData.items || generatedData.items.length === 0) {
-        // Get mock recommendations
-        generatedData = getDefaultRecommendations(type);
+        console.log("[API] Empty items received, using TMDB recommendations");
+        // Get TMDB recommendations
+        generatedData = await getDefaultRecommendations(type);
+      }
+
+      // Filtruj rekomendacje aby usunąć już polubione filmy/utwory
+      if (generatedData.items && generatedData.items.length > 0) {
+        // Pobierz listę polubionych ID
+        const { data: likedItems } = await supabase
+          .from("item_feedback")
+          .select("item_id")
+          .eq("user_id", userId)
+          .eq("feedback_type", "like");
+
+        const likedItemIds = new Set(likedItems?.map((item) => item.item_id) || []);
+
+        // Utwórz mapowanie ID - nazwa dla polubionych filmów
+        const likedItemsByName = new Set(userPreferences.likedMovies || []);
+
+        // Filtruj rekomendacje, usuwając już polubione elementy
+        const originalCount = generatedData.items.length;
+        generatedData.items = generatedData.items.filter((item) => {
+          // Sprawdź czy nie występuje w polubionych ID
+          if (likedItemIds.has(item.id)) {
+            return false;
+          }
+
+          // Sprawdź czy nazwa nie pokrywa się z już polubionymi elementami
+          if (type === "film" && likedItemsByName.has(item.name)) {
+            return false;
+          }
+
+          return true;
+        });
+
+        // Jeśli usunęliśmy jakieś elementy, zapisz informację w logach
+        if (generatedData.items.length < originalCount) {
+          console.log(
+            `[API] Filtered out ${originalCount - generatedData.items.length} already liked items from recommendations`
+          );
+        }
       }
 
       // Create response object
@@ -206,6 +391,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     } catch (error) {
       // Return a fallback response with error information
+      console.error("[API] Error generating recommendations:", error);
 
       // Try to extract more detailed information from the error
       let errorMessage = "Unknown error";
@@ -280,11 +466,12 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
     }
-  } catch {
+  } catch (error) {
+    console.error("[API] Global error in recommendation generation:", error);
     return new Response(
       JSON.stringify({
         error: "Failed to generate recommendations",
-        details: "Unknown error occurred",
+        details: error instanceof Error ? error.message : "Unknown error occurred",
       }),
       {
         status: 500,

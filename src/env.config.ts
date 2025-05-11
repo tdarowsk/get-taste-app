@@ -27,7 +27,7 @@ export const OPENROUTER_API_URL =
 export const OPENROUTER_DEFAULT_MODEL =
   import.meta.env.OPENROUTER_DEFAULT_MODEL ||
   getProcessEnv("OPENROUTER_DEFAULT_MODEL") ||
-  "qwen/qwen3-235b-a22b:free";
+  "qwen/qwen3-4b:free";
 
 // Supabase configuration (from environment)
 export const SUPABASE_URL =
@@ -45,3 +45,5 @@ export const SUPABASE_ANON_KEY =
   import.meta.env.SUPABASE_ANON_KEY || getProcessEnv("SUPABASE_ANON_KEY") || "";
 
 // Log key availability for debugging
+
+console.log("\x1b[32m%s\x1b[0m", TMDB_API_KEY);

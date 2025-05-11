@@ -65,26 +65,37 @@ export function AdaptiveRecommendationsList({
         }
 
         // Transform to view models
-        const vms = filteredRecs.map((dto) => transformRecommendationToViewModel(dto));
+        const transformPromises = filteredRecs.map((dto) =>
+          transformRecommendationToViewModel(dto)
+        );
 
-        setViewModels(vms);
+        // Use Promise.all to wait for all transformations to complete
+        Promise.all(transformPromises)
+          .then((resolvedViewModels) => {
+            setViewModels(resolvedViewModels);
 
-        // Extract all items
-        const items = vms.flatMap((vm) => {
-          if (!vm.items || vm.items.length === 0) {
-            return [];
-          }
+            // Extract all items
+            const items = resolvedViewModels.flatMap((vm) => {
+              if (!vm.items || vm.items.length === 0) {
+                return [];
+              }
 
-          return vm.items.map((item) => ({
-            ...item,
-            type: vm.type,
-            recommendationId: vm.id,
-          }));
-        });
+              return vm.items.map((item) => ({
+                ...item,
+                type: vm.type,
+                recommendationId: vm.id,
+              }));
+            });
 
-        setAllItems(items);
-        setHasProcessedData(true);
+            setAllItems(items);
+            setHasProcessedData(true);
+          })
+          .catch((error) => {
+            console.error("Error processing recommendations:", error);
+            setHasProcessedData(true);
+          });
       } catch (error) {
+        console.error("Error in recommendation processing:", error);
         setHasProcessedData(true);
       }
     } else {
