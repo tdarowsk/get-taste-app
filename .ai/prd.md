@@ -197,6 +197,18 @@ Kryteria akceptacji:
 - Zmiana wartości enva nie wymaga restartu aplikacji przez użytkownika (może być wymagany restart serwera).
 - Zablokowane slidery są wizualnie wyszarzone lub nieaktywne.
 
+US-017  
+Tytuł: Płynne animacje swipowania rekomendacji  
+Opis: Jako użytkownik, chcę doświadczać płynnych i atrakcyjnych wizualnie animacji podczas swipowania kart z rekomendacjami, aby korzystanie z aplikacji było przyjemniejsze i bardziej intuicyjne.  
+Kryteria akceptacji:
+- Karty rekomendacji reagują w czasie rzeczywistym na gest przeciągnięcia (swipe).
+- Podczas przeciągania karty w prawo/lewo, widoczna jest animacja obrotu i przesunięcia.
+- Po zwolnieniu karty, animacja płynnie kończy ruch w odpowiednim kierunku.
+- Karta następna pojawia się z płynną animacją wejścia.
+- Animacje są zoptymalizowane wydajnościowo i działają płynnie nawet na słabszych urządzeniach.
+- Dodane są wizualne wskaźniki (np. kolor zielony dla "lubię", czerwony dla "nie lubię") podczas przeciągania karty.
+- Animacje są zgodne z ogólnym stylem wizualnym aplikacji.
+
 ## 6. Metryki sukcesu
 
 1. Co najmniej 90% użytkowników posiada w pełni uzupełnione profile z poprawnymi danymi dotyczącymi preferencji.

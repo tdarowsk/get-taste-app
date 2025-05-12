@@ -61,12 +61,14 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
   const [movieDetails, setMovieDetails] = useState<MovieDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
 
-  // Reset the direction when a new card becomes active
+  // Reset the drag state when new card becomes active
   useEffect(() => {
     if (isActive) {
       setDirection(0);
       setSwiped(false);
+      setDragOffset(0);
     }
   }, [isActive, item.id]);
 
@@ -308,35 +310,115 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
       className={`absolute top-0 left-0 w-full ${!isActive || swiped ? "hidden" : ""}`}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.8}
+      onDrag={(_, info) => {
+        // Update drag offset to show real-time indicators
+        setDragOffset(info.offset.x);
+      }}
       onDragEnd={(e, info) => {
         const dragX = info.offset.x;
-        if (dragX > 100) {
+        const threshold = 80; // Lower threshold for easier swiping
+
+        // Check for quick flick gestures
+        const isQuickFlick = Math.abs(info.velocity.x) > 500;
+
+        if (dragX > threshold || (isQuickFlick && dragX > 20)) {
+          // Enhanced like animation
           setDirection(1);
           setSwiped(true);
-          setTimeout(() => {
-            handleSwipeWithDetails(FeedbackType.LIKE);
-          }, 200);
-        } else if (dragX < -100) {
+
+          // Use a smoother approach with CSS transitions
+          const card = document.getElementById(`card-${item.id}`);
+          if (card) {
+            card.style.transition = "transform 0.4s ease-out, opacity 0.4s ease-out";
+            card.style.transform = `translateX(${window.innerWidth}px) rotate(40deg)`;
+            card.style.opacity = "0";
+
+            setTimeout(() => {
+              handleSwipeWithDetails(FeedbackType.LIKE);
+            }, 300);
+          } else {
+            // Fallback if the DOM method doesn't work
+            setTimeout(() => {
+              handleSwipeWithDetails(FeedbackType.LIKE);
+            }, 50);
+          }
+        } else if (dragX < -threshold || (isQuickFlick && dragX < -20)) {
+          // Enhanced dislike animation
           setDirection(-1);
           setSwiped(true);
-          setTimeout(() => {
-            handleSwipeWithDetails(FeedbackType.DISLIKE);
-          }, 200);
+
+          // Use a smoother approach with CSS transitions
+          const card = document.getElementById(`card-${item.id}`);
+          if (card) {
+            card.style.transition = "transform 0.4s ease-out, opacity 0.4s ease-out";
+            card.style.transform = `translateX(-${window.innerWidth}px) rotate(-40deg)`;
+            card.style.opacity = "0";
+
+            setTimeout(() => {
+              handleSwipeWithDetails(FeedbackType.DISLIKE);
+            }, 300);
+          } else {
+            // Fallback if the DOM method doesn't work
+            setTimeout(() => {
+              handleSwipeWithDetails(FeedbackType.DISLIKE);
+            }, 50);
+          }
+        } else {
+          // Return to center with smooth transition
+          const card = document.getElementById(`card-${item.id}`);
+          if (card) {
+            card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+            card.style.transform = "translateX(0) rotate(0)";
+          }
         }
       }}
       animate={{
-        x: direction === 0 ? 0 : direction > 0 ? 200 : -200,
+        x: direction === 0 ? 0 : direction > 0 ? window.innerWidth : -window.innerWidth,
         opacity: direction === 0 ? 1 : 0,
+        rotate: direction === 0 ? 0 : direction > 0 ? 30 : -30,
       }}
-      transition={{ duration: 0.2 }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        duration: 0.5,
+      }}
       style={{ cursor: "grab" }}
+      whileTap={{ cursor: "grabbing", scale: 0.98 }}
+      whileDrag={{
+        scale: 1.02,
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      }}
     >
       <div
         className="p-4 bg-white rounded-lg shadow-md border border-gray-200 relative"
         id={`card-${item.id}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        style={{
+          // Add real-time visual feedback during dragging
+          background:
+            dragOffset > 50
+              ? "linear-gradient(90deg, white, rgba(34, 197, 94, 0.1))"
+              : dragOffset < -50
+                ? "linear-gradient(90deg, rgba(239, 68, 68, 0.1), white)"
+                : "white",
+          transition: "background 0.3s ease",
+        }}
       >
+        {/* Show like/dislike indicators during swipe */}
+        {dragOffset > 50 && (
+          <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white rounded text-xs font-bold">
+            LIKE
+          </div>
+        )}
+        {dragOffset < -50 && (
+          <div className="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white rounded text-xs font-bold">
+            NOPE
+          </div>
+        )}
+
         {previousRating.exists && (
           <div
             className={`absolute top-0 right-0 px-2 py-1 text-xs text-white rounded-bl-lg ${
@@ -993,15 +1075,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
   const handleSwipe = useCallback(
     async (itemId: string, feedbackType: FeedbackType) => {
       try {
-        // First update the current index to show the next item immediately
-        if (currentIndex < items.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else if (items.length > 0) {
-          // If we're at the end, show a message about seeing all items
-          setCurrentIndex(items.length);
-        }
-
-        // Find the current item in the array
+        // Find the current item in the array before updating states
         const currentItem = items.find((item) => item.id === itemId);
         if (!currentItem) {
           return;
@@ -1010,7 +1084,18 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
         // Add to feedback history using the service (saves to localStorage)
         UniqueRecommendationsService.addToHistory(userId, itemId, feedbackType);
 
-        // Remove the item from the current list
+        // Add transition delay to improve animation flow between cards
+        await new Promise((resolve) => setTimeout(resolve, 350));
+
+        // Now update the UI states AFTER the animation completes
+        if (currentIndex < items.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else if (items.length > 0) {
+          // If we're at the end, show a message about seeing all items
+          setCurrentIndex(items.length);
+        }
+
+        // Remove the item from the current list with a smooth fade out
         setItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
 
         // Store feedback in the database
