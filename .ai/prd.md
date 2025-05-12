@@ -208,7 +208,6 @@ Kryteria akceptacji:
 - Animacje są zoptymalizowane wydajnościowo i działają płynnie nawet na słabszych urządzeniach.
 - Dodane są wizualne wskaźniki (np. kolor zielony dla "lubię", czerwony dla "nie lubię") podczas przeciągania karty.
 - Animacje są zgodne z ogólnym stylem wizualnym aplikacji.
-- Użytkownik może wyłączyć animacje w ustawieniach dostępności.
 
 ## 6. Metryki sukcesu
 

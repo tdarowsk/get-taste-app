@@ -5,6 +5,7 @@ import { transformRecommendationToViewModel } from "../../lib/utils/transformers
 import type { RecommendationDTO, RecommendationFeedbackType } from "../../types";
 import { useToast } from "../ui";
 import { FeedbackService } from "../../lib/services/feedback.service";
+import { AnimationProvider } from "../swipe-animation";
 
 interface AdaptiveRecommendationsListProps {
   recommendations: RecommendationDTO[] | undefined;
@@ -206,7 +207,8 @@ export function AdaptiveRecommendationsList({
       if (onFeedbackProcessed) {
         onFeedbackProcessed();
       }
-    } catch (error) {
+    } catch (err: unknown) {
+      console.error("Error saving feedback:", err);
       toast({
         title: "Error updating taste profile",
         description: "There was a problem saving your feedback. Please try again.",
@@ -263,21 +265,23 @@ export function AdaptiveRecommendationsList({
         Swipe right to like, left to dislike. Your feedback trains the algorithm!
       </p>
 
-      <div
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4"
-        data-testid="swipe-grid"
-      >
-        {activeItems.map((item) => (
-          <SwipeableRecommendationCard
-            key={item.id}
-            item={item}
-            type={item.type}
-            recommendationId={item.recommendationId}
-            userId={userId}
-            onSwipe={handleSwipe}
-          />
-        ))}
-      </div>
+      <AnimationProvider>
+        <div
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4"
+          data-testid="swipe-grid"
+        >
+          {activeItems.map((item) => (
+            <SwipeableRecommendationCard
+              key={item.id}
+              item={item}
+              type={item.type}
+              recommendationId={item.recommendationId}
+              userId={userId}
+              onSwipe={handleSwipe}
+            />
+          ))}
+        </div>
+      </AnimationProvider>
     </div>
   );
 }
