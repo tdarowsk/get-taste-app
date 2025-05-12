@@ -22,9 +22,64 @@ export function SwipeableRecommendationCard({
   type,
   onSwipe,
 }: SwipeableRecommendationCardProps) {
+  // Dodaj szczegółowe debugowanie
+  console.log("===== CARD DATA DEBUG =====");
+  console.log("Full item data:", JSON.stringify(item, null, 2));
+  console.log("Item type:", typeof item);
+  console.log("Item details:", item.details);
+  console.log("Item details type:", typeof item.details);
+  console.log("Director directly from item:", item.director);
+  console.log("Director from details:", item.details?.director);
+  if (item.details && typeof item.details === "object" && "director" in item.details) {
+    console.log("Director in details confirmed:", item.details.director);
+    console.log("Director type:", typeof item.details.director);
+  }
+  console.log("===== END DEBUG =====");
+
+  console.log(item);
+  console.log("Item details object:", item.details);
+  console.log("Director from details:", item.details?.director);
+
+  // Improved debug logging for director information
+  console.log("DIRECTOR DEBUGGING:");
+  console.log("Item details object:", item.details);
+  console.log("Director from item.details:", item.details?.director);
+  console.log("Director type:", item.details?.director ? typeof item.details.director : "N/A");
+  if (item.metadata) {
+    console.log("Director from item.metadata:", item.metadata.director);
+    console.log("Director from item.metadata.details:", item.metadata?.details?.director);
+    if (item.metadata.directors) {
+      console.log("Directors array from metadata:", item.metadata.directors);
+    }
+  }
+  if (item.director) {
+    console.log("Director directly on item:", item.director);
+  }
+
+  // Before parsing details, check if director is directly available
+  let directFromDetails = null;
+  if (item.details && typeof item.details === "object") {
+    // Check for director as a direct property
+    if ("director" in item.details) {
+      directFromDetails = String(item.details.director);
+      console.log("Direct director access:", directFromDetails);
+    }
+    // Check for directors array
+    else if (
+      "directors" in item.details &&
+      Array.isArray(item.details.directors) &&
+      item.details.directors.length > 0
+    ) {
+      directFromDetails = String(item.details.directors[0]);
+      console.log("Director from directors array:", directFromDetails);
+    }
+  }
+
   console.log("SwipeableRecommendationCard - Received item:", JSON.stringify(item, null, 2));
   console.log("Name field:", item.name);
   console.log("Type field:", item.type);
+
+  const [fetchedDirector, setFetchedDirector] = useState<string | null>(null);
 
   // Zawsze utwórz tytuł - bezpieczny fallback
   const title = item.name || item?.metadata?.name || "Untitled";
@@ -81,6 +136,96 @@ export function SwipeableRecommendationCard({
   // Get parsed details
   const details = tryParseDetailsJson();
 
+  // Check if item is from TMDB based on the metadata
+  const isFromTMDB = !!(
+    item.id &&
+    (String(item.id).includes("tmdb-") || String(item.id).startsWith("movie_"))
+  );
+
+  // Helper to extract the numeric TMDB ID from any ID format
+  const extractTmdbId = (id: string): string | null => {
+    console.log("Extracting TMDB ID from:", id);
+
+    // If ID starts with "tmdb-", extract the number after it
+    if (id.startsWith("tmdb-")) {
+      // Look for a pattern like "tmdb-12345-timestamp-random"
+      // First try: Match only the numeric part immediately after tmdb-
+      const match = id.match(/^tmdb-(\d+)/);
+      if (match && match[1]) {
+        console.log("Extracted TMDB ID using first pattern:", match[1]);
+        return match[1];
+      }
+
+      // Second try: Look for a number embedded in the ID
+      const secondMatch = id.match(/tmdb-.*?(\d+)/);
+      if (secondMatch && secondMatch[1]) {
+        console.log("Extracted TMDB ID using second pattern:", secondMatch[1]);
+        return secondMatch[1];
+      }
+    }
+
+    // If ID starts with "movie_", extract the number after it
+    if (id.startsWith("movie_")) {
+      return id.substring(6);
+    }
+
+    // Check if it's a plain numeric ID
+    if (/^\d+$/.test(id)) {
+      return id;
+    }
+
+    console.log("No TMDB ID could be extracted from:", id);
+    return null;
+  };
+
+  // Fetch movie details from TMDB API for this specific movie
+  useEffect(() => {
+    const fetchMovieDetails = async () => {
+      // If already have director information in details, don't fetch
+      if (
+        details &&
+        details.director &&
+        typeof details.director === "string" &&
+        details.director !== "Unknown Director"
+      ) {
+        console.log(`Director already available in details: ${details.director}`);
+        setFetchedDirector(details.director);
+        return;
+      }
+
+      if (!isFromTMDB || !item.id || type !== "film") return;
+
+      const tmdbId = extractTmdbId(item.id);
+      if (!tmdbId) return;
+
+      try {
+        console.log(`Fetching TMDB details for movie ID: ${tmdbId}`);
+        const response = await fetch(`/api/tmdb/movie/${tmdbId}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Fetched TMDB movie details:", data);
+
+          // Extract director from crew if available
+          if (data.credits && Array.isArray(data.credits.crew)) {
+            const directors = data.credits.crew.filter(
+              (person: { job: string; name?: string }) => person.job === "Director"
+            );
+            if (directors.length > 0) {
+              setFetchedDirector(directors[0].name);
+            }
+          }
+        } else {
+          console.error(`Failed to fetch TMDB details: ${response.status}`);
+        }
+      } catch (error) {
+        console.error("Error fetching TMDB details:", error);
+      }
+    };
+
+    fetchMovieDetails();
+  }, [item.id, isFromTMDB, type, details]);
+
   // Check if item is AI-generated based on the metadata
   const isAiGenerated = !!(
     (item.metadata && "source" in item.metadata && item.metadata.source === "ai") ||
@@ -92,10 +237,12 @@ export function SwipeableRecommendationCard({
       item.id &&
       (String(item.id).startsWith("ai_") ||
         String(item.id).match(/^\d{5,}$/) ||
-        String(item.id).includes("1234")))
+        String(item.id).includes("1234")) &&
+      // Make sure it's not from TMDB
+      !isFromTMDB)
   );
 
-  console.log("Is AI generated:", isAiGenerated, "details:", details);
+  console.log("Is AI generated:", isAiGenerated, "Is from TMDB:", isFromTMDB, "details:", details);
 
   const { toast } = useToast();
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -122,9 +269,17 @@ export function SwipeableRecommendationCard({
     // From direct metadata fields
     (item.metadata && "imageUrl" in item.metadata ? String(item.metadata.imageUrl) : null) ||
     (item.metadata && "img" in item.metadata ? String(item.metadata.img) : null) ||
+    // Handle TMDB poster_path
+    (item.metadata && "poster_path" in item.metadata
+      ? `https://image.tmdb.org/t/p/w500${item.metadata.poster_path}`
+      : null) ||
     // From details section (AI recommendations)
     (details && "imageUrl" in details ? String(details.imageUrl) : null) ||
     (details && "img" in details ? String(details.img) : null) ||
+    // From details section (TMDB movies)
+    (details && "poster_path" in details
+      ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
+      : null) ||
     placeholderImage;
 
   console.log("Image URL processing: ", {
@@ -139,17 +294,119 @@ export function SwipeableRecommendationCard({
   const imageUrl = isValidImageUrl(rawImageUrl as string) ? rawImageUrl : placeholderImage;
   const hasValidImage = rawImageUrl !== placeholderImage && !!rawImageUrl;
 
-  // Extract director from details or direct properties
-  const director =
+  // Extract director from metadata with different checks
+  const extractDirector = () => {
+    console.log("[SwipeableRecommendationCard] Extracting director for:", item.name);
+    console.log("[SwipeableRecommendationCard] Item details:", item.details);
+
+    // Check for directly extracted director from details
+    if (
+      directFromDetails &&
+      directFromDetails !== "Unknown Director" &&
+      directFromDetails !== "null"
+    ) {
+      console.log(
+        "[SwipeableRecommendationCard] Using director from directFromDetails:",
+        directFromDetails
+      );
+      return directFromDetails;
+    }
+
+    // Use fetchedDirector if available
+    if (fetchedDirector) {
+      console.log("[SwipeableRecommendationCard] Using fetchedDirector:", fetchedDirector);
+      return fetchedDirector;
+    }
+
+    // Try to get from item directly
+    if (item.director && String(item.director) !== "Unknown Director") {
+      console.log(
+        "[SwipeableRecommendationCard] Using director from item.director:",
+        item.director
+      );
+      return String(item.director);
+    }
+
+    // Try to get from metadata directly
+    if (
+      item.metadata &&
+      "director" in item.metadata &&
+      item.metadata.director &&
+      String(item.metadata.director) !== "Unknown Director"
+    ) {
+      console.log(
+        "[SwipeableRecommendationCard] Using director from item.metadata.director:",
+        item.metadata.director
+      );
+      return String(item.metadata.director);
+    }
+
+    // Try to get from metadata.directors array
+    if (
+      item.metadata &&
+      item.metadata.directors &&
+      Array.isArray(item.metadata.directors) &&
+      item.metadata.directors.length > 0 &&
+      item.metadata.directors[0] !== "Unknown Director"
+    ) {
+      console.log(
+        "[SwipeableRecommendationCard] Using director from item.metadata.directors[0]:",
+        item.metadata.directors[0]
+      );
+      return String(item.metadata.directors[0]);
+    }
+
     // Try to get from details
-    (details && "director" in details ? String(details.director) : null) ||
-    // Try to get directly from item
-    (item.director ? String(item.director) : null);
+    if (
+      details &&
+      "director" in details &&
+      details.director &&
+      String(details.director) !== "Unknown Director"
+    ) {
+      console.log(
+        "[SwipeableRecommendationCard] Using director from details.director:",
+        details.director
+      );
+      return String(details.director);
+    }
+
+    // Try to get from details.directors array
+    if (
+      details &&
+      details.directors &&
+      Array.isArray(details.directors) &&
+      details.directors.length > 0 &&
+      details.directors[0] !== "Unknown Director"
+    ) {
+      console.log(
+        "[SwipeableRecommendationCard] Using director from details.directors[0]:",
+        details.directors[0]
+      );
+      return String(details.directors[0]);
+    }
+
+    // Final fallback
+    console.log("[SwipeableRecommendationCard] No director found, using fallback");
+    return isFromTMDB ? "Loading director..." : "Unknown Director";
+  };
+
+  // Extract director using the helper function
+  const director = extractDirector();
+  console.log("Final selected director:", director);
 
   // Extract year from details or direct properties
   const year =
     // Try to get from details
     (details && "year" in details ? String(details.year) : null) ||
+    // Try to get from metadata
+    (item.metadata && "year" in item.metadata ? String(item.metadata.year) : null) ||
+    // Try to get from release_date in metadata
+    (item.metadata &&
+    "release_date" in item.metadata &&
+    typeof item.metadata.release_date === "string" &&
+    item.metadata.release_date.length >= 4
+      ? String(item.metadata.release_date).substring(0, 4)
+      : null) ||
     // Try to get directly from item
     (item.year ? String(item.year) : null);
 
@@ -159,6 +416,8 @@ export function SwipeableRecommendationCard({
     genres = details.genres as string[];
   } else if (item.genres && Array.isArray(item.genres)) {
     genres = item.genres as string[];
+  } else if (item.metadata && "genres" in item.metadata && Array.isArray(item.metadata.genres)) {
+    genres = item.metadata.genres as string[];
   }
 
   const primaryGenre = genres.length > 0 ? String(genres[0]) : "";
@@ -169,6 +428,8 @@ export function SwipeableRecommendationCard({
     cast = details.cast as string[];
   } else if (item.cast && Array.isArray(item.cast)) {
     cast = item.cast as string[];
+  } else if (item.metadata && "cast" in item.metadata && Array.isArray(item.metadata.cast)) {
+    cast = item.metadata.cast as string[];
   }
 
   // Join genres for display
@@ -190,9 +451,11 @@ export function SwipeableRecommendationCard({
   // Apply different accent colors based on type and source
   const accentColor = isAiGenerated
     ? "from-green-500 to-emerald-600"
-    : type === "music"
+    : isFromTMDB
       ? "from-blue-600 to-indigo-600"
-      : "from-purple-600 to-pink-600";
+      : type === "music"
+        ? "from-blue-600 to-indigo-600"
+        : "from-purple-600 to-pink-600";
 
   // Determine display name with fallback
   const displayName = item.name || "";
@@ -413,10 +676,16 @@ export function SwipeableRecommendationCard({
               </div>
             )}
 
-            {/* AI badge overlay */}
+            {/* Source badge overlay */}
             {isAiGenerated && (
               <div className="absolute top-2 left-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white">
                 AI
+              </div>
+            )}
+
+            {isFromTMDB && (
+              <div className="absolute top-2 left-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-600 text-white">
+                TMDB
               </div>
             )}
           </div>
@@ -451,8 +720,8 @@ export function SwipeableRecommendationCard({
                 {type === "music" && (
                   <p className="text-xs text-gray-300 line-clamp-1">Artist name</p>
                 )}
-                {type === "film" && director && (
-                  <p className="text-xs text-gray-300 line-clamp-1">Dir: {director}</p>
+                {type === "film" && (
+                  <p className="text-xs text-gray-300 line-clamp-1">Director: {director}</p>
                 )}
               </div>
             )}

@@ -39,10 +39,10 @@ export function useRecommendationForm({
     async (forceRefresh = false) => {
       setIsLoading(true);
       setError(null);
-
+      console.log("dsadsadsadasdsadasdasasdasdasdasdas");
       try {
         const data = await recommendationService.getRecommendations(userId, category, forceRefresh);
-
+        console.log(data);
         const enhancedRecommendations = await Promise.all(
           data.map(async (recommendation) => {
             const reason = await recommendationService.getRecommendationReason(
@@ -62,7 +62,7 @@ export function useRecommendationForm({
             } as EnhancedRecommendationViewModel;
           })
         );
-
+        console.log(enhancedRecommendations);
         setRecommendations(enhancedRecommendations);
         setCurrentIndex(0);
       } catch (error) {

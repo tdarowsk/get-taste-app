@@ -1,20 +1,5 @@
 import type { APIRoute } from "astro";
-import { UserService } from "../../../../lib/services/user.service";
-
-// Define types for user preferences
-interface FilmPreferences {
-  genres: string[];
-}
-
-interface MusicPreferences {
-  genres: string[];
-}
-
-// Define interface for query parameters
-interface PreferencesQueryParams {
-  refresh?: string;
-  forceUpdate?: string;
-}
+import { UserPreferencesService } from "../../../../lib/services/userPreferences.service";
 
 export const prerender = false;
 
@@ -51,33 +36,11 @@ export const GET: APIRoute = async ({ params, request }) => {
     if (shouldRefresh) {
       console.log(`Refreshing preferences for user ${userId}`);
       try {
-        const refreshResult = await UserService.refreshUserPreferencesFromFeedback(userId);
+        const refreshResult = await UserPreferencesService.refreshFilmPreferences(userId);
         console.log(`Refresh result: ${refreshResult ? "success" : "failed"}`);
 
-        // If refresh failed and forceUpdate is true, create preferences with default genres
-        if (!refreshResult && forceUpdate) {
-          console.log("Force updating preferences with defaults");
-          try {
-            await UserService.updateUserPreferences(userId, {
-              filmPreferences: {
-                genres: ["Action", "Drama", "Comedy", "Thriller", "Adventure", "Sci-Fi"],
-              },
-            });
-            console.log("Default preferences successfully applied");
-          } catch (updateError) {
-            console.error("Error applying default preferences:", updateError);
-            return new Response(
-              JSON.stringify({
-                error: "Failed to set default preferences",
-                details: updateError instanceof Error ? updateError.message : String(updateError),
-              }),
-              {
-                status: 500,
-                headers: { "Content-Type": "application/json" },
-              }
-            );
-          }
-        }
+        // Even if refresh "failed", it means we at least tried to process the feedback data
+        // No need to use any default genres anymore
       } catch (refreshError) {
         console.error("Error during preference refresh:", refreshError);
         return new Response(
@@ -93,14 +56,27 @@ export const GET: APIRoute = async ({ params, request }) => {
       }
     }
 
-    // Get user preferences using the UserService
+    // Get user preferences using the new UserPreferencesService
     try {
-      const preferences = await UserService.getUserPreferences(userId);
-      console.log(`Returning preferences for user ${userId}: ${JSON.stringify(preferences)}`);
+      const filmPreferences = await UserPreferencesService.getFilmPreferences(userId);
+
+      // Format the response to match expected structure
+      const preferences = {
+        filmPreferences: filmPreferences,
+        musicPreferences: {
+          genres: [],
+          user_id: userId,
+        },
+      };
+
+      console.log(`Returning preferences for user ${userId}:`, JSON.stringify(preferences));
 
       return new Response(JSON.stringify(preferences), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
       });
     } catch (getError) {
       console.error("Error getting user preferences:", getError);
@@ -151,9 +127,30 @@ export const POST: APIRoute = async ({ params, request }) => {
 
     console.log(`Updating preferences for user ${userId}: ${JSON.stringify(body)}`);
 
+    // Use admin client to update preferences directly with the right data service
     try {
-      // Update user preferences using the UserService
-      await UserService.updateUserPreferences(userId, body);
+      const { filmPreferences } = body;
+
+      // If film preferences are provided, save them
+      if (filmPreferences) {
+        // Use supabase admin to update preferences
+        const { supabaseAdmin } = await import("../../../../db/supabase.admin");
+
+        if (supabaseAdmin) {
+          const { error } = await supabaseAdmin.from("film_preferences").upsert({
+            user_id: userId,
+            genres: filmPreferences.genres || [],
+            liked_movies: filmPreferences.liked_movies || [],
+            updated_at: new Date().toISOString(),
+          });
+
+          if (error) {
+            throw new Error(`Failed to update film preferences: ${error.message}`);
+          }
+        } else {
+          console.warn("Admin client not available for preferences update");
+        }
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: "Preferences updated successfully" }),

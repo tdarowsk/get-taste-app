@@ -40,19 +40,23 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess })
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.redirectToLogin) {
+          // Jeśli użytkownik jest już zarejestrowany, przekieruj do logowania
+          window.location.href = "/auth/login?alreadyRegistered=true";
+          return;
+        }
         throw new Error(data.error || "Błąd rejestracji");
       }
 
-      if (!data.success) {
-        throw new Error(data.error || "Nie udało się utworzyć konta");
+      // Wywołaj callback po pomyślnej rejestracji oraz wyślij globalny event
+      if (onRegisterSuccess) {
+        onRegisterSuccess();
       }
 
-      // Wywołaj callback po pomyślnej rejestracji oraz wyślij globalny event
-      onRegisterSuccess?.();
-      window.dispatchEvent(new CustomEvent("register:success"));
+      // Przekieruj do strony logowania po udanej rejestracji
+      window.location.href = "/auth/login?registration=success";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Wystąpił nieoczekiwany błąd");
-      throw err;
     }
   };
 

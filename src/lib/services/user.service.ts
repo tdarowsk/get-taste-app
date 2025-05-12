@@ -182,7 +182,7 @@ export class UserService {
       }
 
       // Get liked movies from item_feedback to determine genre preferences
-      let movieFeedback = [];
+      let movieFeedback: any[] = [];
       try {
         const { data, error: feedbackError } = await supabaseClient
           .from("item_feedback")
@@ -270,36 +270,35 @@ export class UserService {
         }
       }
 
-      // If no genres were found in feedback but we have liked movies,
-      // use fallback genres based on the number of liked movies
+      // Ensure we never return empty array if we have liked movies
       if (genresFromFeedback.length === 0 && movieFeedback && movieFeedback.length > 0) {
-        // Define fallback genres based on how many movies the user has liked
-        const likedMoviesCount = movieFeedback.length;
-
-        // Always use fallback genres if we have liked movies but no genres
-        genresFromFeedback = ["Action", "Drama", "Thriller", "Comedy"];
-
-        // Add more genres if user has liked many movies
-        if (likedMoviesCount > 10) {
-          genresFromFeedback.push("Adventure", "Sci-Fi");
-        }
-        if (likedMoviesCount > 20) {
-          genresFromFeedback.push("Horror", "Romance");
-        }
         console.log(
-          `Using fallback genres since no specific genres were detected from ${likedMoviesCount} liked movies`
+          `Warning: Found ${movieFeedback.length} liked movies but no genres were extracted.`
         );
-      }
 
-      // Jeśli nie mamy żadnych gatunków, użyjmy domyślnego zestawu
-      if (genresFromFeedback.length === 0) {
-        genresFromFeedback = ["Action", "Drama", "Comedy", "Thriller"];
-        console.log("Using default genres as no genres were detected from feedback");
+        // Try direct genres from the feedback data if available
+        const directGenres = movieFeedback
+          .filter(
+            (item) => item?.genre && typeof item.genre === "string" && item.genre.trim() !== ""
+          )
+          .map((item) => {
+            // Just take first genre if comma-separated
+            const firstGenre = item.genre.split(",")[0].trim();
+            return firstGenre.replace(/^\w/, (c) => c.toUpperCase());
+          })
+          .filter(Boolean);
+
+        if (directGenres.length > 0) {
+          console.log(`Found ${directGenres.length} direct genres from movies`);
+          genresFromFeedback = [...new Set(directGenres)]; // Remove duplicates
+        } else {
+          console.log("Still no genres available after direct extraction attempt");
+        }
       }
 
       // Merge preferences from direct settings and feedback data
       // Prioritize explicit preferences but include genres from feedback
-      let mergedFilmGenres = filmPreferences?.genres || [];
+      const mergedFilmGenres = filmPreferences?.genres || [];
 
       // Add genres from feedback that aren't already in explicit preferences
       genresFromFeedback.forEach((genre) => {
@@ -308,11 +307,8 @@ export class UserService {
         }
       });
 
-      // If we still have no genres, ensure we have some default genres
-      if (mergedFilmGenres.length === 0) {
-        mergedFilmGenres = ["Action", "Drama", "Comedy", "Thriller"];
-        console.log("Using emergency fallback genres as a last resort");
-      }
+      // Log final merged genres
+      console.log(`Final merged genres: ${mergedFilmGenres.join(", ")}`);
 
       // Get music preferences
       const { data: musicPreferences, error: musicError } = await adminClient
@@ -334,7 +330,7 @@ export class UserService {
         try {
           // Create film preferences if needed
           if (shouldCreateFilmPreferences && supabaseAdmin) {
-            console.log("Creating default film preferences");
+            console.log("Creating film preferences with real user data");
 
             try {
               const { error: insertError } = await supabaseAdmin.from("film_preferences").upsert({
@@ -346,9 +342,9 @@ export class UserService {
               });
 
               if (insertError) {
-                console.error("Error creating default film preferences:", insertError);
+                console.error("Error creating film preferences:", insertError);
               } else {
-                console.log("Successfully created default film preferences");
+                console.log("Successfully created film preferences");
               }
             } catch (insertErr) {
               console.error("Exception creating film preferences:", insertErr);
@@ -357,12 +353,12 @@ export class UserService {
 
           // Create music preferences if needed
           if (shouldCreateMusicPreferences && supabaseAdmin) {
-            console.log("Creating default music preferences");
+            console.log("Creating empty music preferences");
 
             try {
               const { error: insertError } = await supabaseAdmin.from("music_preferences").upsert({
                 user_id: userId,
-                genres: ["Rock", "Pop", "Electronic", "Hip Hop"],
+                genres: [],
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               });
@@ -370,7 +366,7 @@ export class UserService {
               if (insertError) {
                 console.error("Error creating default music preferences:", insertError);
               } else {
-                console.log("Successfully created default music preferences");
+                console.log("Successfully created empty music preferences");
               }
             } catch (insertErr) {
               console.error("Exception creating music preferences:", insertErr);
@@ -390,20 +386,20 @@ export class UserService {
             likedMovieIds.length > 0 ? likedMovieIds : filmPreferences?.liked_movies || [],
         },
         musicPreferences: musicPreferences || {
-          genres: ["Rock", "Pop", "Electronic", "Hip Hop"],
+          genres: [],
           user_id: userId,
         },
       };
     } catch (error) {
-      // W przypadku poważnego błędu, zwróć domyślne preferencje
+      // W przypadku poważnego błędu, zwróć puste preferencje
       console.error("Unexpected error in getUserPreferences:", error);
       return {
         filmPreferences: {
-          genres: ["Action", "Drama", "Comedy", "Thriller"],
+          genres: [],
           liked_movies: [],
         },
         musicPreferences: {
-          genres: ["Rock", "Pop", "Electronic", "Hip Hop"],
+          genres: [],
           user_id: userId,
         },
       };
