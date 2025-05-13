@@ -9,8 +9,8 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: ${{ secrets.E2E_URL }}
-      SUPABASE_KEY: ${{ secrets.E2E_SUPABASE_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       E2E_URL: "http://localhost:3000"
     steps:
     - uses: actions/checkout@v3
@@ -21,8 +21,8 @@ jobs:
       run: npm ci
     - name: Create .env.test file
       run: |
-        echo "SUPABASE_URL=${{ secrets.E2E_URL }}" > .env.test
-        echo "SUPABASE_KEY=${{ secrets.E2E_SUPABASE_KEY }}" >> .env.test
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env.test
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env.test
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
     - name: Run Playwright tests
