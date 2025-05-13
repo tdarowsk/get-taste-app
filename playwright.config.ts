@@ -1,7 +1,7 @@
 // Najpierw importujemy dotenv, aby załadować zmienne środowiskowe
 import * as dotenv from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
-import path from "path";
+import * as path from "path";
 
 // Załaduj zmienne środowiskowe z .env.test
 const envPath = path.join(process.cwd(), ".env.test");
