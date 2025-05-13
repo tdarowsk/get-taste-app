@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { RecommendationCard } from "./RecommendationCard";
 import { Button } from "@/components/ui/button";
-import type { RecommendationDataDetails, RecommendationDTO, RecommendationItem } from "../types";
+import type { RecommendationDTO, RecommendationItem } from "../types";
 
 interface SwipeableRecommendationsProps {
   recommendations: RecommendationDTO | null;
@@ -40,7 +40,7 @@ export const SwipeableRecommendations = ({
     } else {
       setItems([]);
     }
-  }, [recommendations]);
+  }, [recommendations, x]);
 
   const handleDragEnd = async (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (animating) return;

@@ -60,6 +60,7 @@ const mockUseDashboard = {
   refreshRecommendations: vi.fn(),
   isGeneratingRecommendations: false,
   isNewUser: true,
+  validUserId: "u1",
 };
 vi.mock("../../../lib/hooks/useDashboard", () => ({ useDashboard: () => mockUseDashboard }));
 

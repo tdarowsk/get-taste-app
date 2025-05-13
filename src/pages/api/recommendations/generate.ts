@@ -66,8 +66,9 @@ async function getDefaultRecommendations(type: "music" | "film"): Promise<Recomm
           confidence: item.confidence || 0.7,
         })),
       };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      console.error("[API] Error fetching TMDB recommendations:", error);
+      // console.error("[API] Error fetching TMDB recommendations:", error);
     }
   }
 
@@ -93,7 +94,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const data = await request.json();
     const { userId, type, force_refresh = false, force_ai = false, is_new_user = false } = data;
 
-    console.info(`[API] Generating ${type} recommendations for user ${userId}`);
+    // console.info(`[API] Generating ${type} recommendations for user ${userId}`);
 
     // Validate parameters
     if (!userId) {
@@ -172,8 +173,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         // Convert to unknown first to satisfy TypeScript's type checking
         feedbackItems = data as unknown as FeedbackItem[];
       }
-    } catch (error) {
-      console.error("[API] Exception in feedback query:", error);
+    } catch {
+      console.error("[API] Exception in feedback query:");
     }
 
     // Format user preferences based on database data
@@ -236,7 +237,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           if (likedMovieIds.length > 0) {
             const existingLikedMovies = userPreferences.likedMovies || [];
             userPreferences.likedMovies = [...new Set([...existingLikedMovies, ...likedMovieIds])];
-            console.log(`[API] Added ${likedMovieIds.length} liked movies from feedback history`);
+            // console.log(`[API] Added ${likedMovieIds.length} liked movies from feedback history`);
           }
         }
       } catch (err) {

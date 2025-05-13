@@ -1,7 +1,7 @@
 import { Recommendation } from "../../domain/models/Recommendation";
 import { RecommendationType } from "../../domain/enums/RecommendationType";
-import { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
-import { DataSource } from "../data/DataSource";
+import type { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
+import type { DataSource } from "../data/DataSource";
 import { RecommendationItem } from "../../domain/models/RecommendationItem";
 
 interface RecommendationDTO {
@@ -38,12 +38,13 @@ export class RecommendationRepository implements IRecommendationRepository {
     try {
       const dto = await this.dataSource.query<RecommendationDTO>(`/api/recommendations/${id}`);
       return this.mapDtoToDomain(dto);
-    } catch (error) {
-      // If the recommendation doesn't exist, return null
+    } catch {
+      // Error caught and ignored
       return null;
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async save(recommendation: Recommendation): Promise<void> {
     // In a real implementation, we would save the recommendation to the API
     // This is not implemented in the current API, so we'll just stub it

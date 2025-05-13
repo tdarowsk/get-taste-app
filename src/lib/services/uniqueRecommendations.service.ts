@@ -39,7 +39,8 @@ export const UniqueRecommendationsService = {
       const key = `recommendation-history-${userId}`;
       const storedHistory = localStorage.getItem(key);
       return storedHistory ? JSON.parse(storedHistory) : [];
-    } catch (err) {
+    } catch {
+      // Error caught and ignored
       return [];
     }
   },
@@ -72,8 +73,8 @@ export const UniqueRecommendationsService = {
           feedbackType: item.feedback_type as RecommendationFeedbackType,
         })
       );
-    } catch (err) {
-      // Fall back to local storage on error
+    } catch {
+      // Error caught and ignored
       return this.getRecommendationHistory(userId);
     }
   },
@@ -110,7 +111,8 @@ export const UniqueRecommendationsService = {
 
       // Convert back to array
       return Array.from(historyMap.values());
-    } catch (err) {
+    } catch {
+      // Error caught and ignored
       return localHistory;
     }
   },
@@ -149,7 +151,9 @@ export const UniqueRecommendationsService = {
 
       // Save back to localStorage
       localStorage.setItem(key, JSON.stringify(history));
-    } catch (err) {}
+    } catch {
+      // Error caught and ignored
+    }
   },
 
   /**
@@ -162,7 +166,9 @@ export const UniqueRecommendationsService = {
     try {
       const key = `recommendation-history-${userId}`;
       localStorage.removeItem(key);
-    } catch (err) {}
+    } catch {
+      // Error caught and ignored
+    }
   },
 
   /**
@@ -231,8 +237,9 @@ export const UniqueRecommendationsService = {
         // If just viewed (no feedback), include it
         return true;
       });
-    } catch (err) {
-      return recommendations; // Return original list on error
+    } catch {
+      // Error caught and ignored
+      return recommendations;
     }
   },
 
@@ -292,16 +299,19 @@ export const UniqueRecommendationsService = {
     // Convert to string to ensure consistent handling
     const userIdStr = String(userId);
 
-    // Log the type (using the parameter to avoid linter warnings)
+    // Filter items by type first, just in case they're mixed
+    const typedItems = items.filter(
+      (item) => !item.type || item.type === type || String(item.type).toLowerCase() === type
+    );
 
     // Client-side filtering
     if (isBrowser) {
-      return this.filterLocalRecommendations(userIdStr, items);
+      return this.filterLocalRecommendations(userIdStr, typedItems);
     }
 
     // In server environment - we can't make direct calls here
     // The actual implementation will be handled in the API endpoint
-    return items;
+    return typedItems;
   },
 
   /**

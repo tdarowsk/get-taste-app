@@ -14,39 +14,35 @@ export const TasteService = {
    * @throws Error w przypadku błędu
    */
   async getUserTaste(userId: string): Promise<UserTasteDTO> {
-    try {
-      // Pobierz preferencje użytkownika
-      const preferences = await getUserPreferences(userId);
+    // Pobierz preferencje użytkownika
+    const preferences = await getUserPreferences(userId);
 
-      // Analizuj gust muzyczny
-      let musicTaste: TasteDTO | undefined;
-      if (preferences.music) {
-        musicTaste = this.analyzeMusicTaste(preferences.music.genres, preferences.music.artists);
-      }
-
-      // Analizuj gust filmowy
-      let filmTaste: TasteDTO | undefined;
-      if (preferences.film) {
-        filmTaste = this.analyzeFilmTaste(
-          preferences.film.genres,
-          preferences.film.director,
-          preferences.film.cast
-        );
-      }
-
-      // Wygeneruj nazwę i opis gustu
-      const name = this.generateTasteName(musicTaste, filmTaste);
-      const description = this.generateTasteDescription(musicTaste, filmTaste);
-
-      return {
-        name,
-        description,
-        music: musicTaste,
-        film: filmTaste,
-      };
-    } catch (error) {
-      throw error;
+    // Analizuj gust muzyczny
+    let musicTaste: TasteDTO | undefined;
+    if (preferences.music) {
+      musicTaste = this.analyzeMusicTaste(preferences.music.genres, preferences.music.artists);
     }
+
+    // Analizuj gust filmowy
+    let filmTaste: TasteDTO | undefined;
+    if (preferences.film) {
+      filmTaste = this.analyzeFilmTaste(
+        preferences.film.genres,
+        preferences.film.director,
+        preferences.film.cast
+      );
+    }
+
+    // Wygeneruj nazwę i opis gustu
+    const name = this.generateTasteName(musicTaste, filmTaste);
+    const description = this.generateTasteDescription(musicTaste, filmTaste);
+
+    return {
+      name,
+      description,
+      music: musicTaste,
+      film: filmTaste,
+    };
   },
 
   /**

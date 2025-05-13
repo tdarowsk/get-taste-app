@@ -32,7 +32,7 @@ export function FilmPreferencesPanel({ userId }: FilmPreferencesPanelProps) {
     const timestamp = new Date().toISOString().substring(11, 19);
     const logMessage = `${timestamp} ${message}`;
     setDebug((prev) => [...prev.slice(-14), logMessage]); // Last 15 logs
-    console.info(`[FilmPreferencesPanel] ${logMessage}`);
+    // console.info(`[FilmPreferencesPanel] ${logMessage}`);
   }, []);
 
   // Fetch genre data from API
@@ -157,7 +157,7 @@ export function FilmPreferencesPanel({ userId }: FilmPreferencesPanelProps) {
     } finally {
       setIsLoadingTestData(false);
     }
-  }, [effectiveUserId, addLog]);
+  }, [effectiveUserId, addLog, refetch]);
 
   // Function to fetch directly from the preferences API
   const fetchFromPreferencesAPI = useCallback(async () => {

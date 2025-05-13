@@ -18,8 +18,10 @@ const gitignorePath = path.resolve(__dirname, ".gitignore");
 const baseConfig = tseslint.config({
   extends: [eslint.configs.recommended, tseslint.configs.strict, tseslint.configs.stylistic],
   rules: {
-    "no-console": "warn",
+    "no-console": "off",
     "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "error",
+    "no-empty": "error",
   },
 });
 
@@ -58,6 +60,9 @@ const reactConfig = tseslint.config({
 
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
+  {
+    ignores: ["**/*.astro", "node_modules/**/*"],
+  },
   baseConfig,
   jsxA11yConfig,
   reactConfig,

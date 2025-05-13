@@ -172,8 +172,6 @@ export function RecommendationCard({ item, type, "data-testid": testId }: Recomm
           .join(", ")
       : "";
 
-  const hasValidImage = rawImageUrl !== placeholderImage;
-
   return (
     <Card
       data-testid={testId}

@@ -1,9 +1,12 @@
 import { supabaseClient } from "../../db/supabase.client";
 import { supabaseAdmin } from "../../db/supabase.admin";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Serwis do zarządzania preferencjami użytkownika - bez żadnych domyślnych/zahardcodowanych wartości
  */
+
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class UserPreferencesService {
   /**
    * Pobiera preferencje filmowe użytkownika na podstawie rzeczywistych polubień
@@ -12,7 +15,7 @@ export class UserPreferencesService {
    */
   public static async getFilmPreferences(userId: string) {
     try {
-      console.log(`Getting film preferences for user ${userId}`);
+      // console.log(`Getting film preferences for user ${userId}`);
 
       // Użyj klienta administratora, jeśli dostępny
       const client = supabaseAdmin || supabaseClient;
@@ -25,7 +28,7 @@ export class UserPreferencesService {
         .single();
 
       if (filmError && filmError.code !== "PGRST116") {
-        console.error("Error fetching film preferences:", filmError);
+        // console.error("Error fetching film preferences:", filmError);
         throw filmError;
       }
 
@@ -48,6 +51,7 @@ export class UserPreferencesService {
       const likedMovieIds: string[] = [];
 
       // Zbierz ID polubionych filmów
+
       likedItems?.forEach((item: any) => {
         if (item.item_id) {
           likedMovieIds.push(item.item_id);
@@ -59,6 +63,7 @@ export class UserPreferencesService {
 
           if (typeof item.genre === "string") {
             // Gatunki mogą być oddzielone przecinkami
+
             genres = item.genre
               .split(/[,;|]/)
               .map((g: any) => g.trim())

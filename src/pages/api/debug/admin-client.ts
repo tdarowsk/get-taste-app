@@ -11,7 +11,7 @@ export const prerender = false;
  */
 export const GET: APIRoute = async () => {
   try {
-    console.log("Testing admin client");
+    // console.log("Testing admin client");
 
     // Sprawdź konfigurację
     const configInfo = {
@@ -26,7 +26,7 @@ export const GET: APIRoute = async () => {
 
     // Sprawdź, czy klient administratora istnieje
     if (!supabaseAdmin) {
-      console.error("Admin client is null");
+      // console.error("Admin client is null");
       return new Response(
         JSON.stringify({
           error: "Admin client is null",

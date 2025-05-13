@@ -4,12 +4,12 @@ import type { UserPreferencesDTO } from "../../types";
 /**
  * Hook for accessing and managing user preferences
  */
-export function useUserPreferences(userId: string) {
+export function useUserPreferences(userId: string, isNewUser?: boolean) {
   return useQuery<UserPreferencesDTO>({
     queryKey: ["preferences", userId],
     queryFn: async () => {
       if (!userId) {
-        console.warn("useUserPreferences called with invalid userId");
+        // console.warn("useUserPreferences called with invalid userId");
         return {
           music: { genres: [], artists: [] },
           film: { genres: [], cast: [], director: null, screenwriter: null },
@@ -38,8 +38,9 @@ export function useUserPreferences(userId: string) {
           Array.isArray(data.filmPreferences.liked_movies) &&
           data.filmPreferences.liked_movies.length > 0;
 
-        if (!hasFilmGenres && hasLikedMovies) {
-          console.log("Detected liked movies but no genres, triggering preference refresh");
+        // Skip auto-refresh for new users to avoid refresh loops
+        if (!isNewUser && !hasFilmGenres && hasLikedMovies) {
+          // console.log("Detected liked movies but no genres, triggering preference refresh");
 
           // Call the API with refresh=true to analyze liked movies
           const refreshResponse = await fetch(
@@ -55,8 +56,8 @@ export function useUserPreferences(userId: string) {
         }
 
         return data;
-      } catch (error) {
-        console.error("Error fetching user preferences:", error);
+      } catch {
+        // Error caught and ignored
         // Return empty preferences object on error
         return {
           music: { genres: [], artists: [] },

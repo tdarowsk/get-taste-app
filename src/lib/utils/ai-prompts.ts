@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Zbiór promptów używanych do interakcji z modelami OpenRouter.ai
  * w systemie rekomendacji getTaste.

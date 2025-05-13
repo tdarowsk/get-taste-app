@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 export type ToastVariant = "default" | "destructive" | "success";
 
+/* eslint-disable react/prop-types */
 export interface ToastProps {
   title?: string;
   description?: string;
@@ -18,11 +19,11 @@ interface ToastContextType {
 
 // Create context with meaningful initial values that do nothing to satisfy linter
 const ToastContext = createContext<ToastContextType>({
-  toast: (_props: ToastProps) => {
+  toast: () => {
     // This is just a placeholder that will be overridden by the provider
   },
   toasts: [],
-  clearToast: (_index: number) => {
+  clearToast: () => {
     // This is just a placeholder that will be overridden by the provider
   },
 });
@@ -70,22 +71,14 @@ const ToastContainer = () => {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md">
-      {toasts.map((toast, index) => (
-        <Toast key={index} toast={toast} index={index} onClose={() => clearToast(index)} />
+      {toasts.map((toast, i) => (
+        <Toast key={i} toast={toast} onClose={() => clearToast(i)} />
       ))}
     </div>
   );
 };
 
-const Toast = ({
-  toast,
-  index,
-  onClose,
-}: {
-  toast: ToastProps;
-  index: number;
-  onClose: () => void;
-}) => {
+const Toast = ({ toast, onClose }: { toast: ToastProps; onClose: () => void }) => {
   const { title, description, variant = "default" } = toast;
 
   const bgColors = {

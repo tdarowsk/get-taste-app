@@ -6,6 +6,8 @@ import type { UpdateUserCommand, UserProfileDTO } from "../../types";
  * Serwis odpowiedzialny za operacje na profilu użytkownika.
  * Obsługuje pobieranie i aktualizację danych użytkownika.
  */
+
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class UserService {
   /**
    * Pobiera profil użytkownika na podstawie ID.
@@ -22,7 +24,7 @@ export class UserService {
       .single();
 
     if (error) {
-      console.error("Error fetching user:", error);
+      // console.error("Error fetching user:", error);
       return null;
     }
 
@@ -96,7 +98,7 @@ export class UserService {
       if (error) {
         // Jeśli nie znaleziono użytkownika, spróbujemy utworzyć domyślny profil
         if (error.code === "PGRST116") {
-          console.log(`User ${userId} not found, using default profile`);
+          // console.log(`User ${userId} not found, using default profile`);
 
           // Zwróć domyślny profil bez próby zapisywania
           return {
@@ -182,6 +184,7 @@ export class UserService {
       }
 
       // Get liked movies from item_feedback to determine genre preferences
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let movieFeedback: any[] = [];
       try {
         const { data, error: feedbackError } = await supabaseClient
@@ -284,7 +287,7 @@ export class UserService {
           .map((item) => {
             // Just take first genre if comma-separated
             const firstGenre = item.genre.split(",")[0].trim();
-            return firstGenre.replace(/^\w/, (c) => c.toUpperCase());
+            return firstGenre.replace(/^\w/, (c: string) => c.toUpperCase());
           })
           .filter(Boolean);
 

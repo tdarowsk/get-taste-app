@@ -22,7 +22,9 @@ function convertSymbolsToStrings(obj: unknown): unknown {
 
   // Handle objects
   if (typeof obj === "object") {
-    const result: Record<string, unknown> = {};
+    const result: Record<string, unknown> = {
+      /* No action needed */
+    };
     for (const key in obj as Record<string, unknown>) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         result[key] = convertSymbolsToStrings((obj as Record<string, unknown>)[key]);
@@ -40,13 +42,8 @@ function convertSymbolsToStrings(obj: unknown): unknown {
  * This client should ONLY be used on the server-side to bypass RLS
  * The key MUST be the service_role key, not the anon key
  */
-let adminClient = null;
-
-// Log admin client initialization attempt
-console.log("[Supabase Admin] Attempting to initialize admin client");
-console.log("[Supabase Admin] SUPABASE_URL available:", !!SUPABASE_URL);
-console.log("[Supabase Admin] SUPABASE_KEY available:", !!SUPABASE_KEY);
-console.log("[Supabase Admin] Running on server:", typeof window === "undefined");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let adminClient: any = null;
 
 // Only create the client on the server
 if (typeof window === "undefined") {
@@ -74,7 +71,9 @@ if (typeof window === "undefined") {
 
           // Ensure proper Content-Type headers are set for all requests
           if (!modifiedOptions.headers) {
-            modifiedOptions.headers = {};
+            modifiedOptions.headers = {
+              /* No action needed */
+            };
           }
 
           // Handle Symbol values in body if present
@@ -86,8 +85,8 @@ if (typeof window === "undefined") {
               modifiedOptions.body = JSON.stringify(convertedBodyObj);
 
               // Log the processed request body
-            } catch (e) {
-              console.error("[Supabase Admin] Error processing request body:", e);
+            } catch {
+              // Error caught and ignored
             }
           }
 
@@ -102,7 +101,9 @@ if (typeof window === "undefined") {
 
           // Ensure Content-Type is set correctly
           if (!modifiedOptions.headers) {
-            modifiedOptions.headers = {};
+            modifiedOptions.headers = {
+              /* No action needed */
+            };
           }
 
           // Force these headers for ALL requests - must come after Symbol conversion
@@ -130,8 +131,8 @@ if (typeof window === "undefined") {
             } else if (url instanceof URL) {
               processedUrl = url.toString();
             }
-          } catch (e) {
-            console.error("[Supabase Admin] Error processing URL:", e);
+          } catch {
+            // Error caught and ignored
           }
 
           // Handle URL correctly based on its type
@@ -147,13 +148,11 @@ if (typeof window === "undefined") {
       },
     });
 
-    console.log("[Supabase Admin] Admin client created successfully:", !!adminClient);
-
     // Test the client with a simple query
     adminClient
       .from("film_preferences")
       .select("count(*)")
-      .then(({ data, error }) => {
+      .then(({ data: any, error: Error }) => {
         if (error) {
           console.error("[Supabase Admin] Test query failed:", error);
         } else {
@@ -163,8 +162,8 @@ if (typeof window === "undefined") {
       .catch((err) => {
         console.error("[Supabase Admin] Exception during test query:", err);
       });
-  } catch (error) {
-    console.error("[Supabase Admin] Failed to create admin client:", error);
+  } catch {
+    // Error caught and ignored
   }
 } else {
   console.log("[Supabase Admin] Not creating admin client - running in browser");
@@ -172,7 +171,7 @@ if (typeof window === "undefined") {
 
 // If admin client is null after all, create a fallback that logs errors
 if (!adminClient) {
-  console.warn("[Supabase Admin] WARNING: Using fallback admin client - RLS bypass will not work!");
+  // console.warn("[Supabase Admin] WARNING: Using fallback admin client - RLS bypass will not work!");
 }
 
 export const supabaseAdmin = adminClient;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import type {
   RecommendationHistoryDTO,
   RecommendationWithFeedbackDTO,
@@ -25,7 +25,7 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
   });
 
   // Fetch recommendation history
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -59,12 +59,12 @@ const RecommendationHistory: React.FC<RecommendationHistoryProps> = ({ userId, c
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, filters, pagination.offset, pagination.limit]);
 
   // Fetch history when component mounts or filters/pagination changes
   useEffect(() => {
     fetchHistory();
-  }, [userId, filters, pagination.offset, pagination.limit]);
+  }, [fetchHistory]);
 
   // Handle type filter change
   const handleTypeFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

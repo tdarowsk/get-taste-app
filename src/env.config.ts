@@ -43,7 +43,3 @@ export const SUPABASE_KEY =
 // Anon key for client-side operations (less privileged)
 export const SUPABASE_ANON_KEY =
   import.meta.env.SUPABASE_ANON_KEY || getProcessEnv("SUPABASE_ANON_KEY") || "";
-
-// Log key availability for debugging
-
-console.log("\x1b[32m%s\x1b[0m", TMDB_API_KEY);

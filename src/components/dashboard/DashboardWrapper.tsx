@@ -8,18 +8,23 @@ interface DashboardWrapperProps {
   user: UserProfileDTO;
 }
 
+// Create a default user for development/error cases
+const defaultUser: UserProfileDTO = {
+  id: "default-user",
+  email: "user@example.com",
+  nick: "Guest",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export function DashboardWrapper({ user }: DashboardWrapperProps) {
-  // Validate the user object to ensure we have a valid ID
+  // Ensure we always have a valid user object, even if props fail
+  const safeUser = user && user.id && user.id !== "undefined" ? user : defaultUser;
 
-  // Ensure user ID is valid
-  if (!user || !user.id || user.id === "undefined") {
-    // We'll still render the component, but with a warning in the console
-  }
-
-  // Create a client
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
+  // Create a client with safer initialization
+  const [queryClient] = useState(() => {
+    try {
+      return new QueryClient({
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
@@ -27,14 +32,29 @@ export function DashboardWrapper({ user }: DashboardWrapperProps) {
             retry: 1,
           },
         },
-      })
-  );
+      });
+    } catch (err) {
+      console.error("Error initializing QueryClient:", err);
+      // Return a basic query client if the detailed config fails
+      return new QueryClient();
+    }
+  });
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <DashboardLayout user={user} />
-      </ToastProvider>
-    </QueryClientProvider>
-  );
+  // Wrap the component rendering in an error boundary
+  try {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <DashboardLayout user={safeUser} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+  } catch (error) {
+    console.error("Error rendering Dashboard:", error);
+    return (
+      <div className="bg-red-500 text-white p-4 rounded">
+        Failed to load dashboard. Please reload the page.
+      </div>
+    );
+  }
 }

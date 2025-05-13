@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       let userFeedbackHistory = [];
       try {
         const feedbackUrl = `${request.url.split("/api/")[0]}/api/users/${userId}/item-feedback`;
-        console.log(`[API] Fetching user feedback from: ${feedbackUrl}`);
+        // console.log(`[API] Fetching user feedback from: ${feedbackUrl}`);
 
         const feedbackResult = await fetch(feedbackUrl);
 
@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
           // Check content type to make sure we're getting JSON
           const contentType = feedbackResult.headers.get("content-type");
           if (!contentType || !contentType.includes("application/json")) {
-            console.warn(`[API] Unexpected content type from feedback API: ${contentType}`);
+            // console.warn(`[API] Unexpected content type from feedback API: ${contentType}`);
             // Continue with empty feedback
           } else {
             // Try to parse the JSON safely
@@ -76,8 +76,9 @@ export const GET: APIRoute = async ({ request, cookies }) => {
                   `[API] Feedback API returned non-JSON response: ${feedbackText.substring(0, 100)}...`
                 );
               }
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (parseError) {
-              console.error("[API] Error parsing feedback JSON:", parseError);
+              // console.error("[API] Error parsing feedback JSON:", parseError);
               // Continue with empty feedback
             }
           }

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { RecommendationCard } from "./RecommendationCard";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { RecommendationItem } from "../types";
 
 interface RecommendationHistoryProps {
@@ -17,11 +17,7 @@ export const RecommendationHistory = ({ userId, onRetry }: RecommendationHistory
   const [contentType, setContentType] = useState<"music" | "film">("music");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadHistoryData();
-  }, [userId, selectedTab, contentType]);
-
-  const loadHistoryData = async () => {
+  const loadHistoryData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -48,7 +44,11 @@ export const RecommendationHistory = ({ userId, onRetry }: RecommendationHistory
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, selectedTab, contentType]);
+
+  useEffect(() => {
+    loadHistoryData();
+  }, [loadHistoryData]);
 
   const handleTabChange = (value: string) => {
     setSelectedTab(value);
@@ -98,9 +98,13 @@ export const RecommendationHistory = ({ userId, onRetry }: RecommendationHistory
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
-          <div key={item.id} className="w-full">
-            <RecommendationCard item={item} showActions={false} />
-          </div>
+          <Card key={item.id} className="w-full">
+            <CardHeader>
+              <CardTitle>{item.name}</CardTitle>
+              <CardDescription>{item.type}</CardDescription>
+            </CardHeader>
+            <CardContent>{item.explanation && <p>{item.explanation}</p>}</CardContent>
+          </Card>
         ))}
       </div>
     );

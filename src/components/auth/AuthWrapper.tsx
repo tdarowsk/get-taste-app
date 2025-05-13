@@ -15,6 +15,11 @@ interface AuthWrapperProps {
   fallbackComponent?: React.ReactNode;
 }
 
+interface AuthStatusResponse {
+  user: unknown | null;
+  isLoggedIn: boolean;
+}
+
 /**
  * Komponent opakowujący, który sprawdza stan zalogowania użytkownika
  * i renderuje odpowiedni komponent
@@ -35,12 +40,16 @@ export const AuthWrapper: React.FC<AuthWrapperProps> = ({
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as AuthStatusResponse;
           setIsLoggedIn(!!data.user);
         } else {
           setIsLoggedIn(false);
         }
       } catch (error) {
+        console.error(
+          "Error checking auth status:",
+          error instanceof Error ? error.message : "Unknown error"
+        );
         setIsLoggedIn(false);
       }
     };

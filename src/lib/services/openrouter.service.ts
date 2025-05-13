@@ -254,10 +254,6 @@ export class OpenRouterService {
           // First direct attempt
           parsedResult = JSON.parse(cleanedContent) as T;
         } catch (_primaryParseError) {
-          console.warn(
-            "[OpenRouter] Primary JSON parse failed, attempting to extract JSON from text"
-          );
-
           // Check if the content starts with text explanations followed by JSON
           const jsonStartIndex = cleanedContent.indexOf("{");
           const jsonEndIndex = cleanedContent.lastIndexOf("}");
@@ -265,7 +261,7 @@ export class OpenRouterService {
           if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
             // Extract the JSON part
             const extractedJson = cleanedContent.substring(jsonStartIndex, jsonEndIndex + 1);
-            console.info("[OpenRouter] Extracted potential JSON from text response");
+            // console.info("[OpenRouter] Extracted potential JSON from text response");
 
             try {
               parsedResult = JSON.parse(extractedJson) as T;
@@ -373,27 +369,8 @@ export class OpenRouterService {
               })),
             };
 
-            // Utwórz odpowiedzi w oczekiwanym formacie
-            console.log(
-              `\x1b[32m[OpenRouter] Successfully received ${localRecommendationType} recommendations\x1b[0m`
-            );
-
-            // Log the raw result from AI before transformation
-            console.log(`\x1b[32m[OpenRouter] Raw AI response before processing:\x1b[0m`);
-            console.log(`\x1b[32m${JSON.stringify(fixedResult, null, 2)}\x1b[0m`);
-
-            // Fix the shape of the recommendations if needed
             const recommendations = Array.isArray(fixedResult.items) ? fixedResult.items : [];
-
             // Log number of recommendations and first item
-            console.log(
-              `\x1b[32m[OpenRouter] Found ${recommendations.length} ${localRecommendationType} recommendations\x1b[0m`
-            );
-            if (recommendations.length > 0) {
-              console.log(`\x1b[32m[OpenRouter] First item example:\x1b[0m`);
-              console.log(`\x1b[32m${JSON.stringify(recommendations[0], null, 2)}\x1b[0m`);
-            }
-
             return fixedResult as unknown as T;
           }
 
@@ -594,7 +571,7 @@ export class OpenRouterService {
 
           if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[OpenRouter] API error: ${response.status} - ${errorText}`);
+            // console.error(`[OpenRouter] API error: ${response.status} - ${errorText}`);
             // Spróbuj z następnym modelem
             return tryWithModel(modelIndex + 1);
           }

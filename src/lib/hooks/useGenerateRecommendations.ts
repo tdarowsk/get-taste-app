@@ -23,15 +23,11 @@ export function useGenerateRecommendations() {
         // Create timeout controller for the fetch
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
-          console.warn("[Frontend] Aborting recommendations request due to timeout");
+          // console.warn("[Frontend] Aborting recommendations request due to timeout");
           controller.abort();
         }, 60000); // 60 second timeout
 
         try {
-          console.info(
-            `[Frontend] Sending recommendation request for type: ${type}, force_refresh: ${force_refresh}`
-          );
-
           const response = await fetch(url.toString(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -75,9 +71,9 @@ export function useGenerateRecommendations() {
                 console.warn("[Frontend] OpenRouter API error (likely rate limit)");
                 throw new Error("OpenRouter API temporarily unavailable. Please try again later.");
               }
-            } catch (jsonError) {
+            } catch {
               // Continue with the normal error flow
-              console.error("[Frontend] Error parsing error response:", jsonError);
+              // console.error("[Frontend] Error parsing error response:", jsonError);
             }
 
             throw new Error(
@@ -120,8 +116,8 @@ export function useGenerateRecommendations() {
 
           throw fetchError;
         }
-      } catch (error) {
-        console.error("[Frontend] Error in generateRecommendations:", error);
+      } catch {
+        // Error caught and ignored
         throw error; // Let the UI handle the error display
       }
     },

@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ url }) => {
       });
     }
 
-    console.log(`Dumping item_feedback for user ${userId}`);
+    // console.log(`Dumping item_feedback for user ${userId}`);
 
     // Use admin client if available, otherwise use regular client
     const client = supabaseAdmin || supabaseClient;
@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ url }) => {
       .eq("user_id", userId);
 
     if (error) {
-      console.error("Error fetching item_feedback:", error);
+      // console.error("Error fetching item_feedback:", error);
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { "Content-Type": "application/json" },

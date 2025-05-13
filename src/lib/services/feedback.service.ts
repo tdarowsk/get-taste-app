@@ -122,7 +122,7 @@ export const FeedbackService = {
         .eq("item_id", itemId);
 
       if (error) {
-        console.error(`Error updating seen recommendation feedback: ${error.message}`);
+        // console.error(`Error updating seen recommendation feedback: ${error.message}`);
       }
     } catch (error) {
       console.error(
@@ -220,11 +220,6 @@ export const FeedbackService = {
         }
       );
 
-      console.log(
-        "````````````````````````````````````````````````````HEREREHREHREH`````````````````````"
-      );
-      console.log(response);
-
       // Wykorzystaj analizę do aktualizacji preferencji użytkownika, jeśli są istotne zmiany
       if (response.updatedPreferences && Object.keys(response.updatedPreferences).length > 0) {
         await this.updateUserPreferences(
@@ -233,7 +228,7 @@ export const FeedbackService = {
           response.updatedPreferences
         );
       }
-    } catch (error) {
+    } catch {
       // Nie rzucaj ponownie - to jest proces w tle, który nie powinien wpływać na doświadczenie użytkownika
     }
   },
@@ -302,7 +297,7 @@ export const FeedbackService = {
           throw new Error(`Nie udało się wstawić preferencji: ${insertError.message}`);
         }
       }
-    } catch (error) {
+    } catch {
       // Nie rzucaj ponownie - to jest proces w tle, który nie powinien wpływać na doświadczenie użytkownika
     }
   },
@@ -342,7 +337,7 @@ export const FeedbackService = {
       }
 
       return data || [];
-    } catch (error) {
+    } catch {
       return [];
     }
   },
@@ -418,7 +413,7 @@ export const FeedbackService = {
       );
 
       return result;
-    } catch (error) {
+    } catch {
       return {
         status: "error",
         reason: error instanceof Error ? error.message : String(error),

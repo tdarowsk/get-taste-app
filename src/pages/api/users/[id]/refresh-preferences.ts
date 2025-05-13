@@ -8,7 +8,7 @@ export const prerender = false;
  * POST /api/users/[id]/refresh-preferences - Refresh preferences based on liked items
  */
 export const POST: APIRoute = async ({ params }) => {
-  console.log("Refresh preferences API called");
+  // console.log("Refresh preferences API called");
 
   try {
     const userId = params.id;
@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ params }) => {
       );
     }
   } catch (error) {
-    console.error("Error in refresh preferences API:", error);
+    // console.error("Error in refresh preferences API:", error);
 
     return new Response(
       JSON.stringify({

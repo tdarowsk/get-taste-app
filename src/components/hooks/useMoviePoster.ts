@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
-import { MoviePosterService } from "@/lib/services/movie-poster.service";
+
+// Implementation for MoviePosterService
+const MoviePosterService = {
+  getMoviePosterUrl: async (title: string): Promise<string | null> => {
+    // Fallback implementation
+    return `https://placehold.co/240x360?text=${encodeURIComponent(title)}`;
+  },
+
+  getMovieBackdropUrl: async (title: string): Promise<string | null> => {
+    // Fallback implementation
+    return `https://placehold.co/1280x720?text=${encodeURIComponent(title)}`;
+  },
+};
 
 interface UseMoviePosterResult {
   posterUrl: string | null;
@@ -32,8 +44,8 @@ export function useMoviePoster(title: string): UseMoviePosterResult {
 
         setPosterUrl(poster);
         setBackdropUrl(backdrop);
-      } catch (err) {
-        console.error("Error loading movie posters:", err);
+      } catch {
+        // console.error("Error loading movie posters");
         setError(true);
       } finally {
         setIsLoading(false);

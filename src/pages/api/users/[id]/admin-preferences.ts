@@ -10,7 +10,7 @@ export const prerender = false;
  */
 export const POST: APIRoute = async ({ params, request }) => {
   try {
-    console.log("Admin preferences API called");
+    // console.log("Admin preferences API called");
     console.log("SUPABASE_URL:", SUPABASE_URL);
     console.log("SUPABASE_KEY available:", !!SUPABASE_KEY);
     console.log("Admin client available:", !!supabaseAdmin);
@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ params, request }) => {
           .single();
 
         if (checkError && checkError.code !== "PGRST116") {
-          console.error("Error checking for existing preferences:", checkError);
+          // console.error("Error checking for existing preferences:", checkError);
         }
 
         // We'll use raw SQL if possible to completely bypass RLS

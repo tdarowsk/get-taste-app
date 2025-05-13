@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +52,8 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnBackdropClick = true,
   closeOnEsc = true,
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
   // Hook obsługujący naciśnięcie klawisza Escape
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
@@ -66,6 +68,9 @@ export const Modal: React.FC<ModalProps> = ({
 
       // Dodaj obsługę klawisza Escape
       document.addEventListener("keydown", handleEscKey);
+
+      // Ustaw focus na modalu dla dostępności
+      modalRef.current?.focus();
     }
 
     return () => {
@@ -76,13 +81,6 @@ export const Modal: React.FC<ModalProps> = ({
       document.removeEventListener("keydown", handleEscKey);
     };
   }, [isOpen, closeOnEsc, onClose]);
-
-  // Obsługa kliknięcia w tło
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget && closeOnBackdropClick) {
-      onClose();
-    }
-  };
 
   // Rozmiary modala
   const sizeClasses = {
@@ -97,22 +95,33 @@ export const Modal: React.FC<ModalProps> = ({
 
   // Renderuj modal w portalu
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black/60 backdrop-blur-sm transition-opacity"
-      onClick={handleBackdropClick}
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby="modal-title"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black/60 backdrop-blur-sm transition-opacity">
+      {/* Używamy semantycznego div z rolą dialogu */}
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
         className={cn(
-          "w-full bg-white rounded-xl shadow-2xl transform transition-all duration-300 animate-scale-in",
+          "w-full bg-white rounded-xl shadow-2xl transform transition-all duration-300 animate-scale-in relative z-10",
           sizeClasses[size],
           className
         )}
+        tabIndex={-1} // Umożliwia focus bez włączania do tab order
       >
         {children}
       </div>
+
+      {/* Jeśli closeOnBackdropClick jest włączone, dodajemy przycisk, który zamyka modal */}
+      {closeOnBackdropClick && (
+        <button
+          className="fixed inset-0 w-full h-full bg-transparent cursor-default"
+          onClick={onClose}
+          aria-label="Close modal"
+          tabIndex={-1} // Wyłącz z tab order, ponieważ przyciski zamykające są wewnątrz modalu
+          style={{ zIndex: 0 }} // Pod modalem, ale nad resztą strony
+        />
+      )}
     </div>,
     document.body
   );

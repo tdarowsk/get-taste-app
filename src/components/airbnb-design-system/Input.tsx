@@ -49,8 +49,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    // Generujemy unikalne ID dla pola, jeśli nie zostało podane
-    const id = providedId || `input-${React.useId()}`;
+    // Generujemy unikalne ID dla pola - zawsze, niezależnie czy providedId jest dostępne
+    const uniqueId = React.useId();
+    // Używamy providedId jeśli istnieje, w przeciwnym razie używamy wygenerowanego ID
+    const id = providedId || `input-${uniqueId}`;
 
     return (
       <div className="w-full">

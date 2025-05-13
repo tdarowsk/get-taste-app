@@ -1,0 +1,3 @@
+# Ignore Astro files due to parsing errors
+src/pages/**/*.astro
+src/layouts/**/*.astro 

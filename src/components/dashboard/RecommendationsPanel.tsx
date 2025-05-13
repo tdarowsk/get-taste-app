@@ -162,8 +162,8 @@ export function RecommendationsPanel({
             } else {
               fixedRec.data.items = [];
             }
-          } catch (error) {
-            console.error("Error converting recommendation items:", error);
+          } catch {
+            // Error while converting recommendation items
             fixedRec.data.items = [];
           }
         }
@@ -209,7 +209,10 @@ export function RecommendationsPanel({
       // Call the parent's refresh function to reload the data
       onRefresh();
     } catch (error) {
-      console.error("Error generating AI recommendations:", error);
+      console.error(
+        "Error generating AI recommendations:",
+        error instanceof Error ? error.message : String(error)
+      );
     } finally {
       setForceGenerating(false);
     }
@@ -557,8 +560,7 @@ function CustomRecommendationsList({
 
           setAllItems(items);
           setHasProcessedData(true);
-        } catch (error) {
-          console.error("Error processing recommendations:", error);
+        } catch {
           setViewModels([]);
           setAllItems([]);
           setHasProcessedData(true);

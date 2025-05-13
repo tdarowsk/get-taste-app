@@ -70,11 +70,7 @@ export function RecommendationStack({
     };
   };
 
-  const handleSwipe = async (
-    _itemId: string,
-    feedbackType: RecommendationFeedbackType,
-    metadata: Record<string, unknown>
-  ) => {
+  const handleSwipe = async (_itemId: string, feedbackType: RecommendationFeedbackType) => {
     try {
       // Set animation direction based on feedback type
       setSwipeDirection(feedbackType === "like" ? "right" : "left");
@@ -100,8 +96,7 @@ export function RecommendationStack({
       setTimeout(() => {
         setDirection("center");
       }, 150);
-    } catch (error) {
-      console.error("Error processing swipe:", error, metadata);
+    } catch {
       setDirection("center");
       setSwipeDirection("none");
     }

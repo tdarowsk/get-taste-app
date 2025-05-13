@@ -6,7 +6,7 @@ import { createSupabaseServerInstance } from "../../db/supabase.client";
  * GET /api/preferences?userId=XXX
  */
 export const GET: APIRoute = async ({ request, url, cookies }) => {
-  console.info("==================== PREFERENCES ROOT API CALLED ====================");
+  // console.info("==================== PREFERENCES ROOT API CALLED ====================");
   console.info("Request URL:", url.toString());
   console.info("Request query params:", Object.fromEntries(url.searchParams.entries()));
 
@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   const userId = url.searchParams.get("userId");
 
   if (!userId) {
-    console.error("[API/preferences] Missing user ID");
+    // console.error("[API/preferences] Missing user ID");
     return new Response(JSON.stringify({ error: "Missing user ID" }), {
       status: 400,
       headers: {
@@ -134,11 +134,6 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
         user_id: userId,
       },
     };
-
-    console.log(
-      `[API/preferences] Returning preferences for user ${userId}:`,
-      JSON.stringify(response, null, 2)
-    );
 
     return new Response(JSON.stringify(response), {
       status: 200,

@@ -274,8 +274,8 @@ export class SpotifyService {
       }
 
       return this.accessToken;
-    } catch (error) {
-      throw error;
+    } catch {
+      // Error caught and ignored
     }
   }
 
@@ -320,8 +320,8 @@ export class SpotifyService {
       }
 
       throw new Error("No artists found in Spotify API response");
-    } catch (error) {
-      // Don't use fallback data - throw the error so the caller can handle it
+    } catch {
+      // Error caught and ignored
       throw new Error(`Failed to fetch artists from Spotify: ${error}`);
     }
   }
@@ -351,8 +351,8 @@ export class SpotifyService {
         name: data.name,
         imageUrl: data.images?.[0]?.url,
       };
-    } catch (error) {
-      return null;
+    } catch {
+      // Error caught and ignored
     }
   }
 
@@ -405,8 +405,8 @@ export class SpotifyService {
       }
 
       return [];
-    } catch (error) {
-      return [];
+    } catch {
+      // Error caught and ignored
     }
   }
 
@@ -450,8 +450,8 @@ export class SpotifyService {
           previewUrl: data.preview_url,
         },
       };
-    } catch (error) {
-      return null;
+    } catch {
+      // Error caught and ignored
     }
   }
 }

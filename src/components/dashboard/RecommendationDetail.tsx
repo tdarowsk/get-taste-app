@@ -14,7 +14,7 @@ export function RecommendationDetail({ item, type, onClose }: RecommendationDeta
   const [fetchedDirector, setFetchedDirector] = useState<string | null>(null);
 
   // Debug logging
-  console.log("RecommendationDetail - item:", item);
+  // console.log("RecommendationDetail - item:", item);
   console.log("item.metadata:", item.metadata);
   console.log("item.metadata.details:", item.metadata?.details);
   console.log("===== DIRECTOR DEBUG IN DETAIL VIEW =====");
@@ -134,7 +134,7 @@ export function RecommendationDetail({ item, type, onClose }: RecommendationDeta
             }
           }
         } else {
-          console.error(`Failed to fetch TMDB details: ${response.status}`);
+          // console.error(`Failed to fetch TMDB details: ${response.status}`);
         }
       } catch (error) {
         console.error("Error fetching TMDB details:", error);

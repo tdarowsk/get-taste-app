@@ -63,7 +63,7 @@ export const MovieMappingService = {
     // Handle IMDB IDs (tt followed by numbers)
     if (movieId.startsWith("tt") && !isNaN(Number(movieId.substring(2)))) {
       // For IMDB IDs, we would ideally look up the TMDB ID, but for now return null
-      console.warn(`IMDB ID format detected: ${movieId} - TMDB lookup required`);
+      // console.warn(`IMDB ID format detected: ${movieId} - TMDB lookup required`);
       return null;
     }
 
@@ -77,7 +77,7 @@ export const MovieMappingService = {
    */
   async fetchMovieFromTMDB(movieId: string): Promise<MovieDetails | null> {
     if (!TMDB_API_KEY) {
-      console.error("TMDB API key not set");
+      // console.error("TMDB API key not set");
       return null;
     }
 
@@ -96,7 +96,7 @@ export const MovieMappingService = {
     }
 
     try {
-      console.log(`Fetching TMDB data for ID: ${tmdbId} (from ${movieId})`);
+      // console.log(`Fetching TMDB data for ID: ${tmdbId} (from ${movieId})`);
 
       const response = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}`, {
         method: "GET",

@@ -3,12 +3,6 @@ import { UserPreferencesService } from "../../../../../lib/services/userPreferen
 
 export const GET: APIRoute = async ({ params, url }) => {
   // Dodajmy bezpośrednie logowanie na początku funkcji
-  console.info(`\n\n======================================================`);
-  console.info(`[API/genres/DEBUG] ENDPOINT WYWOŁANY - API PREFERENCES/GENRES`);
-  console.info(`[API/genres/DEBUG] params: ${JSON.stringify(params)}`);
-  console.info(`[API/genres/DEBUG] url: ${url.toString()}`);
-  console.info(`======================================================\n\n`);
-
   const userId = params.id;
   const type = url.searchParams.get("type") || "film";
 
@@ -19,7 +13,6 @@ export const GET: APIRoute = async ({ params, url }) => {
   );
 
   if (!userId) {
-    console.error("[API/genres] Missing user ID");
     return new Response(JSON.stringify({ error: "Brakujący identyfikator użytkownika" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },

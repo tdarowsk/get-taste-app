@@ -18,9 +18,10 @@ interface GenreData {
 
 export function FavoriteFilmGenres({ userId, onRefresh }: FavoriteFilmGenresProps) {
   const [favoriteGenres, setFavoriteGenres] = useState<GenreData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Pobieramy dane o gatunkach filmowych z API
-  const { data, isLoading, error, refetch } = useQuery<MetadataItem[]>({
+  const { data, error, refetch } = useQuery<MetadataItem[]>({
     queryKey: ["favoriteFilmGenres", userId],
     queryFn: async () => {
       const response = await fetch(`/api/users/${userId}/preferences/genres?type=film`);
@@ -60,9 +61,9 @@ export function FavoriteFilmGenres({ userId, onRefresh }: FavoriteFilmGenresProp
       const result = await response.json();
 
       if (result.success) {
-        console.log("Preferencje zostały pomyślnie odświeżone");
+        // console.log("Preferencje zostały pomyślnie odświeżone");
       } else {
-        console.warn("Nie udało się odświeżyć preferencji:", result.message);
+        // console.warn("Nie udało się odświeżyć preferencji:", result.message);
       }
 
       // Następnie pobierz zaktualizowane dane
@@ -73,7 +74,12 @@ export function FavoriteFilmGenres({ userId, onRefresh }: FavoriteFilmGenresProp
         onRefresh();
       }
     } catch (error) {
-      console.error("Błąd podczas odświeżania preferencji:", error);
+      setIsLoading(false);
+      // Log error and continue to refetch
+      console.error(
+        "Error refreshing preferences:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
       // Mimo błędu, próbujemy odświeżyć dane
       refetch();
     }
