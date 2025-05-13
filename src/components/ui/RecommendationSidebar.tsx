@@ -5,7 +5,32 @@ import { FeedbackType } from "../../types";
 import { UniqueRecommendationsService } from "../../lib/services/uniqueRecommendations.service";
 import { MoviePoster } from "../MoviePoster";
 
-// The time period for which items should not be shown after feedback (24 hours)
+// Funkcja sprawdzająca, czy gatunek jest placeholderem
+const isGenrePlaceholder = (genreName: string): boolean => {
+  if (!genreName || genreName.trim() === "") return true;
+
+  // Różne wzorce placeholderów do wykrywania
+  const placeholderPatterns = [
+    /^[Gg]enre\d+$/, // Genre1, genre2, itp.
+    /^GENRE\d+$/, // GENRE1, GENRE2, itp.
+    /^[Gg]enre[A-Za-z]$/, // GenreA, genreB, itp.
+    /^[Gg]enre\s*\d*$/, // Genre, genre, Genre 1, itp.
+    /^[Gg]enre\s*[A-Za-z]\d*$/, // Genre X, Genre X1, itp.
+    /^placeholder$/i, // placeholder, niezależnie od wielkości liter
+    /^sample$/i, // sample, niezależnie od wielkości liter
+    /^example$/i, // example, niezależnie od wielkości liter
+    /^test\d*$/i, // test, test1, TEST2, itp.
+    /^unknown(\s+genre)?$/i, // unknown, UNKNOWN, Unknown Genre, itp.
+    /^dummy$/i, // dummy, DUMMY, itp.
+    /^custom\d*$/i, // custom, custom1, CUSTOM2, itp.
+    /^\d+$/, // liczby jako nazwy gatunków
+  ];
+
+  // Sprawdź, czy nazwa gatunku pasuje do któregokolwiek z wzorców
+  return placeholderPatterns.some((pattern) => pattern.test(genreName.trim()));
+};
+
+// Time period for which items should not be shown after feedback (24 hours)
 const RECOMMENDATION_COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // Function to fetch movie details from our backend API
@@ -219,8 +244,13 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
 
   // Function to handle swipe with movie details
   const handleSwipeWithDetails = (direction: FeedbackType) => {
+    // Filtrowanie placeholderowych gatunków filmowych
+    const filteredGenres = movieDetails?.genres?.filter((g) => {
+      return !isGenrePlaceholder(g.name);
+    });
+
     // Extract genre names to a string for feedback - format as comma-separated string without spaces
-    const genreString = movieDetails?.genres?.map((g) => g.name).join(",") || null;
+    const genreString = filteredGenres?.map((g) => g.name).join(",") || null;
 
     // Extract cast names to a string for feedback - take top 5 actors
     const castString = movieDetails?.cast?.slice(0, 5).join(",") || null;
@@ -1100,6 +1130,60 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
 
         // Store feedback in the database
         try {
+          // Walidacja danych przed zapisem do API
+          const validateGenre = (genre: string | null): string | null => {
+            if (!genre) return null;
+
+            // Wykrywanie i filtrowanie placeholderowych gatunków
+            const genreArray = genre.split(",");
+
+            console.log("Walidacja gatunków:", genreArray);
+
+            const filteredGenres = genreArray.filter((g) => {
+              const trimmed = g.trim();
+              const isPlaceholder = isGenrePlaceholder(trimmed);
+
+              // Loguj odfiltrowane gatunki
+              if (isPlaceholder) {
+                console.log(`Odfiltrowano placeholder gatunek: "${trimmed}"`);
+              }
+
+              return !isPlaceholder;
+            });
+
+            console.log("Po filtrowaniu:", filteredGenres);
+
+            return filteredGenres.length > 0 ? filteredGenres.join(",") : null;
+          };
+
+          // Znajdź item w oryginalnej tablicy allItems
+          const genre = currentItem?.details?.genre
+            ? validateGenre(currentItem.details.genre as string)
+            : null;
+          const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
+          const cast = currentItem?.details?.cast || null;
+
+          // Create payload with basic fields first
+          let body = JSON.stringify({
+            item_id: itemId,
+            feedback_type: feedbackType,
+          });
+
+          // Try with metadata if available
+          try {
+            if (genre || artist || cast) {
+              body = JSON.stringify({
+                item_id: itemId,
+                feedback_type: feedbackType,
+                genre: genre,
+                artist: artist,
+                cast: cast,
+              });
+            }
+          } catch (error) {
+            console.error("Error creating payload with metadata:", error);
+          }
+
           // Try the primary endpoint first
           let savedSuccessfully = false;
           try {
@@ -1107,32 +1191,6 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
               `/api/users/${userId}/item-feedback`,
               window.location.origin
             );
-
-            // Znajdź item w oryginalnej tablicy allItems
-            const genre = currentItem?.details?.genre || null;
-            const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
-            const cast = currentItem?.details?.cast || null;
-
-            // Create payload with basic fields first
-            let body = JSON.stringify({
-              item_id: itemId,
-              feedback_type: feedbackType,
-            });
-
-            // Try with metadata if available
-            try {
-              if (genre || artist || cast) {
-                body = JSON.stringify({
-                  item_id: itemId,
-                  feedback_type: feedbackType,
-                  genre: genre,
-                  artist: artist,
-                  cast: cast,
-                });
-              }
-            } catch (error) {
-              console.error("Error creating payload with metadata:", error);
-            }
 
             const primaryResponse = await fetch(primaryUrl.toString(), {
               method: "POST",
@@ -1144,6 +1202,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
 
             if (primaryResponse.ok) {
               savedSuccessfully = true;
+              console.log("Primary feedback saved successfully");
             } else {
               // Log primary error for debugging
               console.error("Primary endpoint failed");
@@ -1161,13 +1220,8 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
                 window.location.origin
               );
 
-              // Znajdź item w oryginalnej tablicy allItems
-              const genre = currentItem?.details?.genre || null;
-              const artist = currentItem?.details?.artist || currentItem?.details?.director || null;
-              const cast = currentItem?.details?.cast || null;
-
-              // Create payload with basic fields first
-              let body = JSON.stringify({
+              // Create another payload with the validated data
+              let fallbackBody = JSON.stringify({
                 item_id: itemId,
                 feedback_type: feedbackType,
               });
@@ -1175,7 +1229,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
               // Try with metadata if available
               try {
                 if (genre || artist || cast) {
-                  body = JSON.stringify({
+                  fallbackBody = JSON.stringify({
                     item_id: itemId,
                     feedback_type: feedbackType,
                     genre: genre,
@@ -1192,11 +1246,12 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: body,
+                body: fallbackBody,
               });
 
               if (fallbackResponse.ok) {
                 savedSuccessfully = true;
+                console.log("Fallback feedback saved successfully");
               } else {
                 console.error("Fallback feedback API error:", await fallbackResponse.text());
               }
