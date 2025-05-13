@@ -64,7 +64,8 @@ jobs:
     permissions:
       contents: read
     env:
-      SUPABASE_URL: ${{ secrets.E2E_URLL }}
+      ENV_NAME: integration
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
