@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { RecommendationCard } from "./RecommendationCard";
 import { Button } from "@/components/ui/button";
 import type { RecommendationDTO, RecommendationItem } from "../types";
+import type { EnhancedRecommendationViewModel } from "../types/recommendations";
 
 interface SwipeableRecommendationsProps {
   recommendations: RecommendationDTO | null;
@@ -11,6 +12,38 @@ interface SwipeableRecommendationsProps {
   onEmpty: () => void;
   loading?: boolean;
 }
+
+// Helper function to convert RecommendationItem to EnhancedRecommendationViewModel
+const convertToViewModel = (item: RecommendationItem): EnhancedRecommendationViewModel => {
+  return {
+    recommendation: {
+      id: parseInt(item.id) || 0,
+      user_id: "",
+      data: {
+        title: item.name,
+        description: item.explanation || "",
+        items: [],
+      },
+      type:
+        item.type.toLowerCase() === "film" || item.type.toLowerCase() === "music"
+          ? (item.type.toLowerCase() as "music" | "film")
+          : "music",
+      created_at: new Date().toISOString(),
+    },
+    reason: {
+      primaryReason: item.explanation || "No explanation provided",
+      detailedReasons: [],
+      relatedItems: [],
+    },
+    metadataInsight: {
+      recommendationId: parseInt(item.id) || 0,
+      primaryFactors: [],
+      secondaryFactors: [],
+      uniqueFactors: [],
+    },
+    isNew: true,
+  };
+};
 
 export const SwipeableRecommendations = ({
   recommendations,
@@ -42,7 +75,7 @@ export const SwipeableRecommendations = ({
     }
   }, [recommendations, x]);
 
-  const handleDragEnd = async (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = async (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (animating) return;
 
     const threshold = 100;
@@ -127,6 +160,9 @@ export const SwipeableRecommendations = ({
   const currentItem = items[currentIndex];
   const nextItem = items[currentIndex + 1];
 
+  const currentViewModel = convertToViewModel(currentItem);
+  const nextViewModel = nextItem ? convertToViewModel(nextItem) : null;
+
   return (
     <div className="relative h-[450px] w-full max-w-sm mx-auto">
       {/* Instruction for first-time users */}
@@ -137,9 +173,9 @@ export const SwipeableRecommendations = ({
       )}
 
       {/* Next card (shown behind current card) */}
-      {nextItem && (
+      {nextViewModel && (
         <div className="absolute top-4 left-0 right-0 z-0 opacity-70">
-          <RecommendationCard item={nextItem} showActions={false} isActive={false} />
+          <RecommendationCard recommendation={nextViewModel} showActions={false} isActive={false} />
         </div>
       )}
 
@@ -159,9 +195,9 @@ export const SwipeableRecommendations = ({
         className="absolute w-full top-0 left-0 touch-none"
       >
         <RecommendationCard
-          item={currentItem}
-          onLike={handleLike}
-          onDislike={handleDislike}
+          recommendation={currentViewModel}
+          onFeedback={(_, type) => (type === "like" ? handleLike() : handleDislike())}
+          showActions={true}
           isActive={!animating}
         />
       </motion.div>

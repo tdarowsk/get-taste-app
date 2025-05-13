@@ -48,9 +48,8 @@ const TestPreferencesPanel = ({
   return (
     <PreferencesPanel
       userId={userId}
-      // @ts-expect-error - add internal props for testing
       _activeTabForTesting={activeTab}
-      _setActiveTabForTesting={setActiveTab}
+      _setActiveTabForTesting={setActiveTab as React.Dispatch<React.SetStateAction<string>>}
     />
   );
 };

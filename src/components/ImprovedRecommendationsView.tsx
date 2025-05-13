@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { FormProvider } from "react-hook-form";
 import { useRecommendationForm } from "../hooks/useRecommendationForm";
 import { CategorySelector } from "./CategorySelector";

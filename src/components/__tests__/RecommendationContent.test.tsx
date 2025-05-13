@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { RecommendationContent } from "../RecommendationContent";
@@ -8,6 +7,7 @@ describe("RecommendationContent", () => {
   const data: RecommendationDataDetails = {
     title: "Sample Title",
     description: "Sample description",
+    items: [],
   };
 
   it("renders title and description when provided", () => {
@@ -17,7 +17,7 @@ describe("RecommendationContent", () => {
   });
 
   it("does not render title or description when missing", () => {
-    render(<RecommendationContent data={{}} items={[]} />);
+    render(<RecommendationContent data={{ title: "", description: "", items: [] }} items={[]} />);
     expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
     expect(screen.queryByText("Sample description")).toBeNull();
   });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { EnhancedRecommendationViewModel } from "../types/recommendations";
 import type { RecommendationFeedbackType } from "../types";
@@ -9,7 +9,7 @@ import { AnimationProvider } from "./swipe-animation";
 
 interface RecommendationStackProps {
   recommendations: EnhancedRecommendationViewModel[];
-  onFeedback: (recommendationId: number, feedbackType: RecommendationFeedbackType) => void;
+  onFeedback: (recommendationId: number, feedbackType: RecommendationFeedbackType) => Promise<void>;
   currentIndex: number;
   onNext: () => void;
   userId: string;

@@ -1,7 +1,7 @@
-import { IMetadataService } from "../../domain/interfaces/IMetadataService";
+import type { IMetadataService } from "../../domain/interfaces/IMetadataService";
 import { MetadataInsight } from "../../domain/models/MetadataInsight";
 import { MetadataItem } from "../../domain/models/MetadataItem";
-import { DataSource } from "../data/DataSource";
+import type { DataSource } from "../data/DataSource";
 import { MetadataType } from "../../domain/enums/MetadataType";
 
 interface MetadataInsightDTO {

@@ -1,4 +1,4 @@
-import { DataSource } from "./DataSource";
+import type { DataSource } from "./DataSource";
 
 export class ApiDataSource implements DataSource {
   async query<T>(url: string, options?: RequestInit): Promise<T> {

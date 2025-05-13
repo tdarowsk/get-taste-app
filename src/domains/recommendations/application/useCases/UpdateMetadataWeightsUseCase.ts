@@ -1,4 +1,4 @@
-import { IMetadataService } from "../../domain/interfaces/IMetadataService";
+import type { IMetadataService } from "../../domain/interfaces/IMetadataService";
 import { MetadataType } from "../../domain/enums/MetadataType";
 
 export class UpdateMetadataWeightsUseCase {

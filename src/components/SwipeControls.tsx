@@ -1,5 +1,3 @@
-import React from "react";
-
 interface SwipeControlsProps {
   onLike: () => void;
   onDislike: () => void;

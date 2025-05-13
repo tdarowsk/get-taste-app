@@ -1,10 +1,10 @@
 import type { APIRoute } from "astro";
 import { supabaseAdmin } from "../../../db/supabase.admin";
-import { supabaseClient } from "../../../db/supabase.client";
+import { createSupabaseServerInstance } from "../../../db/supabase.client";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, cookies, request }) => {
   try {
     const userId = url.searchParams.get("userId");
 
@@ -16,6 +16,12 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     // console.log(`Dumping item_feedback for user ${userId}`);
+
+    // Create a Supabase client instance for this request
+    const supabaseClient = createSupabaseServerInstance({
+      headers: request.headers,
+      cookies,
+    });
 
     // Use admin client if available, otherwise use regular client
     const client = supabaseAdmin || supabaseClient;
@@ -60,7 +66,8 @@ export const GET: APIRoute = async ({ url }) => {
             items: feedback || [],
             sample: feedback?.slice(0, 5) || [],
             genreCount:
-              feedback?.filter((item) => item.genre && item.genre.trim() !== "").length || 0,
+              feedback?.filter((item: { genre?: string }) => item.genre && item.genre.trim() !== "")
+                .length || 0,
           },
           filmPrefs,
           servicePrefs,
@@ -83,7 +90,8 @@ export const GET: APIRoute = async ({ url }) => {
             items: feedback || [],
             sample: feedback?.slice(0, 5) || [],
             genreCount:
-              feedback?.filter((item) => item.genre && item.genre.trim() !== "").length || 0,
+              feedback?.filter((item: { genre?: string }) => item.genre && item.genre.trim() !== "")
+                .length || 0,
           },
           filmPrefs,
           serviceError: e instanceof Error ? e.message : String(e),

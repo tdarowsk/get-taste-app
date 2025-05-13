@@ -1,4 +1,6 @@
-qwen/qwen3-4b:free// Script to check if columns exist in recommendation_feedback table
+// Script to check if columns exist in recommendation_feedback table
+/* eslint-env node */
+/* global console, process */
 
 // Import pg
 import pg from "pg";

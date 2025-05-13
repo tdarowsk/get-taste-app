@@ -1,4 +1,3 @@
-import React from "react";
 import type { RecommendationDataDetails, RecommendationItem } from "../types";
 
 interface RecommendationContentProps {
@@ -23,9 +22,9 @@ export function RecommendationContent({ data, items = [] }: RecommendationConten
                   <p className="text-sm text-muted-foreground">{item.type}</p>
                 </div>
 
-                {item.details && item.details.imageUrl && (
+                {item.details && typeof item.details.imageUrl === "string" && (
                   <img
-                    src={item.details.imageUrl as string}
+                    src={item.details.imageUrl}
                     alt={item.name}
                     className="w-16 h-16 object-cover rounded"
                   />

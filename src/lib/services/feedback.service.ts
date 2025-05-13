@@ -1,8 +1,16 @@
-import { supabaseClient } from "../../db/supabase.client";
 import type { RecommendationFeedback, RecommendationFeedbackType } from "../../types";
 import { OpenRouterService } from "./openrouter.service";
 import { OPENROUTER_API_KEY } from "../../env.config";
 import { getAiPrompts, getSystemPrompts } from "../utils/ai-prompts";
+import { createClient } from "@supabase/supabase-js";
+
+// Create a factory function to get a Supabase client that works both client and server side
+const getSupabaseClient = () => {
+  return createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+};
 
 interface FeedbackMetadata {
   recommendation_id: number;
@@ -40,7 +48,7 @@ export const FeedbackService = {
     const userIdStr = String(userId);
 
     // Pobierz szczegóły rekomendacji dla kontekstu algorytmu
-    const { data: recommendation, error: recError } = await supabaseClient
+    const { data: recommendation, error: recError } = await getSupabaseClient()
       .from("recommendations")
       .select("*")
       .eq("id", recommendationId)
@@ -54,7 +62,7 @@ export const FeedbackService = {
     const metadataJson = itemMetadata ? JSON.stringify(itemMetadata) : "{}";
 
     // Use upsert instead of insert to handle duplicates
-    const { data, error } = await supabaseClient
+    const { data, error } = await getSupabaseClient()
       .from("recommendation_feedback")
       .upsert(
         {
@@ -115,7 +123,7 @@ export const FeedbackService = {
       // Convert to string to ensure consistent handling
       const userIdStr = String(userId);
 
-      const { error } = await supabaseClient
+      const { error } = await getSupabaseClient()
         .from("seen_recommendations")
         .update({ feedback_type: feedbackType })
         .eq("user_id", userIdStr)
@@ -152,7 +160,7 @@ export const FeedbackService = {
       const userIdStr = String(userId);
 
       // Pobierz ostatnie 10 feedbacków użytkownika, aby ustalić wzorce
-      const { data: recentFeedback, error: feedbackError } = await supabaseClient
+      const { data: recentFeedback, error: feedbackError } = await getSupabaseClient()
         .from("recommendation_feedback")
         .select("*, recommendations(*)")
         .eq("user_id", userIdStr)
@@ -166,7 +174,7 @@ export const FeedbackService = {
       // Pobierz preferencje użytkownika
       const preferenceTable =
         feedbackMetadata.recommendation_type === "music" ? "music_preferences" : "film_preferences";
-      const { data: preferences, error: prefError } = await supabaseClient
+      const { data: preferences, error: prefError } = await getSupabaseClient()
         .from(preferenceTable)
         .select("*")
         .eq("user_id", userIdStr)
@@ -257,7 +265,7 @@ export const FeedbackService = {
       const table = contentType === "music" ? "music_preferences" : "film_preferences";
 
       // Sprawdź, czy preferencje istnieją
-      const { data: existing, error: checkError } = await supabaseClient
+      const { data: existing, error: checkError } = await getSupabaseClient()
         .from(table)
         .select("*")
         .eq("user_id", userIdStr)
@@ -268,7 +276,7 @@ export const FeedbackService = {
       }
 
       // Add timestamp for updates
-      const updatedData = {
+      const updatedData: Record<string, unknown> = {
         ...updatedPreferences,
         // Only add updated_at if it's supported by the table schema
         ...(table === "music_preferences" || table === "film_preferences"
@@ -278,7 +286,7 @@ export const FeedbackService = {
 
       if (existing) {
         // Aktualizuj istniejące preferencje
-        const { error: updateError } = await supabaseClient
+        const { error: updateError } = await getSupabaseClient()
           .from(table)
           .update(updatedData)
           .eq("user_id", userIdStr);
@@ -288,10 +296,12 @@ export const FeedbackService = {
         }
       } else {
         // Utwórz nowe preferencje
-        const { error: insertError } = await supabaseClient.from(table).insert({
-          user_id: userIdStr,
-          ...updatedPreferences,
-        });
+        const { error: insertError } = await getSupabaseClient()
+          .from(table)
+          .insert({
+            user_id: userIdStr,
+            ...updatedPreferences,
+          });
 
         if (insertError) {
           throw new Error(`Nie udało się wstawić preferencji: ${insertError.message}`);
@@ -324,7 +334,7 @@ export const FeedbackService = {
       // Convert to string to ensure consistent handling
       const userIdStr = String(userId);
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await getSupabaseClient()
         .from("recommendation_feedback")
         .select("*, recommendations(*)")
         .eq("user_id", userIdStr)
@@ -366,7 +376,7 @@ export const FeedbackService = {
       const userIdStr = String(userId);
 
       // Pobierz pozytywny feedback dla analizy "lubianych" treści
-      const { data: likedContent, error: likedError } = await supabaseClient
+      const { data: likedContent, error: likedError } = await getSupabaseClient()
         .from("recommendation_feedback")
         .select("metadata, created_at")
         .eq("user_id", userIdStr)
@@ -379,7 +389,7 @@ export const FeedbackService = {
       }
 
       // Pobierz negatywny feedback dla analizy "nielubianych" treści
-      const { data: dislikedContent, error: dislikedError } = await supabaseClient
+      const { data: dislikedContent, error: dislikedError } = await getSupabaseClient()
         .from("recommendation_feedback")
         .select("metadata, created_at")
         .eq("user_id", userIdStr)
@@ -413,10 +423,10 @@ export const FeedbackService = {
       );
 
       return result;
-    } catch {
+    } catch (err) {
       return {
         status: "error",
-        reason: error instanceof Error ? error.message : String(error),
+        reason: err instanceof Error ? err.message : String(err),
       };
     }
   },

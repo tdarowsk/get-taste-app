@@ -1,11 +1,19 @@
-import { supabaseClient } from "../../db/supabase.client";
 import { supabaseAdmin } from "../../db/supabase.admin";
 import type { UpdateUserCommand, UserProfileDTO } from "../../types";
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * Serwis odpowiedzialny za operacje na profilu użytkownika.
  * Obsługuje pobieranie i aktualizację danych użytkownika.
  */
+
+// Create a factory function to get a Supabase client that works both client and server side
+const getSupabaseClient = () => {
+  return createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+};
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class UserService {
@@ -17,7 +25,7 @@ export class UserService {
    * @throws Error w przypadku błędu bazy danych
    */
   public static async getUserProfile(userId: string): Promise<UserProfileDTO | null> {
-    const { data, error } = await supabaseClient
+    const { data, error } = await getSupabaseClient()
       .from("users")
       .select("*")
       .eq("id", userId)
@@ -57,7 +65,7 @@ export class UserService {
     if (!userExists) return null;
 
     // Aktualizacja danych użytkownika
-    const { data: updatedData, error } = await supabaseClient
+    const { data: updatedData, error } = await getSupabaseClient()
       .from("users")
       .update(data)
       .eq("id", userId)
@@ -89,7 +97,7 @@ export class UserService {
    */
   public static async getUserById(userId: string) {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await getSupabaseClient()
         .from("users")
         .select("*")
         .eq("id", userId)
@@ -124,7 +132,10 @@ export class UserService {
    * Update a user in the database
    */
   public static async updateUser(userId: string, userData: Record<string, unknown>) {
-    const { data, error } = await supabaseClient.from("users").update(userData).eq("id", userId);
+    const { data, error } = await getSupabaseClient()
+      .from("users")
+      .update(userData)
+      .eq("id", userId);
 
     if (error) {
       console.error("Error updating user:", error);
@@ -146,7 +157,7 @@ export class UserService {
     deleted_at?: string | null;
     id?: string;
   }) {
-    const { data, error } = await supabaseClient.from("users").insert([userData]);
+    const { data, error } = await getSupabaseClient().from("users").insert([userData]);
 
     if (error) {
       console.error("Error creating user:", error);
@@ -162,7 +173,7 @@ export class UserService {
   public static async getUserPreferences(userId: string) {
     try {
       // Używamy klienta administratora aby ominąć ograniczenia RLS
-      const adminClient = supabaseAdmin || supabaseClient;
+      const adminClient = supabaseAdmin || getSupabaseClient();
       console.log("Admin client available for preferences:", !!supabaseAdmin);
 
       // Get film preferences from film_preferences table
@@ -187,7 +198,7 @@ export class UserService {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let movieFeedback: any[] = [];
       try {
-        const { data, error: feedbackError } = await supabaseClient
+        const { data, error: feedbackError } = await getSupabaseClient()
           .from("item_feedback")
           .select("item_id, genre, feedback_type, cast, artist")
           .eq("user_id", userId)
@@ -505,11 +516,11 @@ export class UserService {
       console.log(`Refreshing preferences for user ${userId}`);
 
       // Używamy klienta administratora aby ominąć ograniczenia RLS
-      const adminClient = supabaseAdmin || supabaseClient;
+      const adminClient = supabaseAdmin || getSupabaseClient();
       console.log("Admin client available for refresh:", !!supabaseAdmin);
 
       // Get liked movies from item_feedback
-      const { data: movieFeedback, error: feedbackError } = await supabaseClient
+      const { data: movieFeedback, error: feedbackError } = await getSupabaseClient()
         .from("item_feedback")
         .select("item_id, genre, feedback_type")
         .eq("user_id", userId)

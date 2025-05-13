@@ -1,4 +1,3 @@
-import React from "react";
 import type { MetadataItem as MetadataItemType } from "../types/recommendations";
 
 interface MetadataItemProps {

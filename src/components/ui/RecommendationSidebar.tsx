@@ -305,7 +305,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
         // Update drag offset to show real-time indicators
         setDragOffset(info.offset.x);
       }}
-      onDragEnd={(e, info) => {
+      onDragEnd={(_e, info) => {
         const dragX = info.offset.x;
         const threshold = 80; // Lower threshold for easier swiping
 
@@ -981,7 +981,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
 
             // Ensure ID is set
             if (!newItem.id) {
-              newItem.id = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              newItem.id = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
             }
 
             // Add ai_generated flag if the parent response has it

@@ -1,9 +1,9 @@
 import { Feedback } from "../../domain/models/Feedback";
 import { FeedbackType } from "../../domain/enums/FeedbackType";
-import { IFeedbackRepository } from "../../domain/interfaces/IFeedbackRepository";
-import { IDomainEventEmitter } from "../../domain/interfaces/IDomainEventEmitter";
+import type { IFeedbackRepository } from "../../domain/interfaces/IFeedbackRepository";
+import type { IDomainEventEmitter } from "../../domain/interfaces/IDomainEventEmitter";
 import { FeedbackSubmittedEvent } from "../../domain/events/FeedbackSubmittedEvent";
-import { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
+import type { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
 
 export class SubmitFeedbackUseCase {
   constructor(

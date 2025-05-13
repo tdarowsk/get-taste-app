@@ -45,7 +45,7 @@ export class RecommendationRepository implements IRecommendationRepository {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async save(recommendation: Recommendation): Promise<void> {
+  async save(_recommendation: Recommendation): Promise<void> {
     // In a real implementation, we would save the recommendation to the API
     // This is not implemented in the current API, so we'll just stub it
   }

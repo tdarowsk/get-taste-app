@@ -52,7 +52,7 @@ export function useDashboard(userId: string) {
   const generateRecommendationsMutation = useGenerateRecommendations();
 
   // Create the refresh function that will be used by both the UI and the query
-  const generateNewRecommendations = useCallback(() => {
+  const generateNewRecommendations = useCallback(async () => {
     // Validate userId
     if (!validUserId) {
       return Promise.reject(new Error("Invalid user ID for recommendation generation"));

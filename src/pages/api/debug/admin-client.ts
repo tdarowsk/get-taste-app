@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { supabaseAdmin } from "../../../db/supabase.admin";
-import { supabaseClient } from "../../../db/supabase.client";
+import { createSupabaseServerInstance } from "../../../db/supabase.client";
 import { SUPABASE_URL, SUPABASE_KEY } from "../../../env.config";
 
 export const prerender = false;
@@ -9,8 +9,14 @@ export const prerender = false;
  * Debug endpoint to test Supabase connection and RLS bypass
  * GET /api/debug/admin-client
  */
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request, cookies }) => {
   try {
+    // Create a Supabase client instance for this request
+    const supabaseClient = createSupabaseServerInstance({
+      headers: request.headers,
+      cookies,
+    });
+
     // console.log("Testing admin client");
 
     // Sprawdź konfigurację

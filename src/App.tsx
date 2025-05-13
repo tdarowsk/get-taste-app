@@ -1,4 +1,3 @@
-import React from "react";
 import { RecommendationsView } from "./domains/recommendations";
 
 function App() {

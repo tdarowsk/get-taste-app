@@ -1,5 +1,5 @@
-import type { TasteDTO, UserTasteDTO } from "../../types";
 import { getUserPreferences } from "./preferences.service";
+import type { FilmTasteProfile, MusicTasteProfile, TasteDTO, UserTasteDTO } from "../../types";
 
 /**
  * Serwis odpowiedzialny za analizę gustu użytkownika.
@@ -14,34 +14,49 @@ export const TasteService = {
    * @throws Error w przypadku błędu
    */
   async getUserTaste(userId: string): Promise<UserTasteDTO> {
-    // Pobierz preferencje użytkownika
+    // Get user preferences
     const preferences = await getUserPreferences(userId);
 
-    // Analizuj gust muzyczny
-    let musicTaste: TasteDTO | undefined;
-    if (preferences.music) {
-      musicTaste = this.analyzeMusicTaste(preferences.music.genres, preferences.music.artists);
-    }
+    // Analyze music taste based on preferences
+    const musicTaste = preferences.music?.genres
+      ? this.analyzeMusicTaste(preferences.music.genres, preferences.music.artists || [])
+      : undefined;
 
-    // Analizuj gust filmowy
-    let filmTaste: TasteDTO | undefined;
-    if (preferences.film) {
-      filmTaste = this.analyzeFilmTaste(
-        preferences.film.genres,
-        preferences.film.director,
-        preferences.film.cast
-      );
-    }
+    // Analyze film taste based on preferences
+    const filmTaste = preferences.film?.genres
+      ? this.analyzeFilmTaste(
+          preferences.film.genres,
+          preferences.film.director,
+          preferences.film.cast || []
+        )
+      : undefined;
 
-    // Wygeneruj nazwę i opis gustu
+    // Generate taste name and description
     const name = this.generateTasteName(musicTaste, filmTaste);
     const description = this.generateTasteDescription(musicTaste, filmTaste);
+
+    // Create default taste profiles if needed
+    const defaultMusicTaste: MusicTasteProfile = {
+      genres: musicTaste?.genres || [],
+      mood: musicTaste?.mood || ["zróżnicowany"],
+      style: musicTaste?.style || "różnorodny",
+      intensity: musicTaste?.intensity || 5,
+      variety: musicTaste?.variety || 5,
+    };
+
+    const defaultFilmTaste: FilmTasteProfile = {
+      genres: filmTaste?.genres || [],
+      mood: filmTaste?.mood || ["zróżnicowany"],
+      style: filmTaste?.style || "różnorodny",
+      intensity: filmTaste?.intensity || 5,
+      variety: filmTaste?.variety || 5,
+    };
 
     return {
       name,
       description,
-      music: musicTaste,
-      film: filmTaste,
+      music: defaultMusicTaste,
+      film: defaultFilmTaste,
     };
   },
 
@@ -316,33 +331,33 @@ export const TasteService = {
   generateTasteName(musicTaste?: TasteDTO, filmTaste?: TasteDTO): string {
     if (musicTaste && filmTaste) {
       // Połącz style muzyczne i filmowe
-      if (musicTaste.intensity > 7 && filmTaste.intensity > 7) {
+      if ((musicTaste.intensity ?? 5) > 7 && (filmTaste.intensity ?? 5) > 7) {
         return "Intensywny Pasjonat";
-      } else if (musicTaste.variety > 7 && filmTaste.variety > 7) {
+      } else if ((musicTaste.variety ?? 5) > 7 && (filmTaste.variety ?? 5) > 7) {
         return "Wszechstronny Odkrywca";
-      } else if (musicTaste.intensity < 4 && filmTaste.intensity < 4) {
+      } else if ((musicTaste.intensity ?? 5) < 4 && (filmTaste.intensity ?? 5) < 4) {
         return "Kontemplacyjny Znawca";
       } else {
         return "Zbalansowany Entuzjasta";
       }
     } else if (musicTaste) {
       // Tylko muzyczny gust
-      if (musicTaste.intensity > 7) {
+      if ((musicTaste.intensity ?? 5) > 7) {
         return "Muzyczny Energetyk";
-      } else if (musicTaste.variety > 7) {
+      } else if ((musicTaste.variety ?? 5) > 7) {
         return "Muzyczny Odkrywca";
-      } else if (musicTaste.intensity < 4) {
+      } else if ((musicTaste.intensity ?? 5) < 4) {
         return "Muzyczny Meloman";
       } else {
         return "Muzyczny Entuzjasta";
       }
     } else if (filmTaste) {
       // Tylko filmowy gust
-      if (filmTaste.intensity > 7) {
+      if ((filmTaste.intensity ?? 5) > 7) {
         return "Filmowy Poszukiwacz Wrażeń";
-      } else if (filmTaste.variety > 7) {
+      } else if ((filmTaste.variety ?? 5) > 7) {
         return "Filmowy Koneser";
-      } else if (filmTaste.intensity < 4) {
+      } else if ((filmTaste.intensity ?? 5) < 4) {
         return "Filmowy Esteta";
       } else {
         return "Filmowy Entuzjasta";
@@ -356,30 +371,63 @@ export const TasteService = {
    * Generuje opis gustu użytkownika.
    */
   generateTasteDescription(musicTaste?: TasteDTO, filmTaste?: TasteDTO): string {
-    let description = "Twój gust charakteryzuje się ";
+    // Base description
+    let description = "Twój gust odzwierciedla ";
 
-    if (musicTaste && filmTaste) {
-      if (musicTaste.intensity > 7 && filmTaste.intensity > 7) {
-        description += "zamiłowaniem do intensywnych doświadczeń zarówno w muzyce, jak i filmie. ";
-      } else if (musicTaste.variety > 7 && filmTaste.variety > 7) {
-        description +=
-          "szerokim spektrum zainteresowań w różnorodnych gatunkach muzycznych i filmowych. ";
-      } else if (musicTaste.intensity < 4 && filmTaste.intensity < 4) {
-        description += "zamiłowaniem do subtelnych i refleksyjnych utworów oraz filmów. ";
-      } else {
-        description += "zbalansowanym podejściem do różnych form sztuki. ";
-      }
+    // Check if we actually have taste data
+    if (
+      !musicTaste?.intensity ||
+      !filmTaste?.intensity ||
+      !musicTaste?.variety ||
+      !filmTaste?.variety ||
+      !musicTaste?.mood ||
+      !filmTaste?.mood
+    ) {
+      return "Twój profil smaku jest w trakcie tworzenia. Oceń więcej filmów i muzyki, aby uzyskać bardziej szczegółowy opis.";
+    }
 
-      description += `Preferujesz muzykę określaną jako "${musicTaste.style}" oraz filmy w stylu "${filmTaste.style}".`;
-    } else if (musicTaste) {
-      description += `zamiłowaniem do muzyki w stylu "${musicTaste.style}". `;
-      description += `Najbardziej cenisz sobie utwory o ${musicTaste.mood.join(" i ")} charakterze.`;
-    } else if (filmTaste) {
-      description += `zamiłowaniem do filmów w stylu "${filmTaste.style}". `;
-      description += `Najbardziej cenisz sobie produkcje o ${filmTaste.mood.join(" i ")} charakterze.`;
+    // Overall tone based on both music and film tastes
+    if (musicTaste.intensity > 7 && filmTaste.intensity > 7) {
+      description += "zamiłowanie do intensywnych wrażeń i silnych emocji. ";
+    } else if (musicTaste.variety > 7 && filmTaste.variety > 7) {
+      description += "ciekawość i otwartość na różnorodne doświadczenia. ";
+    } else if (musicTaste.intensity < 4 && filmTaste.intensity < 4) {
+      description += "poszukiwanie harmonii i subtelnych doznań estetycznych. ";
     } else {
-      description =
-        "Twój gust jest obecnie w trakcie formowania się. Dodaj więcej preferencji, aby otrzymać dokładniejszą analizę.";
+      description += "balans między tradycją a odkrywaniem nowych wrażeń. ";
+    }
+
+    // Specific music taste description
+    description += "W muzyce ";
+    if (musicTaste.intensity > 7) {
+      description += "poszukujesz mocnych wrażeń i dynamicznych rytmów. ";
+    } else if (musicTaste.variety > 7) {
+      description += "lubisz odkrywać nowe gatunki i różnorodnych artystów. ";
+    } else if (musicTaste.intensity < 4) {
+      description += "cenisz sobie spokojne, melodyjne utwory. ";
+    } else {
+      description += "cenisz balans między spokojem a dynamiką. ";
+    }
+
+    // Specific film taste description
+    description += "W filmach ";
+    if (filmTaste.intensity > 7) {
+      description += "szukasz akcji i mocnych wrażeń. ";
+    } else if (filmTaste.variety > 7) {
+      description += "lubisz eksplorować różne gatunki i style. ";
+    } else if (filmTaste.intensity < 4) {
+      description += "cenisz opowieści skupione na postaciach i emocjach. ";
+    } else {
+      description += "doceniasz zarówno zaangażowane historie, jak i rozrywkę. ";
+    }
+
+    // Add mood-specific descriptions
+    if (musicTaste.mood.length > 0) {
+      description += `Najbardziej cenisz sobie utwory o ${musicTaste.mood.join(" i ")} charakterze.`;
+    }
+
+    if (filmTaste.mood.length > 0) {
+      description += ` W kinie przyciągają Cię produkcje o ${filmTaste.mood.join(" i ")} charakterze.`;
     }
 
     return description;

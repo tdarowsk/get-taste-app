@@ -1,8 +1,8 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-// Główny komponent Card
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+// Define the props interface for Card component
+interface CardBaseProps {
   /**
    * Zawartość karty
    */
@@ -43,7 +43,16 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   onClick?: () => void;
 }
 
-export const Card = React.forwardRef<HTMLDivElement, CardProps>(
+type CardAsLinkProps = CardBaseProps &
+  Omit<React.ComponentPropsWithoutRef<"a">, keyof CardBaseProps>;
+
+type CardAsDivProps = CardBaseProps &
+  Omit<React.ComponentPropsWithoutRef<"div">, keyof CardBaseProps>;
+
+type CardProps = CardBaseProps &
+  (({ href: string } & CardAsLinkProps) | ({ href?: never } & CardAsDivProps));
+
+export const Card = React.forwardRef<HTMLDivElement | HTMLAnchorElement, CardProps>(
   (
     {
       className,
@@ -70,7 +79,12 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     // Jeśli karta ma href, renderuj jako link
     if (href) {
       return (
-        <a href={href} ref={ref as React.Ref<HTMLAnchorElement>} className={cardStyles} {...props}>
+        <a
+          href={href}
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          className={cardStyles}
+          {...(props as React.ComponentPropsWithoutRef<"a">)}
+        >
           {children}
         </a>
       );
@@ -80,7 +94,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     if (interactive && onClick) {
       return (
         <div
-          ref={ref}
+          ref={ref as React.Ref<HTMLDivElement>}
           className={cardStyles}
           onClick={onClick}
           role="button"
@@ -90,7 +104,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
               onClick();
             }
           }}
-          {...props}
+          {...(props as React.ComponentPropsWithoutRef<"div">)}
         >
           {children}
         </div>
@@ -99,7 +113,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
     // Standardowa karta
     return (
-      <div ref={ref} className={cardStyles} {...props}>
+      <div
+        ref={ref as React.Ref<HTMLDivElement>}
+        className={cardStyles}
+        {...(props as React.ComponentPropsWithoutRef<"div">)}
+      >
         {children}
       </div>
     );

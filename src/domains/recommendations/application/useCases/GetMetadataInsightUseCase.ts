@@ -1,5 +1,5 @@
-import { IMetadataService } from "../../domain/interfaces/IMetadataService";
-import { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
+import type { IMetadataService } from "../../domain/interfaces/IMetadataService";
+import type { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
 import { MetadataInsight } from "../../domain/models/MetadataInsight";
 
 export class GetMetadataInsightUseCase {

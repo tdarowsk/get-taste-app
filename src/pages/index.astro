@@ -1,11 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { supabaseClient } from "../db/supabase.client";
 
 // Check if user is authenticated
-const {
-  data: { session },
-} = await supabaseClient.auth.getSession();
+const { data: { session } } = await Astro.locals.supabase.auth.getSession();
 
 // If user is authenticated, redirect to dashboard
 if (session) {

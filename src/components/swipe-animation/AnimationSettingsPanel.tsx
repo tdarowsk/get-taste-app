@@ -1,4 +1,3 @@
-import React from "react";
 import { useAnimationSettings } from "./AnimationSettingsContext";
 
 export function AnimationSettingsPanel() {

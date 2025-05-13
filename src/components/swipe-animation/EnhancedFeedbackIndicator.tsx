@@ -1,4 +1,3 @@
-import React from "react";
 import { motion } from "framer-motion";
 
 export type SwipeState = "none" | "swiping-left" | "swiping-right" | "swiped-left" | "swiped-right";

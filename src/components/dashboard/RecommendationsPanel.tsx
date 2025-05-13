@@ -2,7 +2,6 @@ import { RecommendationsHeader } from "./RecommendationsHeader";
 import { AdaptiveRecommendationsList } from "./AdaptiveRecommendationsList";
 import RecommendationHistory from "../ui/RecommendationHistory";
 import { useState, useEffect, useRef } from "react";
-import React from "react";
 import type { RecommendationDTO, RecommendationItem } from "../../types";
 import { useGenerateRecommendations } from "../../lib/hooks/useGenerateRecommendations";
 import type {
