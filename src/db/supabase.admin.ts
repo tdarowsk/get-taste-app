@@ -152,14 +152,14 @@ if (typeof window === "undefined") {
     adminClient
       .from("film_preferences")
       .select("count(*)")
-      .then(({ data: any, error: Error }) => {
+      .then(({ data, error }: { data: unknown; error: unknown }) => {
         if (error) {
           console.error("[Supabase Admin] Test query failed:", error);
         } else {
           console.log("[Supabase Admin] Test query succeeded:", data);
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("[Supabase Admin] Exception during test query:", err);
       });
   } catch {
