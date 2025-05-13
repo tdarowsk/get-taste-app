@@ -28,7 +28,7 @@ export default defineConfig({
   globalSetup: "./tests/global-setup.ts",
   globalTeardown: "./tests/global-teardown.ts",
   use: {
-    baseURL: process.env.BASE_URL || "http://localhost:3000",
+    baseURL: process.env.E2E_URL || "http://localhost:3000",
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 10000,
     /* Collect trace when retrying the failed test. */
