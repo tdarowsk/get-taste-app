@@ -38,6 +38,16 @@ export class FeatureFlagService implements FeatureFlagProvider {
    */
   public isFeatureEnabled(featurePath: string, context?: UserContext): boolean {
     try {
+      // Podczas testów E2E zawsze włącz funkcje auth
+      if (
+        typeof process !== "undefined" &&
+        process.env.DISABLE_AUTH === "true" &&
+        featurePath.startsWith("auth.")
+      ) {
+        console.debug(`Feature '${featurePath}' enabled for E2E tests with DISABLE_AUTH=true`);
+        return true;
+      }
+
       // Split the path into parts (e.g., 'auth.login' -> ['auth', 'login'])
       const pathParts = featurePath.split(".");
 
