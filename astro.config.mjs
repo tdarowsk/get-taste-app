@@ -15,6 +15,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
     ssr: {
       noExternal: ["react-icons"],
+      external: ["node:*"],
     },
   },
   adapter: cloudflare(),
