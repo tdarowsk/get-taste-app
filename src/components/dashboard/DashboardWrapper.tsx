@@ -6,6 +6,13 @@ import type { UserProfileDTO } from "../../types";
 
 interface DashboardWrapperProps {
   user: UserProfileDTO;
+  featureFlags?: {
+    auth?: boolean;
+    collections?: boolean;
+    recommendations?: boolean;
+    adaptiveRecommendations?: boolean;
+    historyRecommendations?: boolean;
+  };
 }
 
 // Create a default user for development/error cases
@@ -17,7 +24,7 @@ const defaultUser: UserProfileDTO = {
   updated_at: new Date().toISOString(),
 };
 
-export function DashboardWrapper({ user }: DashboardWrapperProps) {
+export function DashboardWrapper({ user, featureFlags }: DashboardWrapperProps) {
   // Ensure we always have a valid user object, even if props fail
   const safeUser = user && user.id && user.id !== "undefined" ? user : defaultUser;
 
@@ -45,7 +52,7 @@ export function DashboardWrapper({ user }: DashboardWrapperProps) {
     return (
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <DashboardLayout user={safeUser} />
+          <DashboardLayout user={safeUser} featureFlags={featureFlags} />
         </ToastProvider>
       </QueryClientProvider>
     );

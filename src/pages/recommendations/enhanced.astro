@@ -17,7 +17,7 @@ const {
 
 // Jeśli nie ma sesji lub wystąpił błąd, przekieruj na stronę logowania
 if (!session || error) {
-  return Astro.redirect("/login?redirect=/recommendations/enhanced");
+  return Astro.redirect("/auth/login?redirect=/recommendations/enhanced");
 }
 
 // Użyj ID użytkownika z sesji
@@ -25,7 +25,16 @@ const userId = session.user.id;
 ---
 
 <Layout title="Zaawansowane rekomendacje | getTaste">
-  <main>
+  <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
     <ImprovedRecommendationsView userId={userId} client:only="react" />
-  </main>
+  </div>
 </Layout>
+
+<script>
+  // This ensures the component is hydrated properly with client-side navigation
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll('[data-reactroot]').forEach(el => {
+      el.removeAttribute('data-reactroot');
+    });
+  });
+</script>
