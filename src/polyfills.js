@@ -1,43 +1,48 @@
-// Polyfill dla MessageChannel
-if (typeof MessageChannel === "undefined") {
-  class MessagePort {
-    constructor() {
-      this.onmessage = null;
-    }
-    postMessage(data) {
-      if (this._otherPort && this._otherPort.onmessage) {
-        const event = { data };
-        // Użyj Promise.resolve zamiast setTimeout, który może nie być dostępny
-        Promise.resolve().then(() => {
-          if (this._otherPort.onmessage) {
-            this._otherPort.onmessage(event);
-          }
-        });
+// Eksportujemy funkcję, która może być wywołana aby zapewnić polyfill
+export function applyMessageChannelPolyfill() {
+  if (typeof MessageChannel === "undefined") {
+    class MessagePort {
+      constructor() {
+        this.onmessage = null;
+      }
+      postMessage(data) {
+        if (this._otherPort && this._otherPort.onmessage) {
+          const event = { data };
+          Promise.resolve().then(() => {
+            if (this._otherPort && this._otherPort.onmessage) {
+              this._otherPort.onmessage(event);
+            }
+          });
+        }
+      }
+      start() {
+        // Pusta implementacja
+      }
+      close() {
+        // Pusta implementacja
       }
     }
-    // Puste metody, które są wymagane przez API
-    start() {
-      // Implementacja start
+
+    class CloudflareMessageChannel {
+      constructor() {
+        this.port1 = new MessagePort();
+        this.port2 = new MessagePort();
+        this.port1._otherPort = this.port2;
+        this.port2._otherPort = this.port1;
+      }
+      toString() {
+        return "[object MessageChannel]";
+      }
     }
-    close() {
-      // Implementacja close
-    }
+
+    // Przypisujemy do globalThis
+    globalThis.MessageChannel = CloudflareMessageChannel;
+    globalThis.MessagePort = MessagePort;
+
+    return true; // Polyfill został zastosowany
   }
 
-  globalThis.MessageChannel = class MessageChannel {
-    constructor() {
-      this.port1 = new MessagePort();
-      this.port2 = new MessagePort();
-      this.port1._otherPort = this.port2;
-      this.port2._otherPort = this.port1;
-    }
-    // Dodatkowa metoda aby uniknąć błędu "class with only a constructor"
-    toString() {
-      return "[object MessageChannel]";
-    }
-  };
-
-  globalThis.MessagePort = MessagePort;
+  return false; // Polyfill nie był potrzebny
 }
 
 // Tutaj możesz dodać więcej polyfilli, jeśli będą potrzebne

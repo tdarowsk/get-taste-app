@@ -1,0 +1,16 @@
+name = "get-taste-app"
+main = "./dist/server/entry.mjs"
+
+compatibility_date = "2023-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[site]
+bucket = "./dist/client"
+
+[build]
+command = "npm run build"
+
+# Włącz zmienne KV dla sesji
+[[kv_namespaces]]
+binding = "SESSION"
+id = "your-kv-namespace-id-for-sessions" # To zostanie zastąpione podczas wdrażania 

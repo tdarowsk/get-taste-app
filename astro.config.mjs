@@ -17,6 +17,13 @@ export default defineConfig({
       noExternal: ["react-icons"],
       external: ["node:*"],
     },
+    resolve: {
+      // Upewnij się, że importy polyfill są rozwiązywane poprawnie
+      alias: {
+        "./polyfills.js": "./src/polyfills.js",
+      },
+    },
+    // Nie definiujemy MessageChannel jako undefined, pozwalamy polyfill to obsłużyć
   },
   adapter: cloudflare(),
   experimental: { session: true },

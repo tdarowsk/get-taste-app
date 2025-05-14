@@ -1,19 +1,57 @@
 ---
 import "../styles/global.css";
+import { applyMessageChannelPolyfill } from "../polyfills.js";
 
 interface Props {
   title: string;
 }
 
 const { title } = Astro.props;
+const polyfillApplied = applyMessageChannelPolyfill(); // Zastosuj polyfill podczas renderowania
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <script is:inline define:vars={{ polyfillApplied }}>
+      // Próbujemy zastosować polyfill po stronie klienta, jeśli jeszcze nie został zastosowany po stronie serwera
+      if (!polyfillApplied && typeof MessageChannel === 'undefined') {
+        class MessagePort {
+          constructor() {
+            this.onmessage = null;
+          }
+          postMessage(data) {
+            if (this._otherPort && this._otherPort.onmessage) {
+              const event = { data };
+              Promise.resolve().then(() => {
+                if (this._otherPort.onmessage) {
+                  this._otherPort.onmessage(event);
+                }
+              });
+            }
+          }
+          start() {}
+          close() {}
+        }
+
+        class MessageChannelPolyfill {
+          constructor() {
+            this.port1 = new MessagePort();
+            this.port2 = new MessagePort();
+            this.port1._otherPort = this.port2;
+            this.port2._otherPort = this.port1;
+          }
+        }
+
+        globalThis.MessageChannel = MessageChannelPolyfill;
+        globalThis.MessagePort = MessagePort;
+      }
+    </script>
   </head>
   <body>
     <div class="min-h-screen bg-background text-foreground">
