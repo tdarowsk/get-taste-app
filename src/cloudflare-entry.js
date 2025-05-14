@@ -42,8 +42,8 @@ if (typeof MessageChannel === "undefined") {
     if (globalThis.console) {
       globalThis.console.log("MessageChannel polyfill applied");
     }
-  } catch (_) {
-    // Ignoruj błędy
+  } catch {
+    // Ignoruj błędy (pominięto parametr, aby uniknąć ostrzeżenia)
   }
 }
 
