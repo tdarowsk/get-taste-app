@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Header } from "./Header";
 import { RecommendationsPanel } from "./RecommendationsPanel";
 import { useDashboard } from "../../lib/hooks/useDashboard";
-import type { UserProfileDTO } from "../../types";
+import type { UserProfileDTO, RecommendationDTO } from "../../types";
 import RecommendationSidebar from "../ui/RecommendationSidebar";
 import { PreferencesPanel } from "./PreferencesPanel";
 
@@ -20,53 +20,50 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
     isGeneratingRecommendations,
     isNewUser,
     validUserId,
-  } = useDashboard(user.id);
+  } = useDashboard(user?.id || "");
 
-  // Wywołaj refreshRecommendations natychmiast
-  refreshRecommendations();
-
-  // Log the user ID and valid user ID to debug
+  // Use useMemo to make sure typedRecommendations is stable for useEffect dependencies
+  const typedRecommendations = useMemo(() => {
+    return Array.isArray(recommendations) ? (recommendations as RecommendationDTO[]) : [];
+  }, [recommendations]);
 
   // Load recommendations when component mounts
   useEffect(() => {
-    // Usuwamy wywołanie refreshRecommendations() stąd, bo teraz jest wywołane wcześniej
-  }, [
-    isRecommendationsLoading,
-    recommendations,
-    refreshRecommendations,
-    validUserId,
-    isGeneratingRecommendations,
-  ]);
+    if (validUserId) {
+      // Always refresh on initial mount, even for new users
+      refreshRecommendations();
+    }
+  }, [validUserId, refreshRecommendations]);
 
   // Refresh recommendations when the type changes
   useEffect(() => {
-    if (validUserId && recommendations && recommendations.length > 0) {
-      // Filter out undefined or invalid recommendations
-      const validRecommendations = recommendations.filter((rec) => rec && rec.type);
+    // Pomijamy automatyczne odświeżanie dla nowych użytkowników
+    if (isNewUser) return;
 
-      if (validRecommendations.length < recommendations.length) {
-        console.log("Filtered out invalid recommendations");
-      }
+    if (validUserId && typedRecommendations.length > 0) {
+      // Filter out undefined or invalid recommendations
+      const validRecommendations = typedRecommendations.filter((rec) => rec && rec.type);
 
       // Check if we have recommendations of the active type
       const hasActiveTypeRecs = validRecommendations.some((rec) => rec.type === activeType);
 
       if (!hasActiveTypeRecs) {
         refreshRecommendations();
-      } else {
-        console.log(`Using existing ${activeType} recommendations`);
       }
     }
-  }, [activeType, recommendations, refreshRecommendations, validUserId]);
+  }, [activeType, typedRecommendations, refreshRecommendations, validUserId, isNewUser]);
 
   // Force a refresh of recommendations after a timeout if recommendations are still loading
   useEffect(() => {
     let timeout: number;
 
+    // Pomijamy automatyczne odświeżanie po timeoucie dla nowych użytkowników
+    if (isNewUser) return;
+
     if (
       validUserId &&
       isRecommendationsLoading &&
-      (!recommendations || recommendations.length === 0)
+      (!typedRecommendations || typedRecommendations.length === 0)
     ) {
       timeout = window.setTimeout(() => {
         refreshRecommendations();
@@ -78,12 +75,13 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
         window.clearTimeout(timeout);
       }
     };
-  }, [validUserId, isRecommendationsLoading, recommendations, refreshRecommendations]);
-
-  // Add debugging for rendering state
-
-  // Check if we have any valid recommendations after filtering
-  // Removed unused variable
+  }, [
+    validUserId,
+    isRecommendationsLoading,
+    typedRecommendations,
+    refreshRecommendations,
+    isNewUser,
+  ]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -134,7 +132,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
             {/* Main content area */}
             <div className="flex-1">
               <RecommendationsPanel
-                recommendations={recommendations}
+                recommendations={typedRecommendations}
                 activeType={activeType}
                 onTypeChange={setActiveType}
                 onRefresh={refreshRecommendations}
@@ -146,7 +144,11 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
             {/* Preferences sidebar */}
             <div className="w-full lg:w-64 xl:w-72 hidden lg:block shrink-0">
-              <PreferencesPanel userId={user.id} onPreferencesUpdated={refreshRecommendations} />
+              <PreferencesPanel
+                userId={user.id}
+                onPreferencesUpdated={refreshRecommendations}
+                isNewUser={isNewUser}
+              />
             </div>
 
             {/* Swipe Recommendations sidebar */}

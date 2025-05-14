@@ -12,7 +12,7 @@ export const prerender = false;
  */
 export const GET: APIRoute = async ({ params, request }) => {
   try {
-    console.log("Preferences API called");
+    // console.log("Preferences API called");
 
     const userId = params.id;
 
@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ params, request }) => {
         // Even if refresh "failed", it means we at least tried to process the feedback data
         // No need to use any default genres anymore
       } catch (refreshError) {
-        console.error("Error during preference refresh:", refreshError);
+        // console.error("Error during preference refresh:", refreshError);
         return new Response(
           JSON.stringify({
             error: "Failed to refresh preferences",
@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ params, request }) => {
             throw new Error(`Failed to update film preferences: ${error.message}`);
           }
         } else {
-          console.warn("Admin client not available for preferences update");
+          // console.warn("Admin client not available for preferences update");
         }
       }
 

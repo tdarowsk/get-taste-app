@@ -24,7 +24,8 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
           throw new Error("Failed to fetch recommendation reason");
         }
         return (await response.json()) as RecommendationReason;
-      } catch (error) {
+      } catch {
+        // Error caught and ignored
         return {
           primaryReason: "Brak danych",
           detailedReasons: [],
@@ -44,7 +45,8 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
         throw new Error("Failed to fetch metadata insight");
       }
       return (await response.json()) as MetadataInsight;
-    } catch (error) {
+    } catch {
+      // Error caught and ignored
       return {
         recommendationId,
         primaryFactors: [],
@@ -87,6 +89,7 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
         setRecommendations(enhancedRecommendations);
         setCurrentIndex(0);
       } catch (error) {
+        // Error caught and ignored
         if (error instanceof Error) {
           setError(error);
         } else {
@@ -121,7 +124,7 @@ export function useRecommendations({ userId, type }: UseRecommendationsParams) {
 
         return await response.json();
       } catch (error) {
-        // Return a mock response instead of throwing to prevent UI crashes
+        // Error caught and ignored
         return {
           success: false,
           message: "Failed to save feedback, but continuing with UI flow",

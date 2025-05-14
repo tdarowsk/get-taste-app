@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -60,6 +59,7 @@ const mockUseDashboard = {
   refreshRecommendations: vi.fn(),
   isGeneratingRecommendations: false,
   isNewUser: true,
+  validUserId: "u1",
 };
 vi.mock("../../../lib/hooks/useDashboard", () => ({ useDashboard: () => mockUseDashboard }));
 

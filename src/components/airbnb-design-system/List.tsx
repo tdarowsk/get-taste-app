@@ -49,7 +49,7 @@ export const List = React.forwardRef<HTMLUListElement, ListProps>(
     const separatorStyles = withSeparators && vertical ? "divide-y divide-gray-100" : "";
 
     return (
-      <ul ref={ref} className={cn(layoutStyles, separatorStyles, className)} role="list" {...props}>
+      <ul ref={ref} className={cn(layoutStyles, separatorStyles, className)} {...props}>
         {children}
       </ul>
     );

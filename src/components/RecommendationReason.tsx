@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import type { RecommendationReason as RecommendationReasonType } from "../types/recommendations";
 
 interface RecommendationReasonProps {

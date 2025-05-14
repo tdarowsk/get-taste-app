@@ -26,7 +26,7 @@ export function useDashboard(userId: string) {
     return userId;
   }, [userId]);
 
-  const preferencesQuery = useUserPreferences(validUserId || "");
+  const preferencesQuery = useUserPreferences(validUserId || "", isNewUser);
 
   // Check if this is a new user based on preferences
   useEffect(() => {
@@ -52,7 +52,7 @@ export function useDashboard(userId: string) {
   const generateRecommendationsMutation = useGenerateRecommendations();
 
   // Create the refresh function that will be used by both the UI and the query
-  const generateNewRecommendations = useCallback(() => {
+  const generateNewRecommendations = useCallback(async () => {
     // Validate userId
     if (!validUserId) {
       return Promise.reject(new Error("Invalid user ID for recommendation generation"));
@@ -116,8 +116,7 @@ export function useDashboard(userId: string) {
         }
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Failed to fetch latest recommendations: ${errorText}`);
+          // We don't need to get the error text if we're not going to use it
           throw new Error(`Failed to fetch latest recommendations: ${response.statusText}`);
         }
 
@@ -130,7 +129,7 @@ export function useDashboard(userId: string) {
 
         return data;
       } catch (error) {
-        // If we fail to get recommendations, try to generate new ones
+        // Error caught and ignored
         try {
           await generateNewRecommendations();
         } catch (genError) {

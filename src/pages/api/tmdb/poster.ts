@@ -25,6 +25,8 @@ export const GET: APIRoute = async ({ url }) => {
       return new Response(JSON.stringify({ error: "TMDB error" }), { status: 502 });
     }
     const data = await tmdbRes.json();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const movieWithPoster = data.results?.find((movie: any) => movie.poster_path);
     if (!movieWithPoster?.poster_path) {
       return new Response(JSON.stringify({ posterUrl: null }), { status: 200 });
@@ -35,7 +37,8 @@ export const GET: APIRoute = async ({ url }) => {
       }),
       { status: 200 }
     );
-  } catch (e) {
+  } catch {
+    // Error caught and ignored
     return new Response(JSON.stringify({ error: "Server error" }), { status: 500 });
   }
 };

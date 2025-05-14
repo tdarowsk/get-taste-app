@@ -9,9 +9,10 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "types": ["vitest/globals", "@testing-library/jest-dom", "node"],
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "ES2022"]
   }
 }

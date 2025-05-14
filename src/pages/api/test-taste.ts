@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import type { UserTasteDTO, TasteDTO } from "../../types";
+import type { UserTasteDTO, MusicTasteProfile, FilmTasteProfile } from "../../types";
 
 export const prerender = false;
 
@@ -9,7 +9,7 @@ export const prerender = false;
  */
 export const GET: APIRoute = async () => {
   // Create a mock taste profile for testing
-  const mockMusicTaste: TasteDTO = {
+  const mockMusicTaste: MusicTasteProfile = {
     genres: ["rock", "indie", "electronic"],
     mood: ["energiczny", "refleksyjny", "nowoczesny"],
     style: "alternatywne odkrycia",
@@ -17,7 +17,7 @@ export const GET: APIRoute = async () => {
     variety: 8,
   };
 
-  const mockFilmTaste: TasteDTO = {
+  const mockFilmTaste: FilmTasteProfile = {
     genres: ["drama", "sci-fi", "thriller"],
     mood: ["emocjonalny", "wizjonerski", "napięcie"],
     style: "kreatywne światy",

@@ -17,7 +17,7 @@ interface SwipeableRecommendationCardProps {
   onSwipe: (
     itemId: string,
     feedbackType: RecommendationFeedbackType,
-    metadata: Record<string, unknown>
+    metadata?: Record<string, unknown>
   ) => Promise<void>;
 }
 
@@ -305,9 +305,7 @@ export function SwipeableRecommendationCard({
         // Poczekaj na zakończenie animacji przed obsługą feedbacku
         await animationPromise.then(() => new Promise((resolve) => setTimeout(resolve, 200)));
         await handleSwipeFeedback("like");
-      } catch (error) {
-        console.error("Error submitting like feedback:", error);
-        // Reset on error
+      } catch {
         animate(x, 0, {
           type: "spring",
           stiffness: 500,
@@ -344,8 +342,7 @@ export function SwipeableRecommendationCard({
         // Poczekaj na zakończenie animacji przed obsługą feedbacku
         await animationPromise.then(() => new Promise((resolve) => setTimeout(resolve, 200)));
         await handleSwipeFeedback("dislike");
-      } catch (error) {
-        console.error("Error submitting dislike feedback:", error);
+      } catch {
         // Reset on error
         animate(x, 0, {
           type: "spring",
@@ -408,8 +405,7 @@ export function SwipeableRecommendationCard({
       // KLUCZOWE - poczekaj na ZAKOŃCZENIE animacji przed wywołaniem onSwipe
       await animationPromise.then(() => new Promise((resolve) => setTimeout(resolve, 500)));
       await onSwipe(item.id, feedbackType, item.metadata || {});
-    } catch (error) {
-      console.error(`Error processing ${feedbackType}`, error);
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save your preference",

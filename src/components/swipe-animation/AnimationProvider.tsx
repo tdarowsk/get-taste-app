@@ -1,4 +1,3 @@
-import React from "react";
 import { AnimationSettingsProvider } from "./AnimationSettingsContext";
 import type { ReactNode } from "react";
 

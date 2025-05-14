@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { FormProvider } from "react-hook-form";
 import { useRecommendationForm } from "../hooks/useRecommendationForm";
 import { CategorySelector } from "./CategorySelector";
@@ -33,7 +33,7 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
     recommendations,
     currentRecommendation,
     isLoading,
-    error,
+    error: hookError,
     fetchRecommendations,
     handleFormSubmit,
     currentIndex,
@@ -72,7 +72,10 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
       );
 
       await formMethods.handleSubmit(handleFormSubmit)();
-    } catch (error) {}
+    } catch {
+      // Handle submission error - could log to error monitoring service
+      // or display error message to user
+    }
   };
 
   // Form submission handler
@@ -105,7 +108,7 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
         if (!response.ok) {
           window.location.href = "/login?redirect=/recommendations/enhanced";
         }
-      } catch (error) {
+      } catch {
         window.location.href = "/login?redirect=/recommendations/enhanced";
       }
     };
@@ -126,10 +129,10 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
               </div>
-            ) : error ? (
+            ) : hookError ? (
               <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
                 <h3 className="font-medium">Wystąpił błąd</h3>
-                <p>{error.message}</p>
+                <p>{hookError.message}</p>
                 <button
                   onClick={() => fetchRecommendations(true)}
                   className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md"

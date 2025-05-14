@@ -123,9 +123,6 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error in TMDB fallback endpoint:", error);
-
-    // W przypadku błędu zwracamy pustą listę rekomendacji
     return new Response(
       JSON.stringify({
         error: "Failed to fetch recommendations",

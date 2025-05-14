@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { EnhancedRecommendationViewModel } from "../types/recommendations";
 import type { RecommendationFeedbackType } from "../types";
@@ -9,7 +9,7 @@ import { AnimationProvider } from "./swipe-animation";
 
 interface RecommendationStackProps {
   recommendations: EnhancedRecommendationViewModel[];
-  onFeedback: (recommendationId: number, feedbackType: RecommendationFeedbackType) => void;
+  onFeedback: (recommendationId: number, feedbackType: RecommendationFeedbackType) => Promise<void>;
   currentIndex: number;
   onNext: () => void;
   userId: string;
@@ -70,11 +70,7 @@ export function RecommendationStack({
     };
   };
 
-  const handleSwipe = async (
-    _itemId: string,
-    feedbackType: RecommendationFeedbackType,
-    metadata: Record<string, unknown>
-  ) => {
+  const handleSwipe = async (_itemId: string, feedbackType: RecommendationFeedbackType) => {
     try {
       // Set animation direction based on feedback type
       setSwipeDirection(feedbackType === "like" ? "right" : "left");
@@ -100,8 +96,7 @@ export function RecommendationStack({
       setTimeout(() => {
         setDirection("center");
       }, 150);
-    } catch (error) {
-      console.error("Error processing swipe:", error, metadata);
+    } catch {
       setDirection("center");
       setSwipeDirection("none");
     }

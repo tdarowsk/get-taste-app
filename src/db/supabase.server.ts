@@ -36,7 +36,7 @@ export const supabaseServerClient = (request: Request) => {
           }));
         },
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        setAll(newCookies) {
+        setAll(_newCookies) {
           // Na ten moment nie potrzebujemy implementować setAll dla odpowiedzi serwera
           // Byłoby to potrzebne przy modyfikacji sesji, ale tutaj tylko czytamy dane
         },

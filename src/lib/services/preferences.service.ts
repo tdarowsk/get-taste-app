@@ -1,4 +1,3 @@
-import { supabaseClient } from "../../db/supabase.client";
 import type {
   FilmPreferencesDTO,
   MusicPreferencesDTO,
@@ -6,6 +5,15 @@ import type {
   UpdateMusicPreferencesCommand,
   UserPreferencesDTO,
 } from "../../types";
+import { createClient } from "@supabase/supabase-js";
+
+// Create a factory function to get a Supabase client that works both client and server side
+const getSupabaseClient = () => {
+  return createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+};
 
 /**
  * Serwis odpowiedzialny za operacje na preferencjach użytkownika.
@@ -23,7 +31,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
   const response: UserPreferencesDTO = {};
 
   // Pobieranie preferencji muzycznych
-  const { data: musicData, error: musicError } = await supabaseClient
+  const { data: musicData, error: musicError } = await getSupabaseClient()
     .from("music_preferences")
     .select("genres, artists")
     .eq("user_id", userId)
@@ -41,7 +49,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
   }
 
   // Pobieranie preferencji filmowych
-  const { data: filmData, error: filmError } = await supabaseClient
+  const { data: filmData, error: filmError } = await getSupabaseClient()
     .from("film_preferences")
     .select("genres, director, cast, screenwriter, liked_movies")
     .eq("user_id", userId)
@@ -77,7 +85,7 @@ export async function updateMusicPreferences(
   data: UpdateMusicPreferencesCommand
 ): Promise<MusicPreferencesDTO> {
   // Sprawdzenie czy rekord już istnieje
-  const { data: existingData } = await supabaseClient
+  const { data: existingData } = await getSupabaseClient()
     .from("music_preferences")
     .select("id")
     .eq("user_id", userId)
@@ -87,7 +95,7 @@ export async function updateMusicPreferences(
 
   if (existingData) {
     // Aktualizacja istniejącego rekordu
-    const { data: updatedData, error } = await supabaseClient
+    const { data: updatedData, error } = await getSupabaseClient()
       .from("music_preferences")
       .update(data)
       .eq("user_id", userId)
@@ -101,7 +109,7 @@ export async function updateMusicPreferences(
     result = updatedData;
   } else {
     // Tworzenie nowego rekordu
-    const { data: newData, error } = await supabaseClient
+    const { data: newData, error } = await getSupabaseClient()
       .from("music_preferences")
       .insert({ user_id: userId, ...data })
       .select("genres, artists")
@@ -133,7 +141,7 @@ export async function updateFilmPreferences(
   data: UpdateFilmPreferencesCommand
 ): Promise<FilmPreferencesDTO> {
   // Sprawdzenie czy rekord już istnieje
-  const { data: existingData } = await supabaseClient
+  const { data: existingData } = await getSupabaseClient()
     .from("film_preferences")
     .select("id")
     .eq("user_id", userId)
@@ -143,7 +151,7 @@ export async function updateFilmPreferences(
 
   if (existingData) {
     // Aktualizacja istniejącego rekordu
-    const { data: updatedData, error } = await supabaseClient
+    const { data: updatedData, error } = await getSupabaseClient()
       .from("film_preferences")
       .update(data)
       .eq("user_id", userId)
@@ -157,7 +165,7 @@ export async function updateFilmPreferences(
     result = updatedData;
   } else {
     // Tworzenie nowego rekordu
-    const { data: newData, error } = await supabaseClient
+    const { data: newData, error } = await getSupabaseClient()
       .from("film_preferences")
       .insert({ user_id: userId, ...data })
       .select("genres, director, cast, screenwriter, liked_movies")

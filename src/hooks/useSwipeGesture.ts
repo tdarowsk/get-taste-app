@@ -54,7 +54,7 @@ export function useSwipeGesture(onSwipeLeft: () => void, onSwipeRight: () => voi
     };
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = () => {
     if (!swipeState.current.isDragging) return;
   };
 
@@ -84,6 +84,10 @@ export function useSwipeGesture(onSwipeLeft: () => void, onSwipeRight: () => voi
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
       onMouseLeave: handleMouseUp,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onTap: (_e: React.MouseEvent | React.TouchEvent) => {
+        // Handle tap if needed
+      },
     },
   };
 }

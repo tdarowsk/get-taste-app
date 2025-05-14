@@ -412,12 +412,12 @@ export const RecommendationService = {
       const tmdbApiKey = TMDB_API_KEY;
 
       if (!tmdbApiKey) {
-        console.error("TMDB API key not configured");
+        // console.error("TMDB API key not configured");
         return this.getFallbackMovieRecommendations("Popular Movies (Fallback)", "API key missing");
       }
 
       // Fetch trending movies from TMDB - using discover to get more data
-      console.log("Fetching movie recommendations from TMDB API");
+      // console.log("Fetching movie recommendations from TMDB API");
       const trendingRes = await fetch(
         `https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&page=1&sort_by=popularity.desc`,
         {

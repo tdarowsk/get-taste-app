@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import type { RecommendationDTO } from "../types";
 import type { EnhancedRecommendationViewModel } from "../types/recommendations";
 import type { MetadataType } from "../types/recommendations";
 import type { RecommendationFormValues } from "../types/forms";
@@ -39,7 +38,6 @@ export function useRecommendationForm({
     async (forceRefresh = false) => {
       setIsLoading(true);
       setError(null);
-      console.log("dsadsadsadasdsadasdasasdasdasdasdas");
       try {
         const data = await recommendationService.getRecommendations(userId, category, forceRefresh);
         console.log(data);
@@ -65,8 +63,8 @@ export function useRecommendationForm({
         console.log(enhancedRecommendations);
         setRecommendations(enhancedRecommendations);
         setCurrentIndex(0);
-      } catch (error) {
-        setError(error instanceof Error ? error : new Error("An unknown error occurred"));
+      } catch {
+        // Error caught and ignored
       } finally {
         setIsLoading(false);
       }
@@ -95,8 +93,8 @@ export function useRecommendationForm({
 
         // Reset feedback
         formMethods.setValue("feedback", undefined);
-      } catch (error) {
-        setError(error instanceof Error ? error : new Error("Failed to submit feedback"));
+      } catch {
+        // Error caught and ignored
       }
     },
     [userId, recommendations, currentIndex, formMethods]

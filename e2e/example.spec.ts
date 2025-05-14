@@ -32,7 +32,7 @@ test.describe("Playwright website", () => {
 
   test("has title", async () => {
     // Use expect with specific matchers
-    await expect(await playwrightPage.getTitle()).toContain("Playwright");
+    expect(await playwrightPage.getTitle()).toContain("Playwright");
   });
 
   test("get started link", async () => {

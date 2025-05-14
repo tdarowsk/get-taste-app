@@ -1,9 +1,20 @@
-import { supabaseClient } from "../../db/supabase.client";
 import { supabaseAdmin } from "../../db/supabase.admin";
+import { createClient } from "@supabase/supabase-js";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Serwis do zarządzania preferencjami użytkownika - bez żadnych domyślnych/zahardcodowanych wartości
  */
+
+// Create a factory function to get a Supabase client that works both client and server side
+const getSupabaseClient = () => {
+  return createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class UserPreferencesService {
   /**
    * Pobiera preferencje filmowe użytkownika na podstawie rzeczywistych polubień
@@ -12,10 +23,10 @@ export class UserPreferencesService {
    */
   public static async getFilmPreferences(userId: string) {
     try {
-      console.log(`Getting film preferences for user ${userId}`);
+      // console.log(`Getting film preferences for user ${userId}`);
 
       // Użyj klienta administratora, jeśli dostępny
-      const client = supabaseAdmin || supabaseClient;
+      const client = supabaseAdmin || getSupabaseClient();
 
       // Pobierz preferencje filmowe z tabeli film_preferences
       const { data: filmPreferences, error: filmError } = await client
@@ -25,7 +36,7 @@ export class UserPreferencesService {
         .single();
 
       if (filmError && filmError.code !== "PGRST116") {
-        console.error("Error fetching film preferences:", filmError);
+        // console.error("Error fetching film preferences:", filmError);
         throw filmError;
       }
 
@@ -48,6 +59,7 @@ export class UserPreferencesService {
       const likedMovieIds: string[] = [];
 
       // Zbierz ID polubionych filmów
+
       likedItems?.forEach((item: any) => {
         if (item.item_id) {
           likedMovieIds.push(item.item_id);
@@ -59,6 +71,7 @@ export class UserPreferencesService {
 
           if (typeof item.genre === "string") {
             // Gatunki mogą być oddzielone przecinkami
+
             genres = item.genre
               .split(/[,;|]/)
               .map((g: any) => g.trim())
@@ -124,7 +137,7 @@ export class UserPreferencesService {
       }
 
       // Użyj klienta administratora, jeśli dostępny
-      const client = supabaseAdmin || supabaseClient;
+      const client = supabaseAdmin || getSupabaseClient();
 
       // Zapisz preferencje do bazy danych
       const { error } = await client.from("film_preferences").upsert({
@@ -157,7 +170,7 @@ export class UserPreferencesService {
       console.log(`Getting film genres metadata for user ${userId}`);
 
       // Pobierz polubione filmy, aby określić gatunki
-      const { data: likedItems, error: likesError } = await supabaseClient
+      const { data: likedItems, error: likesError } = await getSupabaseClient()
         .from("item_feedback")
         .select("item_id, genre, feedback_type")
         .eq("user_id", userId)

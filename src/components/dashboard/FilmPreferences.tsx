@@ -1,83 +1,47 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "../ui/button";
 import { useToast } from "../ui";
 
 interface FilmPreferencesProps {
   userId: string;
   onPreferencesChange?: () => void;
+  isNewUser?: boolean;
 }
 
-export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferencesProps) {
+export function FilmPreferences({
+  userId,
+  onPreferencesChange,
+  isNewUser = false,
+}: FilmPreferencesProps) {
   const [genres, setGenres] = useState<string[]>([]);
   const [likedMovies, setLikedMovies] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
+  const [lastToastTime, setLastToastTime] = useState(0);
 
-  // Fetch user's film preferences
-  useEffect(() => {
-    const fetchPreferences = async () => {
-      if (!userId) return;
-
-      setIsLoading(true);
-      setErrorMessage(null);
-      try {
-        console.log(`Fetching preferences for user ${userId}`);
-        const response = await fetch(`/api/users/${userId}/preferences`);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Fetched preferences:", JSON.stringify(data));
-
-          // Extract film genres from the response
-          if (data.filmPreferences) {
-            if (Array.isArray(data.filmPreferences.genres)) {
-              setGenres(data.filmPreferences.genres);
-            }
-            if (Array.isArray(data.filmPreferences.liked_movies)) {
-              setLikedMovies(data.filmPreferences.liked_movies);
-            }
-
-            // If no genres were found but we have a userId, try to force a refresh to generate them
-            if (
-              (!data.filmPreferences.genres || data.filmPreferences.genres.length === 0) &&
-              userId
-            ) {
-              console.log("No genres found, triggering automatic preference refresh");
-              // Set auto-refreshing state
-              setIsAutoRefreshing(true);
-              // Wait a moment to avoid UI flicker
-              setTimeout(() => {
-                refreshPreferences();
-              }, 500);
-            }
-          }
-        } else {
-          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-          console.error("Failed to fetch preferences:", errorData);
-          setErrorMessage(`Failed to fetch preferences: ${errorData.error || response.statusText}`);
-        }
-      } catch (error) {
-        console.error("Error fetching preferences:", error);
-        setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
-      } finally {
-        setIsLoading(false);
+  // Funkcja do wyświetlania powiadomień z throttlingiem
+  const showToast = useCallback(
+    (title: string, description: string, variant: "default" | "destructive" = "default") => {
+      const now = Date.now();
+      // Ogranicz wyświetlanie powiadomień do maksymalnie 1 na 5 sekund
+      if (now - lastToastTime > 5000) {
+        toast({ title, description, variant });
+        setLastToastTime(now);
       }
-    };
+    },
+    [toast, lastToastTime]
+  );
 
-    fetchPreferences();
-  }, [userId]);
-
-  // Force refresh preferences
-  const refreshPreferences = async () => {
+  // Force refresh preferences - Define first to avoid dependency cycles
+  const refreshPreferences = useCallback(async () => {
     if (!userId) return;
 
     setIsLoading(true);
     setIsAutoRefreshing(true);
     setErrorMessage(null);
     try {
-      console.log(`Refreshing preferences for user ${userId} with forceUpdate=true`);
       // Add forceUpdate parameter for more aggressive preference detection
       const response = await fetch(
         `/api/users/${userId}/preferences?refresh=true&forceUpdate=true`
@@ -85,8 +49,6 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Refreshed preferences response:", JSON.stringify(data));
-
         // Extract film genres from the response
         if (data.filmPreferences) {
           if (Array.isArray(data.filmPreferences.genres)) {
@@ -97,11 +59,10 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
           }
         }
 
-        toast({
-          title: "Preferences updated",
-          description: "Your film preferences have been refreshed based on your liked movies.",
-          variant: "default",
-        });
+        showToast(
+          "Preferences updated",
+          "Your film preferences have been refreshed based on your liked movies."
+        );
 
         // Notify parent component
         if (onPreferencesChange) {
@@ -109,30 +70,77 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
         }
       } else {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        console.error("Failed to refresh preferences:", errorData);
         setErrorMessage(`Failed to refresh preferences: ${errorData.error || response.statusText}`);
 
-        toast({
-          title: "Error",
-          description: `Failed to refresh preferences: ${errorData.error || response.statusText}`,
-          variant: "destructive",
-        });
+        showToast(
+          "Error",
+          `Failed to refresh preferences: ${errorData.error || response.statusText}`,
+          "destructive"
+        );
       }
     } catch (error) {
-      console.error("Error refreshing preferences:", error);
       const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
       setErrorMessage(errorMsg);
 
-      toast({
-        title: "Error",
-        description: `Failed to refresh preferences: ${errorMsg}`,
-        variant: "destructive",
-      });
+      showToast("Error", `Failed to refresh preferences: ${errorMsg}`, "destructive");
     } finally {
       setIsLoading(false);
       setIsAutoRefreshing(false);
     }
-  };
+  }, [userId, showToast, onPreferencesChange]);
+
+  // Fetch user's film preferences
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      if (!userId) return;
+
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const response = await fetch(`/api/users/${userId}/preferences`);
+
+        if (response.ok) {
+          const data = await response.json();
+          // Extract film genres from the response
+          if (data.filmPreferences) {
+            if (Array.isArray(data.filmPreferences.genres)) {
+              setGenres(data.filmPreferences.genres);
+            }
+            if (Array.isArray(data.filmPreferences.liked_movies)) {
+              setLikedMovies(data.filmPreferences.liked_movies);
+            }
+
+            // Pomijamy automatycznie odświeżanie dla nowych użytkowników
+            // lub jeśli już trwa odświeżanie
+            if (
+              !isNewUser &&
+              !isAutoRefreshing &&
+              (!data.filmPreferences.genres || data.filmPreferences.genres.length === 0) &&
+              data.filmPreferences.liked_movies &&
+              data.filmPreferences.liked_movies.length > 0 &&
+              userId
+            ) {
+              // Set auto-refreshing state
+              setIsAutoRefreshing(true);
+              // Wait a moment to avoid UI flicker
+              setTimeout(() => {
+                refreshPreferences();
+              }, 500);
+            }
+          }
+        } else {
+          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+          setErrorMessage(`Failed to fetch preferences: ${errorData.error || response.statusText}`);
+        }
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPreferences();
+  }, [userId, refreshPreferences, isNewUser, isAutoRefreshing]);
 
   // Use default genres function
   const useDefaultGenres = async () => {
@@ -145,10 +153,6 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
     const defaultGenres = ["Action", "Drama", "Comedy", "Thriller", "Adventure", "Sci-Fi"];
 
     try {
-      console.log(`Setting default genres for user ${userId}`);
-
-      // Najpierw spróbuj użyć admin endpoint
-      console.log("Trying admin endpoint first");
       const adminResponse = await fetch(`/api/users/${userId}/admin-preferences`, {
         method: "POST",
         headers: {
@@ -163,19 +167,14 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
       });
 
       const adminData = await adminResponse.json();
-      console.log("Admin endpoint response:", adminData);
-
       // Check if the admin endpoint indicated a warning (UI-only update)
       if (adminData.warning) {
-        console.log("Server sent warning, updating local state only:", adminData.warning);
         setGenres(defaultGenres);
 
-        toast({
-          title: "Preferences displayed",
-          description:
-            adminData.message || "Default film genres have been applied to your profile display.",
-          variant: "default",
-        });
+        showToast(
+          "Preferences displayed",
+          adminData.message || "Default film genres have been applied to your profile display."
+        );
 
         if (onPreferencesChange) {
           onPreferencesChange();
@@ -187,10 +186,7 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
 
       // If the admin endpoint was successful
       if (adminResponse.ok && adminData.success) {
-        toast({
-          title: "Preferences updated",
-          description: "Default film genres have been applied to your profile.",
-        });
+        showToast("Preferences updated", "Default film genres have been applied to your profile.");
 
         // Use the returned data if available
         if (adminData.data && Array.isArray(adminData.data.genres)) {
@@ -211,7 +207,6 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
       // If admin endpoint failed but didn't indicate it was a UI-only update
       // Try standard preferences endpoint
       if (!adminResponse.ok) {
-        console.log("Admin endpoint failed, trying standard endpoint");
         const response = await fetch(`/api/users/${userId}/preferences`, {
           method: "POST",
           headers: {
@@ -226,10 +221,10 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
         });
 
         if (response.ok) {
-          toast({
-            title: "Preferences updated",
-            description: "Default film genres have been applied to your profile.",
-          });
+          showToast(
+            "Preferences updated",
+            "Default film genres have been applied to your profile."
+          );
 
           // Use our default genres since the response might not include them
           setGenres(defaultGenres);
@@ -243,15 +238,12 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
         }
 
         // Both approaches failed - update UI only as a last resort
-        console.log("Both endpoints failed, updating UI state only");
         setGenres(defaultGenres);
 
-        toast({
-          title: "UI Updated (No Backend)",
-          description:
-            "Default genres are only shown in the UI. Backend update failed. Changes will not persist.",
-          variant: "default",
-        });
+        showToast(
+          "UI Updated (No Backend)",
+          "Default genres are only shown in the UI. Backend update failed. Changes will not persist."
+        );
 
         if (onPreferencesChange) {
           onPreferencesChange();
@@ -260,13 +252,11 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
 
-      toast({
-        title: "Error",
-        description: `Failed to apply default genres: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        variant: "destructive",
-      });
+      showToast(
+        "Error",
+        `Failed to apply default genres: ${error instanceof Error ? error.message : String(error)}`,
+        "destructive"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -288,17 +278,16 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
       const data = await response.json();
 
       if (data.success) {
-        toast({
-          title: "Preferencje zaktualizowane",
-          description: "Twoje preferencje zostały odświeżone na podstawie polubionych filmów.",
-        });
+        showToast(
+          "Preferencje zaktualizowane",
+          "Twoje preferencje zostały odświeżone na podstawie polubionych filmów."
+        );
       } else {
-        toast({
-          title: "Informacja",
-          description:
-            data.message || "Nie znaleziono polubionych filmów do wygenerowania preferencji.",
-          variant: "default",
-        });
+        showToast(
+          "Informacja",
+          data.message || "Nie znaleziono polubionych filmów do wygenerowania preferencji.",
+          "default"
+        );
       }
 
       // Odśwież dane
@@ -310,13 +299,13 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
 
-      toast({
-        title: "Błąd",
-        description: `Nie udało się odświeżyć preferencji: ${
+      showToast(
+        "Błąd",
+        `Nie udało się odświeżyć preferencji: ${
           error instanceof Error ? error.message : String(error)
         }`,
-        variant: "destructive",
-      });
+        "destructive"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -438,3 +427,6 @@ export function FilmPreferences({ userId, onPreferencesChange }: FilmPreferences
     </div>
   );
 }
+
+// Add default export to support both import methods
+export default FilmPreferences;

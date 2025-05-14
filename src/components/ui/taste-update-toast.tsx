@@ -1,5 +1,3 @@
-import React from "react";
-
 interface TasteUpdateToastProps {
   type: "music" | "film";
   action: "like" | "dislike";

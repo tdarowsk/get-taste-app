@@ -1,6 +1,5 @@
 ---
-import { ViewTransitions } from "astro:transitions";
-import { supabaseClient } from "../db/supabase.client.ts";
+import { ClientRouter } from "astro:transitions";
 
 interface Props {
   title: string;
@@ -9,7 +8,7 @@ interface Props {
 // Sprawdź czy użytkownik jest zalogowany
 const {
   data: { session },
-} = await supabaseClient.auth.getSession();
+} = await Astro.locals.supabase.auth.getSession();
 
 // Jeśli nie ma sesji, przekieruj na stronę logowania
 if (!session) {
@@ -17,7 +16,7 @@ if (!session) {
 }
 
 const { title } = Astro.props;
-const user = session.user;
+// const user = session.user;
 ---
 
 <!doctype html>
@@ -28,7 +27,7 @@ const user = session.user;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    <ViewTransitions />
+    <ClientRouter />
   </head>
   <body class="min-h-screen bg-gradient-to-br from-[#0e0e20] to-[#1e1e3f] text-white">
     <header class="bg-[#0a0a18]/80 backdrop-blur-sm border-b border-white/10">

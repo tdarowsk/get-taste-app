@@ -15,8 +15,6 @@ export const GET: APIRoute = async () => {
       },
     });
   } catch (error) {
-    console.error("Error fetching TMDB recommendations:", error);
-
     return new Response(
       JSON.stringify({
         error: "Failed to fetch TMDB recommendations",

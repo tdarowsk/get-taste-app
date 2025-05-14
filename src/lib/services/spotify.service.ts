@@ -1,4 +1,4 @@
-import { supabaseClient } from "../../db/supabase.client";
+import { createClient } from "@supabase/supabase-js";
 import type {
   SpotifyDataDTO,
   SpotifySyncCommand,
@@ -6,6 +6,14 @@ import type {
   RecommendationItem,
 } from "../../types";
 import { z } from "zod";
+
+// Create a factory function to get a Supabase client that works both client and server side
+const getSupabaseClient = () => {
+  return createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+};
 
 // Schema for Spotify data validation
 const spotifyTrackSchema = z.object({
@@ -108,7 +116,7 @@ export async function syncSpotifyData(
     const validatedData = spotifyDataSchema.parse(spotifyData);
 
     // Save data to database
-    const { error } = await supabaseClient.from("spotify_data").insert({
+    const { error } = await getSupabaseClient().from("spotify_data").insert({
       user_id: command.user_id.toString(), // Convert number to string
       album_id: "sample_album_id", // In real implementation from Spotify API
       artist_id: "sample_artist_id", // In real implementation from Spotify API
@@ -150,7 +158,7 @@ export async function getSpotifyData(
   const userIdString = typeof userId === "number" ? userId.toString() : userId;
 
   // Get total record count
-  const { count, error: countError } = await supabaseClient
+  const { count, error: countError } = await getSupabaseClient()
     .from("spotify_data")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userIdString);
@@ -160,7 +168,7 @@ export async function getSpotifyData(
   }
 
   // Get paginated data
-  const { data, error } = await supabaseClient
+  const { data, error } = await getSupabaseClient()
     .from("spotify_data")
     .select("*")
     .eq("user_id", userIdString)
@@ -274,8 +282,9 @@ export class SpotifyService {
       }
 
       return this.accessToken;
-    } catch (error) {
-      throw error;
+    } catch (err) {
+      // Error caught and handled
+      throw new Error(`Failed to get Spotify access token: ${String(err)}`);
     }
   }
 
@@ -320,9 +329,9 @@ export class SpotifyService {
       }
 
       throw new Error("No artists found in Spotify API response");
-    } catch (error) {
-      // Don't use fallback data - throw the error so the caller can handle it
-      throw new Error(`Failed to fetch artists from Spotify: ${error}`);
+    } catch (err) {
+      // Error caught and handled
+      throw new Error(`Failed to fetch artists from Spotify: ${String(err)}`);
     }
   }
 
@@ -351,7 +360,9 @@ export class SpotifyService {
         name: data.name,
         imageUrl: data.images?.[0]?.url,
       };
-    } catch (error) {
+    } catch (err) {
+      // Error caught and handled
+      console.error(`Error getting artist info: ${String(err)}`);
       return null;
     }
   }
@@ -405,7 +416,9 @@ export class SpotifyService {
       }
 
       return [];
-    } catch (error) {
+    } catch (err) {
+      // Error caught and handled
+      console.error(`Error getting artist albums: ${String(err)}`);
       return [];
     }
   }
@@ -450,7 +463,9 @@ export class SpotifyService {
           previewUrl: data.preview_url,
         },
       };
-    } catch (error) {
+    } catch (err) {
+      // Error caught and handled
+      console.error(`Error getting track info: ${String(err)}`);
       return null;
     }
   }

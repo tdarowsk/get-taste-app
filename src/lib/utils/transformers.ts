@@ -116,6 +116,7 @@ export async function transformRecommendationToViewModel(
                 transformedItems = await transformItemsArray(content.items, dto.id);
                 break;
               }
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (_) {
               // Continue to next choice
             }
@@ -126,7 +127,7 @@ export async function transformRecommendationToViewModel(
       // If we still have no items, look for any array in the data that might contain recommendations
       if (transformedItems.length === 0) {
         // Look through all properties for arrays
-        for (const [_, value] of Object.entries(extendedData)) {
+        for (const [, /* propertyName not used */ value] of Object.entries(extendedData)) {
           if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object") {
             const potentialItems = await transformItemsArray(value, dto.id);
             if (potentialItems.length > 0) {
@@ -139,11 +140,9 @@ export async function transformRecommendationToViewModel(
 
       // Log the count of items after all attempts - removing empty blocks
       // No need to do anything with 0 items - the empty array will be returned
-
-      if (transformedItems.length > 0) {
-      } else {
-      }
-    } catch (error) {}
+    } catch {
+      // Error caught and ignored
+    }
 
     // Return the transformed view model
     return {
@@ -153,8 +152,8 @@ export async function transformRecommendationToViewModel(
       items: transformedItems,
       createdAt: new Date(dto.created_at || new Date().toISOString()),
     };
-  } catch (error) {
-    // Return a minimal valid structure in case of error
+  } catch {
+    // Error caught and ignored
     return {
       id: dto.id,
       type: dto.type,
@@ -299,9 +298,6 @@ async function transformItemsArray(
       metadata.director === "Unknown Director" ||
       metadata.director === "null"
     ) {
-      console.log("[transformers.ts] Processing director field - current metadata:", metadata);
-      console.log("[transformers.ts] Item object for director check:", itemObj);
-
       // Check for director in the root object first (given our updated AI prompt)
       if (
         typeof itemObj.director === "string" &&
@@ -309,7 +305,6 @@ async function transformItemsArray(
         itemObj.director !== "null"
       ) {
         metadata.director = itemObj.director;
-        console.log("[transformers.ts] Setting director from root object:", itemObj.director);
       }
       // Check for directors array and take the first entry
       else if (
@@ -319,15 +314,9 @@ async function transformItemsArray(
         itemObj.directors[0] !== "null"
       ) {
         metadata.director = itemObj.directors[0];
-        console.log(
-          "[transformers.ts] Setting director from directors array:",
-          itemObj.directors[0]
-        );
       }
       // Check in details object
       else if (itemObj.details && typeof itemObj.details === "object") {
-        console.log("[transformers.ts] Checking details object for director:", itemObj.details);
-
         // Direct director property
         if (
           typeof (itemObj.details as Record<string, unknown>).director === "string" &&
@@ -335,7 +324,6 @@ async function transformItemsArray(
           (itemObj.details as Record<string, unknown>).director !== "null"
         ) {
           metadata.director = (itemObj.details as Record<string, unknown>).director;
-          console.log("[transformers.ts] Setting director from details object:", metadata.director);
         }
         // Directors array in details
         else if (
@@ -348,10 +336,6 @@ async function transformItemsArray(
           metadata.director = (
             (itemObj.details as Record<string, unknown>).directors as string[]
           )[0];
-          console.log(
-            "[transformers.ts] Setting director from details.directors array:",
-            metadata.director
-          );
         }
       }
 
@@ -362,9 +346,6 @@ async function transformItemsArray(
         metadata.director === "null"
       ) {
         metadata.director = "Unknown Director";
-        console.log("[transformers.ts] No director found, using default: Unknown Director");
-      } else {
-        console.log("[transformers.ts] Successfully set director to:", metadata.director);
       }
     }
 
@@ -398,29 +379,34 @@ async function transformItemsArray(
             if (!imageUrl && omdbDetails.poster) {
               imageUrl = omdbDetails.poster;
             } else if (imageUrl) {
+              // Image URL already exists, no need to override
             }
 
             // Fill in missing director ONLY if it's not already provided by the AI
             if (!metadata.director && omdbDetails.director) {
               metadata.director = omdbDetails.director;
             } else if (metadata.director) {
+              // Director already exists, no need to override
             }
 
             // Add year if available and not already set
             if (!metadata.year && omdbDetails.year) {
               metadata.year = omdbDetails.year;
             } else if (metadata.year) {
+              // Year already exists, no need to override
             }
           }
-        } catch (error) {
-          // Just using the fallback return is sufficient error handling
+        } catch {
+          // Error caught and ignored
         }
       } else {
+        // No OMDB fetch needed since we have all the required data
       }
     }
 
-    // Debug log for problematic items
+    // Debug log for problematic items - removing empty block
     if (!imageUrl || !metadata.director) {
+      // Uncomment for debugging if needed
     }
 
     // Need to add a default type for the view model
@@ -505,4 +491,31 @@ export function transformFilmPreferencesToFormModel(
     cast: dto?.cast || [],
     screenwriter: dto?.screenwriter || "",
   };
+}
+
+export async function transformMultipleItems<T>(
+  items: unknown[],
+  transformFn: (item: unknown) => Promise<T>
+): Promise<T[]> {
+  const results: T[] = [];
+
+  for (const item of items) {
+    try {
+      const transformed = await transformFn(item);
+      results.push(transformed);
+    } catch {
+      // Skip items that fail to transform
+    }
+  }
+
+  return results;
+}
+
+export async function safeJsonParse(text: string): Promise<unknown> {
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Return empty object if parsing fails
+    return {};
+  }
 }

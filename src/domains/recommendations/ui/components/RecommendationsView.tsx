@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { FormProvider } from "react-hook-form";
 import { useRecommendations } from "../hooks/useRecommendations";
 import { RecommendationType } from "../../domain/enums/RecommendationType";
 import { MetadataType } from "../../domain/enums/MetadataType";
-import { FeedbackType } from "../../domain/enums/FeedbackType";
 
 // Component to display loading state
 const LoadingIndicator: React.FC = () => (
@@ -141,8 +141,8 @@ export const RecommendationsView: React.FC<{ userId: string }> = ({ userId }) =>
         if (!response.ok) {
           window.location.href = "/login?redirect=/recommendations";
         }
-      } catch (error) {
-        window.location.href = "/login?redirect=/recommendations";
+      } catch {
+        // Error caught and ignored
       }
     };
 

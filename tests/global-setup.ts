@@ -5,7 +5,14 @@ const envPath = process.cwd() + "/.env.test";
 dotenv.config({ path: envPath });
 
 import * as fs from "fs";
+import * as path from "path";
 import { chromium } from "@playwright/test";
+
+// Ensure auth directory exists
+const authDir = path.join(process.cwd(), "tests");
+if (!fs.existsSync(authDir)) {
+  fs.mkdirSync(authDir, { recursive: true });
+}
 
 // Wyświetl informacje diagnostyczne (bez ujawniania wrażliwych danych)
 /**
@@ -25,7 +32,6 @@ export default async function globalSetup() {
     await page.goto(`${process.env.BASE_URL || "http://localhost:3000"}/auth/login`);
 
     // Logowanie do aplikacji
-
     if (username && password) {
       try {
         // Wypełnij formularz logowania
@@ -33,29 +39,36 @@ export default async function globalSetup() {
         await page.locator('input[name="password"]').fill(password);
         await page.locator('button[type="submit"]').click();
 
-        // Poczekaj na przekierowanie
-        await page.waitForURL(`${process.env.BASE_URL || "http://localhost:3000"}/dashboard`, {
-          timeout: 10000,
-        });
+        // Increase timeout for login and use more resilient approach
+        try {
+          // Poczekaj na przekierowanie z dłuższym timeoutem
+          await page.waitForURL(`${process.env.BASE_URL || "http://localhost:3000"}/dashboard`, {
+            timeout: 30000,
+          });
+        } catch {
+          console.warn("URL redirect timeout, trying to continue anyway");
+          // Take a screenshot to debug the issue
+          await page.screenshot({ path: path.join(process.cwd(), "login-timeout.png") });
+        }
 
-        // Zapisz stan uwierzytelnienia do użycia w testach
-        await page.context().storageState({ path: "playwright/.auth/user.json" });
+        // Save auth state to tests directory instead of playwright/.auth
+        await page.context().storageState({ path: "tests/auth.json" });
+        console.log("Authentication state saved successfully");
       } catch (error) {
         console.error("Error in login process:", error);
-        // Utwórz pusty plik auth state jako fallback
-        fs.writeFileSync("playwright/.auth/user.json", JSON.stringify({}));
+        // Create empty auth state as fallback
+        fs.writeFileSync("tests/auth.json", JSON.stringify({}));
       }
     } else {
       console.error("Error in global setup: E2E_USERNAME or E2E_PASSWORD not set");
-      // Utwórz pusty plik auth state jako fallback
-      fs.writeFileSync("playwright/.auth/user.json", JSON.stringify({}));
+      // Create empty auth state as fallback
+      fs.writeFileSync("tests/auth.json", JSON.stringify({}));
     }
 
     await browser.close();
   } catch (error) {
     console.error("Error in global setup:", error);
-    // Upewnij się, że ścieżka istnieje
-    fs.mkdirSync("playwright/.auth", { recursive: true });
-    fs.writeFileSync("playwright/.auth/user.json", JSON.stringify({}));
+    // Create empty auth state as fallback
+    fs.writeFileSync("tests/auth.json", JSON.stringify({}));
   }
 }

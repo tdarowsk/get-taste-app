@@ -55,7 +55,9 @@ export const LogoutButton: React.FC<LogoutButtonProps> = ({
         // Domyślnie przekieruj na stronę logowania
         window.location.href = "/auth/login";
       }
-    } catch (error) {
+    } catch {
+      // Ignore logout errors - user will still be redirected to login page
+      // or the onLogoutSuccess callback will handle redirection
     } finally {
       setIsLoading(false);
     }

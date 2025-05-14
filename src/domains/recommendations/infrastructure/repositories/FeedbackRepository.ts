@@ -1,6 +1,6 @@
 import { Feedback } from "../../domain/models/Feedback";
-import { IFeedbackRepository } from "../../domain/interfaces/IFeedbackRepository";
-import { DataSource } from "../data/DataSource";
+import type { IFeedbackRepository } from "../../domain/interfaces/IFeedbackRepository";
+import type { DataSource } from "../data/DataSource";
 import { FeedbackType } from "../../domain/enums/FeedbackType";
 
 interface FeedbackDTO {

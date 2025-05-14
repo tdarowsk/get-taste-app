@@ -10,7 +10,7 @@ const MUSIC_GENRE = "musicGenre";
  * GET /api/user-preferences-genres?userId=XXX&type=film
  */
 export const GET: APIRoute = async ({ request, url, cookies }) => {
-  console.info("==================== PREFERENCES API CALLED ====================");
+  // console.info("==================== PREFERENCES API CALLED ====================");
   console.info("Request URL:", url.toString());
   console.info("Request query params:", Object.fromEntries(url.searchParams.entries()));
 
@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   console.info(`Processing request for userId=${userId}, type=${type}`);
 
   if (!userId) {
-    console.error("[API/user-preferences-genres] Missing user ID");
+    // console.error("[API/user-preferences-genres] Missing user ID");
     return new Response(JSON.stringify({ error: "Missing user ID" }), {
       status: 400,
       headers: {

@@ -1,14 +1,12 @@
 import { Recommendation } from "../../domain/models/Recommendation";
 import { RecommendationType } from "../../domain/enums/RecommendationType";
-import { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
-import { IMetadataService } from "../../domain/interfaces/IMetadataService";
-import { IDomainEventEmitter } from "../../domain/interfaces/IDomainEventEmitter";
+import type { IRecommendationRepository } from "../../domain/interfaces/IRecommendationRepository";
+import type { IDomainEventEmitter } from "../../domain/interfaces/IDomainEventEmitter";
 import { RecommendationsRefreshedEvent } from "../../domain/events/RecommendationsRefreshedEvent";
 
 export class GetRecommendationsUseCase {
   constructor(
     private recommendationRepository: IRecommendationRepository,
-    private metadataService: IMetadataService,
     private eventEmitter: IDomainEventEmitter
   ) {}
 

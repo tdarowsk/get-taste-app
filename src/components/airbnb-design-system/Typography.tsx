@@ -1,4 +1,5 @@
 import React from "react";
+import type { ElementType } from "react";
 import { cn } from "@/lib/utils";
 
 interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
@@ -35,7 +36,7 @@ interface HeadingProps extends TypographyProps {
 
 export const Heading = React.forwardRef<HTMLHeadingElement, HeadingProps>(
   ({ level = 1, variant = "default", className, children, clamp, ...props }, ref) => {
-    const Component = `h${level}` as keyof JSX.IntrinsicElements;
+    const Component = `h${level}` as ElementType;
 
     const variantStyles = {
       default: "",
@@ -92,7 +93,7 @@ interface TextProps extends TypographyProps {
    * Element HTML, jako który ma być renderowany komponent
    * @default "p"
    */
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
 }
 
 export const Text = React.forwardRef<HTMLParagraphElement, TextProps>(
@@ -118,7 +119,7 @@ export const Text = React.forwardRef<HTMLParagraphElement, TextProps>(
 
     return (
       <Component
-        ref={ref as any}
+        ref={ref as React.Ref<HTMLElement>}
         className={cn(
           "text-gray-700",
           variantStyles[variant],

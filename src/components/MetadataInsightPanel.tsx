@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { MetadataType } from "../types/recommendations";
 import type { MetadataInsight, MetadataItem as MetadataItemType } from "../types/recommendations";
 import { MetadataCategory } from "./MetadataCategory";

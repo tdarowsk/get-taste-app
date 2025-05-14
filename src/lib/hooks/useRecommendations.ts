@@ -7,7 +7,7 @@ interface UseRecommendationsOptions {
   isNewUser?: boolean;
 }
 
-export function useRecommendations({ userId, type, isNewUser }: UseRecommendationsOptions) {
+export function useRecommendations({ userId, type }: UseRecommendationsOptions) {
   return useQuery<RecommendationDTO[]>({
     queryKey: ["likedRecommendations", userId, type],
     queryFn: async () => {
@@ -36,7 +36,8 @@ export function useRecommendations({ userId, type, isNewUser }: UseRecommendatio
         const recommendations = data.data.map((h) => h.recommendation);
 
         return recommendations;
-      } catch (error) {
+      } catch {
+        // Error caught and ignored
         return [];
       }
     },

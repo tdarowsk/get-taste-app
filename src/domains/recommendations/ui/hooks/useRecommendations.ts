@@ -57,8 +57,8 @@ export function useRecommendations({
 
   // Create use cases
   const getRecommendationsUseCase = useMemo(
-    () => new GetRecommendationsUseCase(recommendationRepository, metadataService, eventEmitter),
-    [recommendationRepository, metadataService, eventEmitter]
+    () => new GetRecommendationsUseCase(recommendationRepository, eventEmitter),
+    [recommendationRepository, eventEmitter]
   );
 
   const submitFeedbackUseCase = useMemo(

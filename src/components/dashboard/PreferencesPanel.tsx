@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { FilmPreferences } from "./FilmPreferences";
+import FilmPreferences from "./FilmPreferences";
 import { useToast } from "../ui";
 
 interface PreferencesPanelProps {
   userId: string;
   onPreferencesUpdated?: () => void;
+  isNewUser?: boolean;
   // Testing only props - not for production use
   _activeTabForTesting?: string;
   _setActiveTabForTesting?: (tab: string) => void;
@@ -15,6 +16,7 @@ interface PreferencesPanelProps {
 export function PreferencesPanel({
   userId,
   onPreferencesUpdated,
+  isNewUser = false,
   _activeTabForTesting,
   _setActiveTabForTesting,
 }: PreferencesPanelProps) {
@@ -60,8 +62,8 @@ export function PreferencesPanel({
 
           setHasFilmPreferences(hasFilm);
         }
-      } catch (error) {
-        console.error("Error checking preferences:", error);
+      } catch {
+        // Error checking preferences
       } finally {
         setIsLoading(false);
       }
@@ -153,7 +155,11 @@ export function PreferencesPanel({
         </TabsList>
 
         <TabsContent value="film" className="mt-4">
-          <FilmPreferences userId={userId} onPreferencesChange={handlePreferencesChange} />
+          <FilmPreferences
+            userId={userId}
+            onPreferencesChange={handlePreferencesChange}
+            isNewUser={isNewUser}
+          />
         </TabsContent>
 
         <TabsContent value="music" className="mt-4">

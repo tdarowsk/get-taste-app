@@ -91,12 +91,10 @@ export function AdaptiveRecommendationsList({
             setAllItems(items);
             setHasProcessedData(true);
           })
-          .catch((error) => {
-            console.error("Error processing recommendations:", error);
+          .catch(() => {
             setHasProcessedData(true);
           });
-      } catch (error) {
-        console.error("Error in recommendation processing:", error);
+      } catch {
         setHasProcessedData(true);
       }
     } else {
@@ -169,7 +167,7 @@ export function AdaptiveRecommendationsList({
   const handleSwipe = async (
     itemId: string,
     feedbackType: RecommendationFeedbackType,
-    metadata: Record<string, unknown>
+    metadata: Record<string, unknown> = {}
   ) => {
     try {
       // Validate userId
@@ -207,8 +205,7 @@ export function AdaptiveRecommendationsList({
       if (onFeedbackProcessed) {
         onFeedbackProcessed();
       }
-    } catch (err: unknown) {
-      console.error("Error saving feedback:", err);
+    } catch {
       toast({
         title: "Error updating taste profile",
         description: "There was a problem saving your feedback. Please try again.",

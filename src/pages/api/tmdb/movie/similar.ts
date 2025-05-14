@@ -49,7 +49,7 @@ export const GET: APIRoute = async ({ request }) => {
     );
 
     if (!similarMoviesResponse.ok) {
-      console.error(`Error fetching similar movies: ${similarMoviesResponse.status}`);
+      // console.error(`Error fetching similar movies: ${similarMoviesResponse.status}`);
       return new Response(
         JSON.stringify({
           error: "Failed to fetch similar movies",

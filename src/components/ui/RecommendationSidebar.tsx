@@ -10,19 +10,14 @@ const RECOMMENDATION_COOLDOWN_PERIOD = 24 * 60 * 60 * 1000; // 24 hours in milli
 
 // Function to fetch movie details from our backend API
 const fetchMovieDetailsFromBackend = async (movieId: string) => {
-  try {
-    // Fetch movie details from our backend API endpoint
-    const response = await fetch(`/api/tmdb/movie/${movieId}`);
+  // Fetch movie details from our backend API endpoint
+  const response = await fetch(`/api/tmdb/movie/${movieId}`);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch movie details: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching movie details:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch movie details: ${response.statusText}`);
   }
+
+  return await response.json();
 };
 
 interface FeedbackHistoryItem {
@@ -54,7 +49,7 @@ interface RecommendationSidebarProps {
 }
 
 const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
-  console.log("item", item);
+  // console.log("item", item);
   console.log("isActive", isActive);
   const [direction, setDirection] = useState(0);
   const [swiped, setSwiped] = useState(false);
@@ -171,16 +166,11 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
   // Fetch movie details from our backend API when card becomes active and is a film
   useEffect(() => {
     if (isActive && item.type === "film" && !isAiGenerated) {
-      console.log("``````````````````dszadsadasdasdaaaa```````````````````````````");
-      console.log(item);
       fetchMovieDetails(item.id.replace(/^tmdb-/, ""));
-      console.log(fetchMovieDetails(item.id.replace(/^tmdb-/, "")));
-      console.log(item.id);
-      console.log("``````````````````dszadsadasdasdaaaa```````````````````````````");
     } else if (isActive && isAiGenerated) {
       // For AI-generated content, we already have details
       const aiDetails = extractDetails;
-      console.log("aiDetails", aiDetails);
+      console.log("Using AI-generated details:", aiDetails);
       if (aiDetails) {
         setMovieDetails(aiDetails);
       }
@@ -291,7 +281,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
       console.log("Director from movieDetails:", movieDetails?.director);
       console.log("=== END DIRECTOR DEBUG ===");
     }
-  }, [isActive, item, movieDetails]);
+  }, [isActive, movieDetails, item]);
 
   // Check the director value in the render logic
   const directorToDisplay =
@@ -315,7 +305,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onSwipe, isActive }) => {
         // Update drag offset to show real-time indicators
         setDragOffset(info.offset.x);
       }}
-      onDragEnd={(e, info) => {
+      onDragEnd={(_e, info) => {
         const dragX = info.offset.x;
         const threshold = 80; // Lower threshold for easier swiping
 
@@ -870,7 +860,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
 
       // Jeśli dotarliśmy tutaj, API TMDB nie zwróciło prawidłowych danych
       // Ustawiamy pusty stan i pokazujemy komunikat o błędzie
-      console.warn("[RecommendationSidebar] No valid data from TMDB API");
+      // console.warn("[RecommendationSidebar] No valid data from TMDB API");
       setItems([]);
       setError("No recommendations available from TMDB. Please try again later.");
     } catch (err) {
@@ -991,7 +981,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
 
             // Ensure ID is set
             if (!newItem.id) {
-              newItem.id = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              newItem.id = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
             }
 
             // Add ai_generated flag if the parent response has it
@@ -1217,7 +1207,7 @@ const RecommendationSidebar: React.FC<RecommendationSidebarProps> = ({
         console.error("Error handling swipe:", error);
       }
     },
-    [currentIndex, items, userId, isNewUser]
+    [currentIndex, items, userId]
   );
 
   return (

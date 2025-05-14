@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Zbiór promptów używanych do interakcji z modelami OpenRouter.ai
  * w systemie rekomendacji getTaste.
@@ -91,7 +92,7 @@ export const getAiPrompts = () => {
         ${JSON.stringify(recentFeedback, null, 2)}
         
         Zadanie:
-        Zaktualizuj profil preferencji użytkownika, uwzględniając ostatni feedback. Zwróć uwagę na:
+        Zaktualizuj profil preferencji użytkownika dotyczące ${type === "music" ? "muzyki" : "filmów"}, uwzględniając ostatni feedback. Zwróć uwagę na:
         1. Zachowanie istniejących silnych preferencji, o ile nie zostały zaprzeczone przez nowy feedback
         2. Dodanie nowych preferencji wynikających z pozytywnego feedbacku
         3. Usunięcie lub obniżenie wagi preferencji sprzecznych z negatywnym feedbackiem
@@ -132,7 +133,7 @@ export const getAiPrompts = () => {
     selectNextBestRecommendation: (
       remainingRecommendations: Record<string, unknown>[],
       userFeedback: Record<string, unknown>[],
-      type: "music" | "film"
+      _type: "music" | "film"
     ): string => {
       return `
         Wybierz najlepszą kolejną rekomendację na podstawie dotychczasowego feedbacku użytkownika.

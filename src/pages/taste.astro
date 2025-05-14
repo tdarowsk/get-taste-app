@@ -1,5 +1,5 @@
 ---
-import Layout from "../layouts/BaseLayout.astro";
+import Layout from "../layouts/ProtectedLayout.astro";
 import { TasteService } from "../lib/services/taste.service";
 // Get the current user ID from environment or session (replace with real logic)
 const userId = import.meta.env.PUBLIC_USER_ID || "test-user";
@@ -7,7 +7,7 @@ const userId = import.meta.env.PUBLIC_USER_ID || "test-user";
 const taste = await TasteService.getUserTaste(userId);
 ---
 
-<Layout>
+<Layout title="Twój Profil Gustu">
   <main class="prose mx-auto py-8">
     <h1 class="text-3xl font-bold">Profil Twojego Gustu</h1>
     <section>

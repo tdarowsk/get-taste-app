@@ -37,9 +37,7 @@ export function Header({ user }: HeaderProps) {
       if (data.success) {
         // Redirect to home page after successful logout
         window.location.href = "/";
-      } else {
       }
-    } catch (error) {
     } finally {
       setIsLoggingOut(false);
     }

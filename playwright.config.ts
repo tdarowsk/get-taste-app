@@ -1,7 +1,7 @@
 // Najpierw importujemy dotenv, aby załadować zmienne środowiskowe
 import * as dotenv from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
-import path from "path";
+import * as path from "path";
 
 // Załaduj zmienne środowiskowe z .env.test
 const envPath = path.join(process.cwd(), ".env.test");
@@ -28,13 +28,13 @@ export default defineConfig({
   globalSetup: "./tests/global-setup.ts",
   globalTeardown: "./tests/global-teardown.ts",
   use: {
-    baseURL: process.env.BASE_URL || "http://localhost:3000",
+    baseURL: process.env.E2E_URL || "http://localhost:3000",
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 10000,
     /* Collect trace when retrying the failed test. */
     trace: "on-first-retry",
     // Użyj zapisanego stanu uwierzytelnienia, jeśli jest dostępny
-    storageState: "playwright/.auth/user.json",
+    storageState: "tests/auth.json",
     // Ustaw tryb niepewny dla Playwright
     contextOptions: {
       ignoreHTTPSErrors: true,
