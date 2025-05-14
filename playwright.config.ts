@@ -34,7 +34,7 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. */
     trace: "on-first-retry",
     // Użyj zapisanego stanu uwierzytelnienia, jeśli jest dostępny
-    storageState: "playwright/.auth/user.json",
+    storageState: "tests/auth.json",
     // Ustaw tryb niepewny dla Playwright
     contextOptions: {
       ignoreHTTPSErrors: true,
