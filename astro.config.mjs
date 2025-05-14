@@ -17,6 +17,15 @@ export default defineConfig({
       noExternal: ["react-icons"],
       external: ["node:*"],
     },
+    resolve: {
+      // Fix for React 19 compatibility with Cloudflare
+      // Prevents the "MessageChannel is not defined" error
+      alias: import.meta.env.PROD
+        ? {
+            "react-dom/server": "react-dom/server.edge",
+          }
+        : undefined,
+    },
   },
   adapter: cloudflare(),
   experimental: { session: true },
