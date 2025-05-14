@@ -2,9 +2,18 @@
 import Layout from "../../layouts/Layout.astro";
 import { LoginForm } from "../../components/auth/LoginForm";
 import { createSupabaseServerInstance } from "../../db/supabase.client";
+import { isFeatureEnabled } from "../../features";
 
 // Ustaw, że ta strona jest zawsze renderowana na serwerze
 export const prerender = false;
+
+// Sprawdź stan flagi dla funkcji logowania
+const isAuthLoginEnabled = isFeatureEnabled("auth.login");
+
+// Jeśli funkcja logowania jest wyłączona, przekieruj na stronę główną
+if (!isAuthLoginEnabled) {
+  return Astro.redirect("/feature-disabled");
+}
 
 // Sprawdź, czy użytkownik jest już zalogowany
 const supabase = createSupabaseServerInstance({

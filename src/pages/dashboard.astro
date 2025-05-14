@@ -4,9 +4,23 @@ import MainLayout from "../layouts/MainLayout.astro";
 import { DashboardWrapper } from "../components/dashboard/DashboardWrapper";
 import { createSupabaseServerInstance } from "../db/supabase.client";
 import type { UserProfileDTO } from "../types";
+import { isFeatureEnabled } from "../features";
 
 // Strona dashboard zawsze renderowana na serwerze
 export const prerender = false;
+
+// Sprawdź stan flagi dla funkcji dashboardu
+const authEnabled = isFeatureEnabled("auth");
+const collectionsEnabled = isFeatureEnabled("collections");
+
+// Przekazujemy informacje o flagach do komponentu
+const featureFlags = {
+  auth: authEnabled,
+  collections: collectionsEnabled,
+  recommendations: isFeatureEnabled("collections.recommendations"),
+  adaptiveRecommendations: isFeatureEnabled("collections.recommendations.adaptive"),
+  historyRecommendations: isFeatureEnabled("collections.recommendations.history")
+};
 
 // Sprawdzenie czy użytkownik jest zalogowany jest obsługiwane przez middleware
 // Jeśli nie jest, zostanie automatycznie przekierowany na stronę logowania
@@ -48,7 +62,7 @@ const serializedUser = JSON.parse(JSON.stringify(userProfile));
 
 <MainLayout title="getTaste | Twoje rekomendacje">
   <div id="dashboard-root">
-    <DashboardWrapper user={serializedUser} client:load />
+    <DashboardWrapper user={serializedUser} featureFlags={featureFlags} client:load />
   </div>
 </MainLayout>
 

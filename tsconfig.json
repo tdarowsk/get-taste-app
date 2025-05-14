@@ -7,12 +7,15 @@
     "jsxImportSource": "react",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@features/*": ["./src/features/*"]
     },
     "types": ["vitest/globals", "@testing-library/jest-dom", "node"],
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": false,
     "lib": ["ESNext", "DOM", "DOM.Iterable", "ES2022"]
   }
 }

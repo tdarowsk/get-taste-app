@@ -2,9 +2,18 @@
 import Layout from "../../layouts/Layout.astro";
 import { RegisterForm } from "../../components/auth/RegisterForm";
 import { createSupabaseServerInstance } from "../../db/supabase.client";
+import { isFeatureEnabled } from "../../features";
 
 // Ustaw, że ta strona jest zawsze renderowana na serwerze
 export const prerender = false;
+
+// Sprawdź stan flagi dla funkcji rejestracji
+const isAuthRegisterEnabled = isFeatureEnabled("auth.register");
+
+// Jeśli funkcja rejestracji jest wyłączona, przekieruj na stronę główną
+if (!isAuthRegisterEnabled) {
+  return Astro.redirect("/feature-disabled");
+}
 
 // Sprawdź, czy użytkownik jest już zalogowany
 const supabase = createSupabaseServerInstance({
