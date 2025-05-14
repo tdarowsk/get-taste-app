@@ -17,8 +17,6 @@ export default defineConfig({
       noExternal: ["react-icons"],
     },
   },
-  adapter: cloudflare({
-    mode: "advanced",
-  }),
+  adapter: cloudflare(),
   experimental: { session: true },
 });
