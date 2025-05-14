@@ -51,23 +51,14 @@ export function Header({ user }: HeaderProps) {
             <Button
               variant="ghost"
               className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 px-3"
-              onClick={() => (window.location.href = "/dashboard")}
             >
               Dashboard
             </Button>
             <Button
               variant="ghost"
               className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 px-3"
-              onClick={() => (window.location.href = "/preferences")}
             >
-              Preferences
-            </Button>
-            <Button
-              variant="ghost"
-              className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 px-3"
-              onClick={() => (window.location.href = "/taste")}
-            >
-              Taste Profile
+              Explore
             </Button>
             <Button
               variant="ghost"
@@ -142,26 +133,11 @@ export function Header({ user }: HeaderProps) {
       {showMobileMenu && (
         <div className="md:hidden bg-white dark:bg-gray-900 shadow-md py-2 px-4 border-t">
           <div className="flex flex-col space-y-2">
-            <Button
-              variant="ghost"
-              className="justify-start text-sm font-medium"
-              onClick={() => (window.location.href = "/dashboard")}
-            >
+            <Button variant="ghost" className="justify-start text-sm font-medium">
               Dashboard
             </Button>
-            <Button
-              variant="ghost"
-              className="justify-start text-sm font-medium"
-              onClick={() => (window.location.href = "/preferences")}
-            >
-              Preferences
-            </Button>
-            <Button
-              variant="ghost"
-              className="justify-start text-sm font-medium"
-              onClick={() => (window.location.href = "/taste")}
-            >
-              Taste Profile
+            <Button variant="ghost" className="justify-start text-sm font-medium">
+              Explore
             </Button>
             <Button variant="ghost" className="justify-start text-sm font-medium">
               History

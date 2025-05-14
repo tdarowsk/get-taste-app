@@ -1,0 +1,120 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+// Check if user is already authenticated
+const {
+  data: { session },
+} = await Astro.locals.supabase.auth.getSession();
+
+// If user is authenticated, redirect to dashboard
+if (session) {
+  return Astro.redirect("/dashboard");
+}
+---
+
+<Layout title="Logowanie - getTaste">
+  <main class="flex flex-col min-h-[90vh] justify-center items-center px-4 py-8">
+    <div class="logo-container mb-8 w-full max-w-md flex justify-center">
+      <img src="/images/logo.svg" alt="getTaste Logo" class="w-64" />
+    </div>
+
+    <div class="bg-white/5 backdrop-blur-md rounded-lg shadow-lg p-8 w-full max-w-md border border-white/10">
+      <h1 class="text-3xl font-bold mb-8 text-center">Zaloguj się do getTaste</h1>
+
+      <form id="login-form" class="space-y-7">
+        <div>
+          <label for="email" class="block mb-2 text-lg">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            class="w-full px-4 py-3 text-lg rounded-md bg-white/10 border border-white/20 focus:border-purple-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="block mb-2 text-lg">Hasło</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            class="w-full px-4 py-3 text-lg rounded-md bg-white/10 border border-white/20 focus:border-purple-500 focus:outline-none"
+          />
+        </div>
+
+        <div id="error-message" class="text-red-500 hidden py-2"></div>
+
+        <button
+          type="submit"
+          class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-4 px-8 rounded-md shadow-md hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 text-lg mt-8"
+        >
+          Zaloguj się
+        </button>
+      </form>
+
+      <div class="mt-8 text-center">
+        <p class="text-lg">
+          Nie masz jeszcze konta? <a href="/register" class="text-purple-400 hover:text-purple-300 underline"
+            >Zarejestruj się</a
+          >
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center max-w-md px-4">
+      <p class="text-white/70">Odkryj nowe filmy i muzykę dopasowane do Twoich preferencji dzięki getTaste.</p>
+    </div>
+  </main>
+</Layout>
+
+<script is:inline>
+  // Handle login form submission
+  document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("login-form");
+    const errorMessage = document.getElementById("error-message");
+
+    if (form && errorMessage) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        // Bezpieczne pobieranie wartości z formularza
+        const email = form.querySelector("#email").value;
+        const password = form.querySelector("#password").value;
+
+        try {
+          // Clear any previous error messages
+          errorMessage.textContent = "";
+          errorMessage.classList.add("hidden");
+
+          // Użyj bezpiecznego API endpointu zamiast bezpośredniego logowania
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || "Wystąpił błąd podczas logowania");
+          }
+
+          // Redirect to dashboard on successful login
+          window.location.href = "/dashboard";
+        } catch (error) {
+          // Display error message
+          let errorMsg = "Wystąpił błąd podczas logowania. Spróbuj ponownie.";
+          if (error instanceof Error) {
+            errorMsg = error.message;
+          }
+          errorMessage.textContent = errorMsg;
+          errorMessage.classList.remove("hidden");
+        }
+      });
+    }
+  });
+</script>

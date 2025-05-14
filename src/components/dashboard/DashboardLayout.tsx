@@ -8,16 +8,9 @@ import { PreferencesPanel } from "./PreferencesPanel";
 
 interface DashboardLayoutProps {
   user: UserProfileDTO;
-  featureFlags?: {
-    auth?: boolean;
-    collections?: boolean;
-    recommendations?: boolean;
-    adaptiveRecommendations?: boolean;
-    historyRecommendations?: boolean;
-  };
 }
 
-export function DashboardLayout({ user, featureFlags }: DashboardLayoutProps) {
+export function DashboardLayout({ user }: DashboardLayoutProps) {
   const {
     activeType,
     setActiveType,
@@ -146,11 +139,6 @@ export function DashboardLayout({ user, featureFlags }: DashboardLayoutProps) {
                 isLoading={isRecommendationsLoading || isGeneratingRecommendations}
                 userId={user.id}
                 isNewUser={isNewUser}
-                featureFlags={{
-                  recommendations: featureFlags?.recommendations,
-                  adaptiveRecommendations: featureFlags?.adaptiveRecommendations,
-                  historyRecommendations: featureFlags?.historyRecommendations,
-                }}
               />
             </div>
 

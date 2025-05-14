@@ -11,7 +11,6 @@ import type {
 import { RecommendationCard } from "./RecommendationCard";
 import { transformRecommendationToViewModel } from "../../lib/utils/transformers";
 import { MoviePoster } from "@/components/MoviePoster";
-import { featureFlagService } from "../../features/featureFlagService";
 
 // Type alias for metadata objects to avoid 'any' type warnings
 type MetadataRecord = Record<string, unknown>;
@@ -29,11 +28,6 @@ interface RecommendationsPanelProps {
   isLoading: boolean;
   userId: string;
   isNewUser?: boolean;
-  featureFlags?: {
-    recommendations?: boolean;
-    adaptiveRecommendations?: boolean;
-    historyRecommendations?: boolean;
-  };
 }
 
 export function RecommendationsPanel({
@@ -44,7 +38,6 @@ export function RecommendationsPanel({
   isLoading,
   userId,
   isNewUser = false,
-  featureFlags,
 }: RecommendationsPanelProps) {
   const [activeTab, setActiveTab] = useState<"recommendations" | "ratings" | "swipe">(
     "recommendations"
@@ -54,11 +47,6 @@ export function RecommendationsPanel({
     RecommendationDTO[] | undefined
   >(undefined);
   const [forceGenerating, setForceGenerating] = useState(false);
-  const [featureState, setFeatureState] = useState({
-    recommendations: true,
-    adaptive: true,
-    history: true,
-  });
 
   // Dodajemy stan do śledzenia aktualnie wybranej rekomendacji
   const [selectedItem, setSelectedItem] = useState<RecommendationItemViewModel | null>(null);
@@ -69,36 +57,6 @@ export function RecommendationsPanel({
 
   // Validate userId
   const validUserId = userId && userId !== "undefined" ? userId : "";
-
-  // Sprawdzanie flag funkcji - wykonywane poza blokami warunkowymi
-  useEffect(() => {
-    // Sprawdzamy feature flagi tylko raz podczas inicjalizacji komponentu
-    const userContext = {
-      id: validUserId,
-      role: isNewUser ? "new_user" : "user",
-    };
-
-    const isRecommendationsEnabled =
-      featureFlags?.recommendations !== undefined
-        ? featureFlags.recommendations
-        : featureFlagService.isFeatureEnabled("collections.recommendations", userContext);
-
-    const isAdaptiveEnabled =
-      featureFlags?.adaptiveRecommendations !== undefined
-        ? featureFlags.adaptiveRecommendations
-        : featureFlagService.isFeatureEnabled("collections.recommendations.adaptive", userContext);
-
-    const isHistoryEnabled =
-      featureFlags?.historyRecommendations !== undefined
-        ? featureFlags.historyRecommendations
-        : featureFlagService.isFeatureEnabled("collections.recommendations.history", userContext);
-
-    setFeatureState({
-      recommendations: isRecommendationsEnabled,
-      adaptive: isAdaptiveEnabled,
-      history: isHistoryEnabled,
-    });
-  }, [featureFlags, validUserId, isNewUser]);
 
   // Process recommendations on change
   useEffect(() => {
@@ -222,17 +180,8 @@ export function RecommendationsPanel({
     }
   }, [recommendations, validUserId]);
 
-  // If recommendations are disabled, show a message
-  if (!featureState.recommendations) {
-    return (
-      <div className="bg-white/5 backdrop-blur-sm rounded-lg shadow-lg border border-white/10 p-8 text-center">
-        <h2 className="text-xl font-semibold text-white mb-4">Recommendations Unavailable</h2>
-        <p className="text-gray-300">
-          This feature is currently unavailable. Please check back later.
-        </p>
-      </div>
-    );
-  }
+  // Extra debugging to check if recommendations are being properly processed
+  // Remove empty useEffect
 
   // Handler for when feedback is processed in the adaptive system
   const handleFeedbackProcessed = () => {
@@ -283,6 +232,9 @@ export function RecommendationsPanel({
     setSelectedItem(null);
   };
 
+  // Debug logging - usunięcie pustego bloku
+  // Usunięcie pustego if
+
   // Combined loading state
   const combinedLoading = isLoading || forceGenerating || generateRecommendationsMutation.isPending;
 
@@ -298,18 +250,16 @@ export function RecommendationsPanel({
       <div className="border-b border-white/10">
         <nav className="flex -mb-px px-6 justify-between">
           <div className="flex">
-            {featureState.adaptive && (
-              <button
-                onClick={() => setActiveTab("swipe")}
-                className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
-                  activeTab === "swipe"
-                    ? "border-purple-500 text-purple-400"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
-                }`}
-              >
-                Swipe Recommendations
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab("swipe")}
+              className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
+                activeTab === "swipe"
+                  ? "border-purple-500 text-purple-400"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
+              }`}
+            >
+              Swipe Recommendations
+            </button>
             <button
               onClick={() => setActiveTab("recommendations")}
               className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
@@ -320,18 +270,16 @@ export function RecommendationsPanel({
             >
               All Recommendations
             </button>
-            {featureState.history && (
-              <button
-                onClick={() => setActiveTab("ratings")}
-                className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
-                  activeTab === "ratings"
-                    ? "border-purple-500 text-purple-400"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
-                }`}
-              >
-                My Ratings
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab("ratings")}
+              className={`mr-4 py-4 px-1 text-sm font-medium border-b-2 ${
+                activeTab === "ratings"
+                  ? "border-purple-500 text-purple-400"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
+              }`}
+            >
+              My Ratings
+            </button>
           </div>
 
           <div className="flex items-center">
@@ -529,11 +477,11 @@ export function RecommendationsPanel({
           isNewUser={isNewUser}
           onItemSelect={handleItemSelect}
         />
-      ) : activeTab === "ratings" && featureState.history ? (
+      ) : activeTab === "ratings" ? (
         <div className="p-6">
           <RecommendationHistory userId={validUserId} />
         </div>
-      ) : featureState.adaptive ? (
+      ) : (
         <AdaptiveRecommendationsList
           key={`swipe-${activeType}-${refreshTrigger}`}
           recommendations={processedRecommendations}
@@ -542,12 +490,7 @@ export function RecommendationsPanel({
           isNewUser={isNewUser}
           userId={validUserId}
           onFeedbackProcessed={handleFeedbackProcessed}
-          featureEnabled={featureState.adaptive}
         />
-      ) : (
-        <div className="p-6 text-center">
-          <p className="text-gray-300">This feature is currently unavailable.</p>
-        </div>
       )}
     </div>
   );

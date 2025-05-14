@@ -6,7 +6,6 @@ import type { RecommendationDTO, RecommendationFeedbackType } from "../../types"
 import { useToast } from "../ui";
 import { FeedbackService } from "../../lib/services/feedback.service";
 import { AnimationProvider } from "../swipe-animation";
-import { featureFlagService } from "../../features/featureFlagService";
 
 interface AdaptiveRecommendationsListProps {
   recommendations: RecommendationDTO[] | undefined;
@@ -15,7 +14,6 @@ interface AdaptiveRecommendationsListProps {
   isNewUser?: boolean;
   userId: string;
   onFeedbackProcessed?: () => void;
-  featureEnabled?: boolean; // Opcjonalna flaga przekazana z góry
 }
 
 interface RecommendationItemWithType {
@@ -35,28 +33,12 @@ export function AdaptiveRecommendationsList({
   isNewUser = false,
   userId,
   onFeedbackProcessed,
-  featureEnabled,
 }: AdaptiveRecommendationsListProps) {
   const { toast } = useToast();
   const [processedItems, setProcessedItems] = useState<Set<string>>(new Set());
   const [viewModels, setViewModels] = useState<RecommendationViewModel[]>([]);
   const [allItems, setAllItems] = useState<RecommendationItemWithType[]>([]);
   const [hasProcessedData, setHasProcessedData] = useState(false);
-  const [featureIsEnabled, setFeatureIsEnabled] = useState<boolean>(true);
-
-  // Create user context for feature flag check - przeniesione przed useEffect
-  useEffect(() => {
-    // Sprawdzamy feature flag tylko raz podczas inicjalizacji komponentu
-    const isAdaptiveEnabled =
-      featureEnabled !== undefined
-        ? featureEnabled
-        : featureFlagService.isFeatureEnabled("collections.recommendations.adaptive", {
-            id: userId,
-            role: isNewUser ? "new_user" : "user",
-          });
-
-    setFeatureIsEnabled(isAdaptiveEnabled);
-  }, [featureEnabled, userId, isNewUser]);
 
   // Process recommendations when they change
   useEffect(() => {
@@ -122,35 +104,7 @@ export function AdaptiveRecommendationsList({
     }
   }, [recommendations, type]);
 
-  // If adaptive recommendations are disabled, show a message
-  if (!featureIsEnabled) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white/5 backdrop-blur-sm rounded-b-lg">
-        <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 p-6 rounded-full mb-6 border border-white/10">
-          <svg
-            className="h-12 w-12 text-purple-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold mb-2 text-white">
-          Adaptive Recommendations Unavailable
-        </h3>
-        <p className="text-gray-300 max-w-md mb-6">
-          This feature is currently disabled in your environment.
-        </p>
-      </div>
-    );
-  }
+  // Validate and log user ID
 
   // Handle loading state - only show if we're actually loading and haven't processed data yet
   if (isLoading && !hasProcessedData) {
@@ -229,6 +183,8 @@ export function AdaptiveRecommendationsList({
 
       // Add item to processed set
       setProcessedItems((prev) => new Set([...prev, itemId]));
+
+      // Log feedback data
 
       // Save feedback to database and update algorithm
       await FeedbackService.saveSwipeFeedback(userId, item.recommendationId, feedbackType, {

@@ -106,10 +106,10 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
       try {
         const response = await fetch("/api/auth/me");
         if (!response.ok) {
-          window.location.href = "/auth/login?redirect=/recommendations/enhanced";
+          window.location.href = "/login?redirect=/recommendations/enhanced";
         }
       } catch {
-        window.location.href = "/auth/login?redirect=/recommendations/enhanced";
+        window.location.href = "/login?redirect=/recommendations/enhanced";
       }
     };
 
@@ -119,30 +119,7 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
   return (
     <FormProvider {...formMethods}>
       <form onSubmit={formMethods.handleSubmit(onSubmit)} className="container mx-auto px-4 py-8">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => window.history.back()}
-            className="mr-4 flex items-center justify-center p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-            aria-label="Go back"
-            type="button"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
-          <h1 className="text-3xl font-bold">Zaawansowane rekomendacje</h1>
-        </div>
+        <h1 className="text-3xl font-bold mb-8">Zaawansowane rekomendacje</h1>
 
         <CategorySelector />
 
@@ -172,7 +149,7 @@ export function ImprovedRecommendationsView({ userId }: ImprovedRecommendationsV
                   rekomendacje.
                 </p>
                 <button
-                  onClick={() => (window.location.href = "/preferences")}
+                  onClick={() => (window.location.href = "/profile/preferences")}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
                   type="button"
                 >

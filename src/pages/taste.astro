@@ -1,32 +1,68 @@
 ---
-import MainLayout from "../layouts/MainLayout.astro";
-import { TasteProfileWrapper } from "../components/dashboard/TasteProfileWrapper";
+import Layout from "../layouts/ProtectedLayout.astro";
 import { TasteService } from "../lib/services/taste.service";
-
-// Logika sprawdzania użytkownika
-const user = Astro.locals.user;
-const userId = user?.id;
-
-// Przekierowanie niezalogowanych użytkowników
-if (!userId) {
-  return Astro.redirect("/auth/login");
-}
-
-// Fetch user taste server-side for initial data
-const initialTaste = await TasteService.getUserTaste(userId);
+// Get the current user ID from environment or session (replace with real logic)
+const userId = import.meta.env.PUBLIC_USER_ID || "test-user";
+// Fetch user taste server-side
+const taste = await TasteService.getUserTaste(userId);
 ---
 
-<MainLayout title="Twój Profil Gustu - getTaste">
-  <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-    <TasteProfileWrapper userId={userId} initialData={initialTaste} client:only="react" />
-  </div>
-</MainLayout>
+<Layout title="Twój Profil Gustu">
+  <main class="prose mx-auto py-8">
+    <h1 class="text-3xl font-bold">Profil Twojego Gustu</h1>
+    <section>
+      <h2 class="text-2xl mt-6">{taste.name}</h2>
+      <p class="mt-2">{taste.description}</p>
+    </section>
 
-<script>
-  // This ensures the component is hydrated properly with client-side navigation
-  document.addEventListener('astro:page-load', () => {
-    document.querySelectorAll('[data-reactroot]').forEach(el => {
-      el.removeAttribute('data-reactroot');
-    });
-  });
-</script>
+    {
+      taste.music && (
+        <section>
+          <h3 class="text-xl mt-6">Analiza Muzyczna</h3>
+          <ul class="list-disc list-inside mt-2">
+            <li>
+              <strong>Gatunki:</strong> {taste.music.genres.join(", ")}
+            </li>
+            <li>
+              <strong>Nastrój:</strong> {taste.music.mood.join(", ")}
+            </li>
+            <li>
+              <strong>Styl:</strong> {taste.music.style}
+            </li>
+            <li>
+              <strong>Intensywność:</strong> {taste.music.intensity}
+            </li>
+            <li>
+              <strong>Różnorodność:</strong> {taste.music.variety}
+            </li>
+          </ul>
+        </section>
+      )
+    }
+
+    {
+      taste.film && (
+        <section>
+          <h3 class="text-xl mt-6">Analiza Filmowa</h3>
+          <ul class="list-disc list-inside mt-2">
+            <li>
+              <strong>Gatunki:</strong> {taste.film.genres.join(", ")}
+            </li>
+            <li>
+              <strong>Nastrój:</strong> {taste.film.mood.join(", ")}
+            </li>
+            <li>
+              <strong>Styl:</strong> {taste.film.style}
+            </li>
+            <li>
+              <strong>Intensywność:</strong> {taste.film.intensity}
+            </li>
+            <li>
+              <strong>Różnorodność:</strong> {taste.film.variety}
+            </li>
+          </ul>
+        </section>
+      )
+    }
+  </main>
+</Layout>
