@@ -28,7 +28,7 @@ WORKDIR /app
 COPY --from=builder /app/package*.json ./
 RUN npm pkg delete scripts.prepare && \
     npm ci --omit=dev && \
-    npm install @astrojs/node
+    npm install @astrojs/node server-destroy
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
@@ -43,6 +43,7 @@ USER nodejs
 ENV HOST=0.0.0.0
 ENV PORT=8080
 ENV NODE_ENV=production
+ENV ENV_NAME=prod
 
 # Expose port
 EXPOSE 8080
