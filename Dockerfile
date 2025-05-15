@@ -28,7 +28,7 @@ WORKDIR /app
 COPY --from=builder /app/package*.json ./
 RUN npm pkg delete scripts.prepare && \
     npm ci --omit=dev && \
-    npm install @astrojs/node server-destroy
+    npm install @astrojs/node server-destroy send
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
