@@ -11,6 +11,24 @@ const getProcessEnv = (key: string): string | undefined => {
   return undefined;
 };
 
+// Public Supabase configuration for client-side
+export const PUBLIC_SUPABASE_URL =
+  import.meta.env.PUBLIC_SUPABASE_URL || getProcessEnv("PUBLIC_SUPABASE_URL") || "";
+export const PUBLIC_SUPABASE_ANON_KEY =
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY || getProcessEnv("PUBLIC_SUPABASE_ANON_KEY") || "";
+
+// Supabase configuration (from environment)
+export const SUPABASE_URL =
+  import.meta.env.SUPABASE_URL || getProcessEnv("SUPABASE_URL") || PUBLIC_SUPABASE_URL;
+
+// Use service role key for admin operations - this must be the service role key to bypass RLS
+export const SUPABASE_KEY =
+  import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+  getProcessEnv("SUPABASE_SERVICE_ROLE_KEY") ||
+  import.meta.env.SUPABASE_KEY ||
+  getProcessEnv("SUPABASE_KEY") ||
+  PUBLIC_SUPABASE_ANON_KEY;
+
 // TMDB API Key for film recommendations
 export const TMDB_API_KEY = import.meta.env.TMDB_API_KEY || getProcessEnv("TMDB_API_KEY") || "";
 
@@ -28,17 +46,6 @@ export const OPENROUTER_DEFAULT_MODEL =
   import.meta.env.OPENROUTER_DEFAULT_MODEL ||
   getProcessEnv("OPENROUTER_DEFAULT_MODEL") ||
   "qwen/qwen3-4b:free";
-
-// Supabase configuration (from environment)
-export const SUPABASE_URL =
-  import.meta.env.SUPABASE_URL || getProcessEnv("SUPABASE_URL") || "http://127.0.0.1:54321";
-// Use service role key for admin operations - this must be the service role key to bypass RLS
-export const SUPABASE_KEY =
-  import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
-  getProcessEnv("SUPABASE_SERVICE_ROLE_KEY") ||
-  import.meta.env.SUPABASE_KEY ||
-  getProcessEnv("SUPABASE_KEY") ||
-  "";
 
 // Anon key for client-side operations (less privileged)
 export const SUPABASE_ANON_KEY =

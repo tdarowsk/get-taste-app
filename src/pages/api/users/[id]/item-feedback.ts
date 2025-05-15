@@ -179,22 +179,18 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
 
     // Attempt to record item feedback in the database
     try {
-      const { data: feedbackData, error: feedbackError } = await supabase
-        .from("item_feedback")
-        .upsert(
-          {
-            user_id: userId,
-            item_id: body.item_id,
-            feedback_type: body.feedback_type,
-            created_at: new Date().toISOString(),
-            genre: body.genre || null,
-            artist: body.artist || null,
-            cast: body.cast || null,
-          },
-          { onConflict: "user_id,item_id" }
-        )
-        .select()
-        .single();
+      const { error: feedbackError } = await supabase.from("item_feedback").upsert(
+        {
+          user_id: userId,
+          item_id: body.item_id,
+          feedback_type: body.feedback_type,
+          created_at: new Date().toISOString(),
+          genre: body.genre || null,
+          artist: body.artist || null,
+          cast: body.cast || null,
+        },
+        { onConflict: "user_id,item_id" }
+      );
 
       if (feedbackError) {
         return new Response(
@@ -209,21 +205,22 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
         );
       }
 
+      // Return success response
       return new Response(
         JSON.stringify({
-          message: "Item feedback saved",
-          data: feedbackData,
+          success: true,
+          message: "Feedback saved successfully",
         }),
         {
           status: 201,
           headers: { "Content-Type": "application/json" },
         }
       );
-    } catch (dbError) {
+    } catch (error) {
       return new Response(
         JSON.stringify({
-          error: "Database error when saving feedback",
-          details: dbError instanceof Error ? dbError.message : String(dbError),
+          error: "An error occurred while processing your feedback",
+          details: error instanceof Error ? error.message : String(error),
         }),
         {
           status: 500,
