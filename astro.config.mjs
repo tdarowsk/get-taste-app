@@ -4,19 +4,24 @@ import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
-import cloudflare from "@astrojs/cloudflare";
+import node from "@astrojs/node";
 
 // https://astro.build/config
 export default defineConfig({
   output: "server",
   integrations: [react(), sitemap()],
-  server: { port: 3000 },
+  server: {
+    port: 8080,
+    host: "0.0.0.0",
+  },
   vite: {
     plugins: [tailwindcss()],
     ssr: {
       noExternal: ["react-icons"],
     },
   },
-  adapter: cloudflare(),
+  adapter: node({
+    mode: "standalone",
+  }),
   experimental: { session: true },
 });
