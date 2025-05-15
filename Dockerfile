@@ -1,22 +1,17 @@
 # Build stage
-FROM node:22.14.0-alpine AS builder
+FROM node:20.11.1-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache python3 make g++ libc6-compat git
 
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV=prod \
-    ENV_NAME=prod
-
 # Copy package files
-COPY package*.json ./
-COPY .nvmrc ./
+COPY package*.json .nvmrc ./
 
 # Install dependencies with Husky
-RUN npm ci
-RUN npm install @astrojs/node
+RUN npm ci && \
+    npm install @astrojs/node
 
 # Copy source files
 COPY . .
@@ -25,13 +20,9 @@ COPY . .
 RUN npm run build -- --config astro.config.docker.mjs
 
 # Production stage
-FROM node:22.14.0-alpine AS runner
+FROM node:20.11.1-alpine AS runner
 
 WORKDIR /app
-
-# Set production environment
-ENV NODE_ENV=prod \
-    ENV_NAME=prod
 
 # Install production dependencies only, skipping prepare script
 COPY --from=builder /app/package*.json ./
@@ -43,19 +34,19 @@ RUN npm pkg delete scripts.prepare && \
 COPY --from=builder /app/dist ./dist
 
 # Create and use non-root user
-RUN addgroup -g 1001 -S nodejs \
-    && adduser -S nextjs -u 1001 \
-    && chown -R nextjs:nodejs /app
-USER nextjs
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
 
-# Expose port
-EXPOSE 3000
+USER nodejs
 
 # Set environment variables
-ENV NODE_ENV=prod \
-    ENV_NAME=prod \
-    HOST=0.0.0.0 \
-    PORT=3000
+ENV HOST=0.0.0.0
+ENV PORT=8080
+ENV NODE_ENV=production
+
+# Expose both ports for flexibility
+EXPOSE 3000
+EXPOSE 8080
 
 # Start the application
 CMD ["node", "./dist/server/entry.mjs"]
