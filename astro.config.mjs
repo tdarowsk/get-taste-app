@@ -19,6 +19,11 @@ export default defineConfig({
     ssr: {
       noExternal: ["react-icons"],
     },
+    server: {
+      host: "0.0.0.0",
+      strictPort: true,
+      allowedHosts: ["localhost", "get-taste-app-pnnwq.ondigitalocean.app", ".ondigitalocean.app"],
+    },
   },
   adapter: node({
     mode: "standalone",
