@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { TMDB_API_KEY } from "../../../env.config";
 
 export const GET: APIRoute = async ({ url }) => {
   const title = url.searchParams.get("title");
@@ -6,8 +7,7 @@ export const GET: APIRoute = async ({ url }) => {
     return new Response(JSON.stringify({ error: "Missing title" }), { status: 400 });
   }
 
-  const apiKey = import.meta.env.TMDB_API_KEY;
-  if (!apiKey) {
+  if (!TMDB_API_KEY) {
     return new Response(JSON.stringify({ error: "TMDB API key not set" }), { status: 500 });
   }
 
@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ url }) => {
       {
         headers: {
           accept: "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${TMDB_API_KEY}`,
         },
       }
     );

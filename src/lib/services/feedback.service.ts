@@ -1,15 +1,16 @@
 import type { RecommendationFeedback, RecommendationFeedbackType } from "../../types";
 import { OpenRouterService } from "./openrouter.service";
-import { OPENROUTER_API_KEY } from "../../env.config";
+import {
+  OPENROUTER_API_KEY,
+  PUBLIC_SUPABASE_URL,
+  PUBLIC_SUPABASE_ANON_KEY,
+} from "../../env.config";
 import { getAiPrompts, getSystemPrompts } from "../utils/ai-prompts";
 import { createClient } from "@supabase/supabase-js";
 
 // Create a factory function to get a Supabase client that works both client and server side
 const getSupabaseClient = () => {
-  return createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-  );
+  return createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
 };
 
 interface FeedbackMetadata {
