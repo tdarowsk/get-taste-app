@@ -90,20 +90,70 @@ This project is licensed under the MIT License.
 
 Aplikacja wymaga następujących zmiennych środowiskowych, które należy umieścić w pliku `.env` w głównym katalogu projektu:
 
-```
+```bash
 # Supabase environment variables (server-side)
 SUPABASE_URL=https://your-supabase-url.supabase.co
 SUPABASE_KEY=your-supabase-service-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 # Supabase environment variables (client-side)
 PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-# OpenRouter API key
+# OpenRouter API configuration
 OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_API_URL=https://openrouter.ai/api/v1
+OPENROUTER_DEFAULT_MODEL=qwen/qwen3-235b-a22b:free
+
+# External APIs
+TMDB_API_KEY=your-tmdb-api-key
+OMDB_API_KEY=your-omdb-api-key
+SPOTIFY_CLIENT_ID=your-spotify-client-id
+
+# Server configuration (for Docker/production)
+HOST=0.0.0.0
+PORT=8080
+NODE_ENV=production
 ```
 
-Plik `.env` jest ignorowany przez system kontroli wersji, dlatego musisz utworzyć go lokalnie.
+### Środowisko deweloperskie
+
+Dla środowiska deweloperskiego, skopiuj plik `.env.example` do `.env` i uzupełnij wymagane zmienne:
+
+```bash
+cp .env.example .env
+```
+
+### Środowisko produkcyjne
+
+W środowisku produkcyjnym (Docker/DigitalOcean) zmienne środowiskowe powinny być ustawione przez system zarządzania konfiguracją lub platformę hostingową.
+
+### Środowisko testowe
+
+Dla testów E2E, stwórz plik `.env.test` z następującą konfiguracją:
+
+```bash
+# Supabase credentials for tests
+SUPABASE_URL=<Twój URL Supabase>
+SUPABASE_KEY=<Twój klucz API Supabase>
+SUPABASE_SERVICE_ROLE_KEY=<Twój klucz Service Role>
+
+# Test user credentials
+E2E_USERNAME=<testowy email>
+E2E_PASSWORD=<testowe hasło>
+
+# Base URL for tests
+BASE_URL=http://localhost:3000
+
+# Disable auth for E2E tests
+DISABLE_AUTH=true
+```
+
+**WAŻNE**: 
+- Nigdy nie commituj plików `.env`, `.env.test` ani rzeczywistych kluczy do repozytorium
+- Używaj różnych kluczy dla środowisk produkcyjnego, deweloperskiego i testowego
+- Regularnie rotuj klucze API w środowisku produkcyjnym
+- Używaj ograniczonych uprawnień dla kluczy w środowisku deweloperskim
 
 ## Testy E2E
 
